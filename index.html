@@ -1205,7 +1205,16 @@ function loadCatalogue(){
       applyRegions(d.regions,d.global);
       applyCountries(d.countries.filter(c=>c.iso),d.mode,'Live catalogue loaded ('+d.mode.replace('live:','')+')');
     }else loadFromSupabase();
-  }).catch(()=>loadFromSupabase());
+    openDeepLink();
+  }).catch(()=>{loadFromSupabase();openDeepLink();});
+}
+/* ?country=<iso> deep link from the marketing site */
+function openDeepLink(){
+  const iso=new URLSearchParams(location.search).get('country');
+  if(!iso)return;
+  const c=COUNTRIES.find(x=>x.iso===iso);
+  if(c){go('store');openCountry(c.n);}
+  history.replaceState(null,'',location.pathname);
 }
 loadCatalogue();
 
@@ -1657,7 +1666,7 @@ function socialLogin(provider){
     toast('Open the app at http://localhost:4000 to use social login');
     return;
   }
-  sb.auth.signInWithOAuth({provider,options:{redirectTo:location.origin}}).then(({error})=>{
+  sb.auth.signInWithOAuth({provider,options:{redirectTo:location.origin+'/app'}}).then(({error})=>{
     if(error)toast(error.message);
   });
 }

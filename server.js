@@ -516,8 +516,12 @@ const server = http.createServer(async (req, res) => {
   // static files — lets the app run at http://localhost:4000 (required for OAuth login redirects)
   const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.sql': 'text/plain' };
   if (req.method === 'GET' && !req.url.startsWith('/api/')) {
-    const urlPath = decodeURIComponent(req.url.split('?')[0]);
-    const fp = path.join(__dirname, urlPath === '/' ? 'index.html' : urlPath);
+    let urlPath = decodeURIComponent(req.url.split('?')[0]);
+    if (urlPath === '/') urlPath = 'site.html';        // marketing site at root
+    else if (urlPath === '/app') urlPath = 'index.html'; // the store app
+    else if (urlPath === '/privacy') urlPath = 'privacy.html';
+    else if (urlPath === '/terms') urlPath = 'terms.html';
+    const fp = path.join(__dirname, urlPath);
     if (!fp.startsWith(__dirname)) { res.writeHead(403); res.end(); return; }
     if (fs.existsSync(fp) && fs.statSync(fp).isFile()) {
       res.writeHead(200, { 'Content-Type': MIME[path.extname(fp).toLowerCase()] || 'application/octet-stream' });
