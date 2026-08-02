@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MobiYatri — eSIMs for Indian Travellers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F1F5FB;
+    --bg-top:#E4EAF6;
+    --card:#FFFFFF;
+    --ink:#23253A;
+    --ink-soft:#76819B;
+    --line:#E5EBF5;
+    --orange:#FF6B57;
+    --orange-deep:#E85340;
+    --mint:#D6EBDB;
+    --mint-ink:#1F7A40;
+    --radius:20px;
+    --shadow:0 2px 12px rgba(42,44,74,.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:#C2CCDE;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink);
+  }
+  /* ---------- phone frame ---------- */
+  #phone{
+    width:min(420px,100vw);
+    height:min(880px,100vh);
+    background:linear-gradient(180deg,var(--bg-top) 0%,var(--bg) 34%,#F8FAFD 100%);
+    position:relative;overflow:hidden;
+    box-shadow:0 24px 70px rgba(40,25,5,.35);
+    border-radius:clamp(0px,3vw,40px);
+  }
+  @media (max-width:440px){#phone{border-radius:0;box-shadow:none}}
+
+  /* ---------- screens ---------- */
+  .screen{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+  .screen.active{display:flex}
+  .scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;padding:0 16px;scrollbar-width:none}
+  .scroll::-webkit-scrollbar{display:none}
+
+  /* ---------- status bar ---------- */
+  .statusbar{height:40px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:14px;font-weight:700;letter-spacing:.01em}
+  .statusbar .sicons{display:flex;align-items:center;gap:5px}
+  .statusbar svg{display:block}
+
+  /* ---------- shared ---------- */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:4px 14px 8px;flex-shrink:0}
+  .topbar .title{font-size:16px;font-weight:700;flex:1;text-align:center}
+  .backbtn,.closebtn{
+    width:38px;height:38px;border:none;background:transparent;cursor:pointer;color:var(--ink);
+    display:flex;align-items:center;justify-content:center;border-radius:50%;
+  }
+  .backbtn:active,.closebtn:active{background:rgba(0,0,0,.06)}
+  .btn{
+    display:block;width:100%;padding:16px;border:none;border-radius:999px;
+    font-size:15.5px;font-weight:700;cursor:pointer;text-align:center;font-family:inherit;
+    transition:transform .06s ease,box-shadow .2s;letter-spacing:.01em;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn-primary{background:var(--orange);color:#fff;box-shadow:0 6px 18px rgba(255,107,87,.35)}
+  .btn-deep{background:var(--orange-deep);color:#fff;box-shadow:0 6px 18px rgba(232,83,64,.35)}
+  .btn-outline{background:#fff;color:var(--ink);border:1.5px solid #D8E1EF}
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:var(--mint);color:var(--mint-ink);border-radius:999px;padding:5px 13px;font-size:13px;font-weight:800}
+  .chip{font-size:10.5px;font-weight:800;border:1.2px solid #D8CFC2;border-radius:5px;padding:1px 5px;color:var(--ink-soft)}
+  .muted{color:var(--ink-soft)}
+  .divider{height:1px;background:var(--line);margin:14px 0}
+  h1{font-size:27px;font-weight:800;letter-spacing:-.02em}
+  h2{font-size:21px;font-weight:800;letter-spacing:-.01em}
+  h3{font-size:16px;font-weight:800}
+
+  /* ---------- flags ---------- */
+  .flag{width:38px;height:28px;border-radius:6px;overflow:hidden;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;background:#E5EDF7;position:relative}
+  .flag img{width:100%;height:100%;object-fit:cover;display:block}
+  .flag.region{background:linear-gradient(150deg,#C9DEF2,#DFEDF9);display:flex;align-items:center;justify-content:center}
+  .flag.region svg{width:100%;height:100%}
+  .flag.region svg{width:100%;height:100%}
+  .flag.sm{width:32px;height:24px;border-radius:5px}
+
+  /* ---------- bottom nav ---------- */
+  .tabbar{
+    flex-shrink:0;display:flex;background:rgba(255,255,255,.94);backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);padding:9px 0 16px;
+  }
+  .tabbar button{
+    flex:1;border:none;background:none;cursor:pointer;font-family:inherit;
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    font-size:11.5px;font-weight:700;color:#94A1B8;
+  }
+  .tabbar button svg{stroke:#94A1B8}
+  .tabbar button.on{color:var(--ink)}
+  .tabbar button.on svg{stroke:var(--ink)}
+  .tabbar button .ico{position:relative;height:24px}
+  .tabbar button.on .ico::after{content:"";position:absolute;left:50%;transform:translateX(-50%);bottom:-7px;width:20px;height:3px;border-radius:2px;background:var(--orange)}
+
+  /* ---------- welcome ---------- */
+  .confetti{position:absolute;border-radius:8px;opacity:.6;pointer-events:none}
+  .welcome-body{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 28px;text-align:center;position:relative}
+  .bgart{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  /* ---------- futuristic dark hero screens (welcome + splash) ---------- */
+  #welcome,#splash{background:radial-gradient(130% 90% at 80% -10%,#2E3268 0%,#20234A 48%,#151834 100%)}
+  #welcome .statusbar,#splash .statusbar{color:#EDEEF8}
+  #welcome .statusbar svg *,#splash .statusbar svg *{fill:#EDEEF8}
+  #welcome .statusbar svg [stroke],#splash .statusbar svg [stroke]{stroke:#EDEEF8}
+  #welcome h1{color:#F5F6FC}
+  #welcome .wordmark{color:#F5F6FC}
+  #welcome .muted{color:#A9ACC9}
+  #welcome .valueprops div{color:#E2EBF9}
+  #welcome .valueprops svg [stroke]{stroke:#DDE0F2}
+  #welcome .valueprops svg [fill="#23253A"]{fill:#DDE0F2}
+  #welcome .confetti,#splash .confetti{opacity:.12}
+  #welcome svg.paisley [fill]{fill:#262A52}
+  #welcome .welcome-art::before{background:radial-gradient(circle,rgba(255,107,87,.30),transparent 62%)}
+  #welcome .btn-outline{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.26);color:#F5F6FC;backdrop-filter:blur(6px)}
+  #welcome .tricolor{outline-color:rgba(255,255,255,.16)}
+  #splash .splash-word{color:#F5F6FC}
+  #splash .splash-tag{color:#A9ACC9}
+  #splash .loaddots span{background:#3A3E6E}
+  #splash .splash-mark .imap{filter:drop-shadow(0 0 26px rgba(125,135,255,.4))}
+  .welcome-art{margin:0 auto 20px;width:190px;position:relative}
+  .welcome-art::before{content:"";position:absolute;inset:-44px;background:radial-gradient(circle,rgba(255,107,87,.13),transparent 62%);border-radius:50%}
+  .welcome-art svg{position:relative}
+  .wordmark{display:flex;align-items:center;justify-content:center;gap:7px;font-size:27px;font-weight:800;letter-spacing:-.03em;margin-bottom:14px}
+  .wordmark em{color:var(--orange);font-style:normal}
+
+  /* ---------- splash & animations ---------- */
+  .screen.active{animation:screenFade .4s ease}
+  @keyframes screenFade{from{opacity:0}to{opacity:1}}
+  .splash-logo{display:flex;flex-direction:column;align-items:center}
+  .splash-mark{position:relative;width:180px;height:198px;display:flex;align-items:center;justify-content:center}
+  .splash-mark .imap{position:absolute;inset:0;width:100%;height:100%;animation:mapIn 1.2s ease .1s both}
+  @keyframes mapIn{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:none}}
+  .splash-logo .plane{position:relative;z-index:1;animation:planeIn 1s cubic-bezier(.2,.8,.3,1.25) .25s both;filter:drop-shadow(0 4px 8px rgba(120,70,10,.25))}
+  .splash-word{font-size:36px;font-weight:800;letter-spacing:-.03em;margin-top:12px;animation:fadeUp .7s .4s both}
+  .splash-word em{color:var(--orange);font-style:normal}
+  .splash-tag{font-size:13px;font-weight:700;color:var(--ink-soft);margin-top:6px;animation:fadeUp .7s .6s both}
+  .loaddots{display:flex;gap:8px;margin-top:34px}
+  .loaddots span{width:8px;height:8px;border-radius:50%;background:#C9CBE0;animation:dotPulse 1s infinite}
+  .loaddots span:nth-child(2){animation-delay:.15s}
+  .loaddots span:nth-child(3){animation-delay:.3s}
+  @keyframes dotPulse{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:1;transform:scale(1.3);background:var(--orange)}}
+  @keyframes planeIn{from{opacity:0;transform:translate(-46px,46px) rotate(-24deg) scale(.5)}to{opacity:1;transform:none}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  /* eSIM-into-phone hero animation */
+  .welcome-art .sim{animation:simDrop 3s ease-in-out infinite}
+  @keyframes simDrop{
+    0%{transform:translate(-64px,-48px) rotate(-18deg);opacity:0}
+    12%{opacity:1}
+    42%{transform:translate(0,0) rotate(0deg);opacity:1}
+    80%{transform:translate(0,0);opacity:1}
+    94%,100%{transform:translate(0,0);opacity:0}
+  }
+  .welcome-art .wave{opacity:0;animation:waveIn 3s ease-in-out infinite}
+  .welcome-art .w2{animation-delay:.14s}
+  .welcome-art .w3{animation-delay:.28s}
+  @keyframes waveIn{0%,42%{opacity:0}54%{opacity:1}82%{opacity:1}94%,100%{opacity:0}}
+  .welcome-art .glowring{opacity:0;transform-box:fill-box;transform-origin:center;animation:ringPop 3s ease-in-out infinite}
+  @keyframes ringPop{0%,40%{opacity:0;transform:scale(.6)}50%{opacity:.9;transform:scale(1)}72%{opacity:0;transform:scale(1.5)}100%{opacity:0}}
+  .spinner{display:inline-block;width:15px;height:15px;border:2.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;vertical-align:-2px;margin-right:7px;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ---------- Indian accents ---------- */
+  .hindi{font-family:"Noto Sans Devanagari","Plus Jakarta Sans",sans-serif}
+  .tricolor{display:block;width:66px;height:4.5px;border-radius:3px;margin:12px auto 0;background:linear-gradient(90deg,#FF9933 0 33.3%,#F3ECDF 33.3% 66.6%,#2E7D4F 66.6% 100%);outline:1px solid #DDDCE5}
+  .tabbar button.on .ico::after{background:linear-gradient(90deg,#FF9933 0 34%,#EFEEF3 34% 66%,#2E7D4F 66% 100%)}
+  .promo::before{content:"";position:absolute;inset:0;border-radius:var(--radius);background-image:radial-gradient(#C9CEF5 1px,transparent 1.4px);background-size:15px 15px;opacity:.10;pointer-events:none}
+  .paisley{position:absolute;pointer-events:none}
+  .imap .ring{transform-box:fill-box;transform-origin:center;animation:spinSlow 30s linear infinite}
+  @keyframes spinSlow{to{transform:rotate(360deg)}}
+  .valueprops{margin:24px auto 0;text-align:left;display:inline-block}
+  .valueprops div{display:flex;align-items:center;gap:12px;font-size:14.5px;font-weight:700;margin:12px 0}
+  .valueprops .vicon{width:26px;height:26px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+  .welcome-actions{padding:0 20px 36px;display:grid;gap:12px}
+
+  /* ---------- sheets ---------- */
+  .sheet-backdrop{position:absolute;inset:0;background:rgba(28,29,48,.42);display:none;z-index:40}
+  .sheet-backdrop.open{display:block}
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;z-index:50;background:linear-gradient(180deg,#F2F6FB,#F7FAFD);
+    border-radius:28px 28px 0 0;max-height:88%;display:none;flex-direction:column;
+    box-shadow:0 -12px 44px rgba(0,0,0,.22);
+  }
+  .sheet.open{display:flex}
+  /* auth sheet opens full screen */
+  #authsheet{top:0;height:100%;max-height:100%;border-radius:0}
+  #authsheet .grab{display:none}
+  #authsheet .sheet-scroll{padding-top:2px}
+  .sheet .grab{width:44px;height:5px;border-radius:3px;background:#C8D3E5;margin:11px auto 4px;flex-shrink:0}
+  .sheet-scroll{overflow-y:auto;padding:8px 22px 32px;scrollbar-width:none}
+  .sheet-scroll::-webkit-scrollbar{display:none}
+  .authtabs{display:flex;gap:28px;border-bottom:1.5px solid #D8E1EF;margin-bottom:18px}
+  .authtabs button{border:none;background:none;font-family:inherit;font-size:15px;font-weight:700;color:var(--ink-soft);padding:11px 2px;cursor:pointer;border-bottom:2.5px solid transparent}
+  .authtabs button.on{color:var(--ink);border-color:var(--ink)}
+  .socialrow{display:flex;gap:10px;margin-bottom:16px}
+  .socialrow button{flex:1;padding:12px;border-radius:999px;border:1.5px solid #D8E1EF;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;height:46px}
+  .field{width:100%;padding:14px 16px;border:1.5px solid #D8E1EF;border-radius:14px;background:#fff;font-size:15px;font-family:inherit;margin-bottom:12px;color:var(--ink)}
+  .field::placeholder{color:#97A4BA}
+  .field:focus{outline:none;border-color:var(--orange)}
+  .pwrules{font-size:12.5px;color:var(--ink-soft);margin:-4px 0 12px;line-height:1.9;font-weight:600}
+  .checkrow{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:var(--ink-soft);margin:4px 0 16px;font-weight:600}
+  .checkrow input{accent-color:var(--orange);width:17px;height:17px}
+  .legal{font-size:12px;color:var(--ink-soft);text-align:center;margin-top:14px;line-height:1.7;font-weight:600}
+  .legal u{cursor:pointer;color:var(--ink)}
+
+  /* ---------- store ---------- */
+  .storehead{padding:2px 16px 0;flex-shrink:0}
+  .walletrow{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+  .walletrow .lbl{font-size:11px;color:var(--ink-soft);font-weight:700}
+  .walletchip{background:#E2EBF9;color:#33386E;font-weight:800;font-size:13px;border-radius:999px;padding:5px 13px;cursor:pointer}
+  .hi{font-size:24px;font-weight:800;margin:0 0 14px;letter-spacing:-.02em}
+  .searchbar{
+    display:flex;align-items:center;gap:11px;background:#fff;border-radius:16px;
+    padding:15px 16px;box-shadow:var(--shadow);cursor:text;margin-bottom:14px;
+  }
+  .searchbar .ph{color:#97A4BA;font-size:15px;font-weight:600}
+  .promo{
+    background:radial-gradient(130% 130% at 85% -20%,#2E3268 0%,#20234A 55%,#171A38 100%);border-radius:var(--radius);
+    padding:16px 18px 14px;text-align:center;margin-bottom:12px;position:relative;box-shadow:0 6px 20px rgba(23,26,56,.35);
+    overflow:hidden;
+  }
+  .promo h3{color:#F5F6FC}
+  .promo p{color:#A9ACC9}
+  .promo .dots span{background:rgba(255,255,255,.18)}
+  .promo .dots span.on{background:#FF8A73}
+  .promo rect[fill="#2A2E5C"]{stroke:#7A82C4;stroke-width:1.5}
+  .promo .coinhop ellipse{fill:#0F1233;opacity:.6}
+  .promo .art{width:120px;margin:0 auto}
+  .promo h3{margin:8px 0 5px}
+  .promo p{font-size:13px;color:var(--ink-soft);line-height:1.55;font-weight:600}
+  .promo .info{position:absolute;top:12px;right:12px;width:27px;height:27px;border-radius:50%;background:rgba(255,255,255,.14);border:none;font-weight:800;color:#EDEEF8;cursor:pointer;font-family:Georgia,serif;font-style:italic;z-index:2}
+  .dots{display:flex;gap:6px;justify-content:center;margin-top:12px}
+  .dots span{height:4.5px;border-radius:3px;background:#DCE4F0;width:30px;cursor:pointer;transition:background .3s,width .3s}
+  .dots span.on{background:var(--ink);width:38px}
+  /* promo carousel */
+  .promo-viewport{overflow:hidden}
+  .promo-track{display:flex;transition:transform .55s cubic-bezier(.4,0,.2,1)}
+  .promo-slide{flex:0 0 100%;min-width:0;padding:0 2px;box-sizing:border-box}
+  .promo .route{animation:dashFlow 1.6s linear infinite}
+  @keyframes dashFlow{to{stroke-dashoffset:-28}}
+  .promo .pin{transform-box:fill-box;transform-origin:center;animation:pinPulse 2s ease-in-out infinite}
+  @keyframes pinPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
+  .promo .coinhop{transform-box:fill-box;transform-origin:center;animation:coinHop 1.8s ease-in-out infinite}
+  @keyframes coinHop{0%,100%{transform:translateY(0) }50%{transform:translateY(-7px)}}
+  .promo .tw{animation:twinkle 1.6s ease-in-out infinite}
+  .promo .t2{animation-delay:.4s}
+  .promo .t3{animation-delay:.9s}
+  @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:1}}
+  .promo .orbitg{animation:orbit 7s linear infinite}
+  @keyframes orbit{to{transform:rotate(360deg)}}
+  /* quick services grid */
+  .svcgrid{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 8px 14px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px 4px;margin-bottom:14px}
+  .svc{display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;border:none;background:none;font-family:inherit;padding:0;transition:transform .08s}
+  .svc:active{transform:scale(.93)}
+  .svc .si{width:47px;height:47px;border-radius:14px;display:flex;align-items:center;justify-content:center}
+  .svc span{font-size:11.5px;font-weight:700;color:var(--ink)}
+  .cattabs{display:flex;gap:24px;border-bottom:1.5px solid #DDE4F0;margin:2px 0 12px;position:sticky;top:0;background:linear-gradient(180deg,#F1F5FB,#F1F5FB);z-index:2}
+  .cattabs button{border:none;background:none;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--ink-soft);padding:11px 2px;cursor:pointer;border-bottom:2.5px solid transparent}
+  .cattabs button.on{color:var(--ink);border-color:var(--ink)}
+  .catnote{font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;line-height:1.55;font-weight:600}
+  .countryrow{
+    display:flex;align-items:center;gap:14px;background:#fff;border-radius:18px;
+    padding:15px 16px;margin-bottom:10px;cursor:pointer;box-shadow:var(--shadow);
+    transition:transform .06s ease;
+  }
+  .countryrow:active{transform:scale(.985)}
+  .countryrow .nm{flex:1;font-size:15px;font-weight:700}
+  .countryrow .pr{font-size:15px;font-weight:800;white-space:nowrap}
+  .countryrow .pr small{font-weight:700;color:var(--ink-soft);font-size:11.5px}
+  .fab{
+    position:absolute;right:16px;bottom:92px;width:54px;height:54px;border-radius:50%;
+    background:var(--orange);border:none;color:#fff;cursor:pointer;
+    box-shadow:0 8px 22px rgba(255,107,87,.5);z-index:5;display:flex;align-items:center;justify-content:center;
+  }
+
+  /* ---------- search overlay ---------- */
+  #search{background:rgba(28,29,48,.38)}
+  .searchpanel{background:#fff;margin:48px 14px 0;border-radius:18px;overflow:hidden;box-shadow:0 14px 44px rgba(0,0,0,.28);display:flex;flex-direction:column;max-height:70%}
+  .searchpanel .inputrow{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .searchpanel input{border:none;outline:none;flex:1;font-size:16px;font-family:inherit;color:var(--ink);font-weight:600}
+  .searchpanel input::placeholder{color:#97A4BA}
+  .searchpanel .results{overflow-y:auto}
+  .sresult{display:flex;align-items:center;gap:12px;padding:12px 16px;cursor:pointer;font-size:15px;font-weight:700}
+  .sresult:hover{background:#FAF6EF}
+  .shead{background:#E7EEF8;color:var(--ink-soft);font-size:13px;font-weight:700;padding:9px 16px}
+
+  /* ---------- country detail ---------- */
+  .opcard .oprow{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15.5px}
+  .opcard .cmprow{display:flex;align-items:center;justify-content:space-between;margin-top:13px;padding-top:13px;border-top:1px solid var(--line);font-size:14px;font-weight:700}
+  .dtabs{display:flex;margin:18px 0 0;border-bottom:1.5px solid #DDE4F0}
+  .dtabs button{flex:1;border:none;background:none;font-family:inherit;font-size:15px;font-weight:700;padding:12px;color:var(--ink-soft);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1.5px}
+  .dtabs button.on{color:var(--ink);border-color:var(--ink)}
+  .segment{display:flex;background:#E1E8F4;border-radius:999px;padding:4px;margin:16px 0}
+  .segment button{flex:1;border:none;border-radius:999px;padding:11px;font-family:inherit;font-size:14px;font-weight:700;background:none;color:var(--ink);cursor:pointer}
+  .segment button.on{background:var(--ink);color:#fff}
+  .validity{font-size:13.5px;font-weight:800;color:var(--ink);margin:16px 2px 8px}
+  .pkg{
+    display:flex;align-items:center;justify-content:space-between;background:#fff;
+    border:2px solid transparent;border-radius:16px;padding:16px 18px;margin-bottom:10px;
+    cursor:pointer;box-shadow:var(--shadow);font-size:16px;font-weight:800;
+  }
+  .pkg small{font-weight:700;color:var(--ink-soft);font-size:12px}
+  .pkg.sel{border-color:var(--orange)}
+  .pdbtn{display:flex;align-items:center;justify-content:center;gap:9px;background:#fff;border:1.5px solid #D8E1EF;border-radius:999px;padding:14px;font-size:14.5px;font-weight:700;width:100%;cursor:pointer;font-family:inherit;margin:6px 0 10px;color:var(--ink)}
+  .buynote{font-size:12px;color:var(--ink-soft);text-align:center;line-height:1.55;margin-bottom:8px;font-weight:600}
+  .buybar{
+    flex-shrink:0;background:rgba(246,250,254,.96);backdrop-filter:blur(10px);
+    border-top:1px solid #DDE4F0;padding:10px 16px 22px;position:relative;
+  }
+  .buybar::before{content:"";display:block;width:44px;height:5px;border-radius:3px;background:#C8D3E5;margin:0 auto 10px}
+  .buybar .totrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;font-size:14px;font-weight:700}
+  .buybar .totrow b{font-size:20px;font-weight:800}
+  .faq{background:#fff;border-radius:16px;padding:15px 17px;margin-bottom:10px;cursor:pointer;box-shadow:var(--shadow)}
+  .faq .q{display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:700;gap:10px}
+  .faq .a{display:none;margin-top:10px;font-size:13.5px;color:var(--ink-soft);line-height:1.65;font-weight:600}
+  .faq.open .a{display:block}
+  .faq .car{transition:transform .2s;color:var(--ink-soft);flex-shrink:0}
+  .faq.open .car{transform:rotate(180deg)}
+
+  /* ---------- package details ---------- */
+  .pd-item{margin-bottom:20px}
+  .pd-item .hd{display:flex;align-items:center;gap:11px;font-size:15px;font-weight:800;margin-bottom:6px}
+  .pd-item .hd svg{flex-shrink:0}
+  .pd-item p{font-size:13.5px;color:var(--ink-soft);line-height:1.65;font-weight:600}
+
+  /* ---------- checkout ---------- */
+  .paysec{font-size:13px;font-weight:800;color:var(--ink);text-align:center;margin:16px 0 10px;display:flex;align-items:center;gap:12px}
+  .paysec::before,.paysec::after{content:"";flex:1;height:1px;background:#E5DBC9}
+  .payopt{
+    display:flex;align-items:center;gap:13px;background:#fff;border:2px solid transparent;
+    border-radius:16px;padding:14px 16px;margin-bottom:10px;cursor:pointer;
+    font-size:14.5px;font-weight:700;box-shadow:var(--shadow);
+  }
+  .payopt.sel{border-color:var(--orange)}
+  .payopt .plogo{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:13px;color:#fff}
+  .payopt .sub{display:block;font-size:11.5px;font-weight:600;color:var(--ink-soft);margin-top:2px}
+  .payopt .arr{margin-left:auto;color:var(--ink-soft)}
+  .upibadge{background:#E7F4E9;color:#1F7A40;font-size:10px;font-weight:800;border-radius:6px;padding:3px 8px;margin-left:auto;letter-spacing:.03em}
+
+  /* ---------- order complete ---------- */
+  .oc-art{text-align:center;padding:14px 0 8px}
+  .oc-art svg{width:150px}
+  .oc h2{text-align:center;margin-bottom:6px}
+  .oc .sub{text-align:center;font-size:14px;color:var(--ink-soft);line-height:1.65;margin-bottom:16px;padding:0 12px;font-weight:600}
+
+  /* ---------- my esims ---------- */
+  .refbanner{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);cursor:pointer;font-size:13.5px;font-weight:700;line-height:1.4}
+  .coin{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#FFE9A8,#F5B93F 70%);box-shadow:inset 0 -2px 4px rgba(160,100,0,.35);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#8A5A00}
+  .esimcard{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
+  .esimcard .hd{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+  .esimcard .hd .nm{font-size:18px;font-weight:800}
+  .esimcard .lbl{font-size:13px;font-weight:800;color:var(--ink);margin:14px 0 8px}
+  .statgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat{background:#EAF0F9;border-radius:12px;padding:10px 13px}
+  .stat .k{font-size:11.5px;color:var(--ink-soft);font-weight:700;display:flex;gap:6px;align-items:center}
+  .stat .v{font-size:15px;font-weight:800;margin-top:3px}
+  .renewrow{display:flex;align-items:center;justify-content:space-between;background:#EAF0F9;border-radius:12px;padding:12px 13px;margin-top:10px;font-size:13.5px;font-weight:700}
+  .togglelbl{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-soft);font-weight:700}
+  .dot-off{width:8px;height:8px;border-radius:50%;background:#BFCBDD}
+  .esimcard .actions{display:grid;gap:10px;margin-top:15px}
+
+  /* ---------- switch ---------- */
+  .switch{width:48px;height:29px;border-radius:999px;background:#DDD2C0;border:none;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:23px;height:23px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25);transition:left .2s}
+  .switch.on{background:var(--orange)}
+  .switch.on::after{left:22px}
+
+  /* ---------- install ---------- */
+  .install-steps{counter-reset:st}
+  .istep{display:flex;gap:14px;margin-bottom:18px}
+  .istep .n{counter-increment:st;width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .istep .n::before{content:counter(st)}
+  .istep h4{font-size:15px;font-weight:800;margin-bottom:3px}
+  .istep p{font-size:13.5px;color:var(--ink-soft);line-height:1.6;font-weight:600}
+  .qrwrap{width:158px;margin:6px auto 16px;background:#fff;border-radius:14px;padding:10px;box-shadow:var(--shadow)}
+  .modal-backdrop{position:absolute;inset:0;background:rgba(28,29,48,.5);z-index:60;display:none;align-items:center;justify-content:center;padding:26px}
+  .modal-backdrop.open{display:flex}
+  .modal{background:#F2F6FB;border-radius:26px;padding:28px 22px;text-align:center;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.4)}
+  .modal .ck{width:78px;height:78px;border-radius:50%;background:var(--mint);display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+  .modal h3{font-size:20px;margin-bottom:8px}
+  .modal p{font-size:14px;color:var(--ink-soft);line-height:1.65;margin-bottom:14px;font-weight:600}
+  .tipbox{background:#fff;border-radius:14px;padding:13px 15px;font-size:13px;color:var(--ink-soft);display:flex;gap:9px;text-align:left;line-height:1.55;margin-bottom:18px;font-weight:600}
+
+  /* ---------- profile ---------- */
+  .avatar{width:66px;height:66px;border-radius:50%;background:linear-gradient(140deg,#FF8A73,var(--orange-deep));color:#fff;font-size:26px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:4px auto 10px}
+  .profname{text-align:center;font-size:19px;font-weight:800}
+  .profmail{text-align:center;font-size:13px;color:var(--ink-soft);margin-bottom:18px;font-weight:600}
+  .menu{background:#fff;border-radius:18px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px}
+  .mitem{display:flex;align-items:center;gap:14px;padding:15px 17px;font-size:14.5px;font-weight:700;cursor:pointer;border-bottom:1px solid var(--line)}
+  .mitem:last-child{border-bottom:none}
+  .mitem .mi{width:26px;text-align:center;flex-shrink:0;display:flex;justify-content:center}
+  .mitem .val{margin-left:auto;color:var(--ink-soft);font-size:13px;font-weight:700}
+  .mitem .car{color:#B2BFD4}
+  .mitem .car:first-of-type{margin-left:0}
+
+  /* ---------- compatibility checker ---------- */
+  .dialcode{display:block;text-align:center;background:var(--ink);color:#fff;font-family:ui-monospace,Consolas,monospace;font-size:34px;font-weight:700;letter-spacing:.12em;border-radius:16px;padding:18px;margin:6px 0 8px}
+  .devlist{background:#fff;border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin:10px 0}
+  .devrow{display:flex;align-items:center;gap:12px;padding:13px 16px;font-size:14px;font-weight:700;border-bottom:1px solid var(--line)}
+  .devrow:last-child{border-bottom:none}
+  .devrow .ok{margin-left:auto;color:#1F7A40;font-weight:800;font-size:13px;white-space:nowrap}
+  .devrow .brand{width:26px;text-align:center;font-weight:800;color:var(--ink-soft)}
+
+  /* ---------- AI assistant chat ---------- */
+  #assistsheet{top:0;height:100%;max-height:100%;border-radius:0}
+  #assistsheet .grab{display:none}
+  .chathead{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex-shrink:0}
+  .chathead .cbot{width:40px;height:40px;border-radius:50%;background:linear-gradient(140deg,#FF8A73,#E85340);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .chathead .nm{font-size:15.5px;font-weight:800}
+  .chathead .st{font-size:12px;color:var(--ink-soft);font-weight:600}
+  .chatlog{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px;scrollbar-width:none}
+  .chatlog::-webkit-scrollbar{display:none}
+  .cmsg{max-width:82%;padding:11px 14px;border-radius:16px;font-size:14px;line-height:1.55;font-weight:600;white-space:pre-wrap;word-break:break-word}
+  .cmsg.user{align-self:flex-end;background:var(--orange);color:#fff;border-bottom-right-radius:6px}
+  .cmsg.bot{align-self:flex-start;background:#fff;color:var(--ink);border-bottom-left-radius:6px;box-shadow:var(--shadow)}
+  .cmsg.typing{display:flex;gap:5px;align-items:center;padding:14px 16px}
+  .cmsg.typing i{width:7px;height:7px;border-radius:50%;background:#B2BFD4;animation:dotPulse 1s infinite;font-style:normal}
+  .cmsg.typing i:nth-child(2){animation-delay:.15s}
+  .cmsg.typing i:nth-child(3){animation-delay:.3s}
+  .chatchips{display:flex;gap:8px;padding:0 16px 10px;flex-wrap:wrap;flex-shrink:0}
+  .chip-q{background:#fff;border:1.5px solid #D8E1EF;border-radius:999px;padding:8px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--ink)}
+  .chatinput{display:flex;gap:10px;padding:10px 14px 20px;border-top:1px solid var(--line);flex-shrink:0}
+  .chatinput input{flex:1;padding:13px 16px;border:1.5px solid #D8E1EF;border-radius:999px;background:#fff;font-size:14.5px;font-family:inherit;color:var(--ink)}
+  .chatinput input:focus{outline:none;border-color:var(--orange)}
+  .chatinput button{width:46px;height:46px;border-radius:50%;background:var(--orange);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(255,107,87,.35)}
+
+  /* ---------- toast ---------- */
+  #toast{
+    position:absolute;left:50%;transform:translateX(-50%);bottom:104px;z-index:80;
+    background:var(--ink);color:#fff;font-size:13px;font-weight:700;padding:12px 19px;
+    border-radius:999px;opacity:0;pointer-events:none;transition:opacity .25s;white-space:nowrap;
+  }
+  #toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="phone">
+
+<!-- ============ svg sprite ============ -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <g id="i-back"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-close"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></g>
+    <g id="i-search"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15.5 15.5L20 20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></g>
+    <g id="i-chev"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-arr"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-store"><path d="M4.5 9.5h15l-1.2 10a2 2 0 01-2 1.8H7.7a2 2 0 01-2-1.8L4.5 9.5z" fill="none" stroke-width="1.9" stroke-linejoin="round"/><path d="M8.5 12V7a3.5 3.5 0 017 0v5" fill="none" stroke-width="1.9" stroke-linecap="round"/></g>
+    <g id="i-sim"><rect x="5" y="3.5" width="14" height="17" rx="3" fill="none" stroke-width="1.9"/><rect x="8.5" y="11" width="7" height="6" rx="1.4" fill="none" stroke-width="1.7"/><path d="M14 3.5l5 5" stroke-width="0" /></g>
+    <g id="i-user"><circle cx="12" cy="8.2" r="3.7" fill="none" stroke-width="1.9"/><path d="M5 20c.8-3.6 3.6-5.4 7-5.4s6.2 1.8 7 5.4" fill="none" stroke-width="1.9" stroke-linecap="round"/></g>
+    <g id="i-chat"><path d="M12 4c4.7 0 8.5 3.2 8.5 7.2S16.7 18.4 12 18.4c-.9 0-1.8-.1-2.6-.3L5 20l1.2-3.4C4.6 15.3 3.5 13.4 3.5 11.2 3.5 7.2 7.3 4 12 4z" fill="#fff"/></g>
+    <g id="i-phone"><rect x="7" y="2.5" width="10" height="19" rx="2.5" fill="none" stroke-width="1.9"/><path d="M10.5 18.5h3" stroke-width="1.9" stroke-linecap="round"/></g>
+  </defs>
+</svg>
+
+  <!-- ============ SPLASH ============ -->
+  <div class="screen active" id="splash">
+    <div class="statusbar"><span>9:41</span><span class="sicons">
+      <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#23253A"/><rect x="4.5" y="4" width="3" height="7" rx="1" fill="#23253A"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#23253A"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#23253A" opacity=".35"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" fill="none" stroke="#23253A" opacity=".4"/><rect x="2" y="2" width="18" height="8" rx="2" fill="#23253A"/><path d="M23.5 4v4a2 2 0 000-4z" fill="#23253A" opacity=".4"/></svg>
+    </span></div>
+    <div class="welcome-body">
+      <svg class="bgart" viewBox="0 0 400 900" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <radialGradient id="sgA"><stop offset="0%" stop-color="#FF6B57" stop-opacity=".22"/><stop offset="100%" stop-color="#FF6B57" stop-opacity="0"/></radialGradient>
+          <radialGradient id="sgB"><stop offset="0%" stop-color="#7B6CFF" stop-opacity=".28"/><stop offset="100%" stop-color="#7B6CFF" stop-opacity="0"/></radialGradient>
+        </defs>
+        <circle cx="330" cy="110" r="190" fill="url(#sgB)"/>
+        <circle cx="60" cy="720" r="190" fill="url(#sgA)"/>
+        <g fill="#C9CEF5">
+          <circle cx="58" cy="94" r="1.8" opacity=".5"/><circle cx="142" cy="56" r="1.3" opacity=".38"/><circle cx="332" cy="78" r="1.8" opacity=".55"/>
+          <circle cx="262" cy="40" r="1.2" opacity=".4"/><circle cx="372" cy="168" r="1.4" opacity=".42"/><circle cx="28" cy="212" r="1.3" opacity=".38"/>
+          <circle cx="90" cy="640" r="1.4" opacity=".3"/><circle cx="330" cy="700" r="1.3" opacity=".3"/><circle cx="200" cy="760" r="1.2" opacity=".25"/>
+        </g>
+      </svg>
+      <div class="confetti" style="top:8%;left:12%;width:34px;height:15px;background:#F6DBA6;transform:rotate(22deg)"></div>
+      <div class="confetti" style="top:15%;right:12%;width:26px;height:26px;background:#CFE6D6;border-radius:50%"></div>
+      <div class="confetti" style="top:34%;left:6%;width:20px;height:20px;background:#CBE2DE;transform:rotate(35deg)"></div>
+      <div class="confetti" style="bottom:24%;right:8%;width:22px;height:22px;background:#F6C185;transform:rotate(-15deg)"></div>
+      <div class="confetti" style="bottom:12%;left:14%;width:36px;height:14px;background:#CBE2DE;transform:rotate(30deg)"></div>
+      <div class="confetti" style="top:55%;right:4%;width:16px;height:34px;background:#F9E3BC;transform:rotate(-25deg);opacity:.5"></div>
+      <div class="splash-logo">
+        <div class="splash-mark">
+          <svg class="imap" viewBox="0 0 200 200">
+            <circle cx="100" cy="100" r="82" fill="#EAE9F3"/>
+            <circle cx="100" cy="100" r="82" fill="none" stroke="#C9CBE0" stroke-width="2"/>
+            <g class="ring">
+              <circle cx="100" cy="100" r="90" fill="none" stroke="#C6C9E2" stroke-width="1.5" stroke-dasharray="6 6"/>
+              <circle cx="100" cy="100" r="96" fill="none" stroke="#9FA5D4" stroke-width="3.5" stroke-dasharray="0.6 11" stroke-linecap="round" opacity=".8"/>
+            </g>
+            <ellipse cx="100" cy="100" rx="38" ry="82" fill="none" stroke="#C9CBE0" stroke-width="1.8"/>
+            <path d="M18 100h164" stroke="#C9CBE0" stroke-width="1.8"/>
+            <path d="M26 64 Q100 44 174 64" fill="none" stroke="#C9CBE0" stroke-width="1.8"/>
+            <path d="M26 136 Q100 156 174 136" fill="none" stroke="#C9CBE0" stroke-width="1.8"/>
+            <path d="M62 74 Q74 62 84 72 Q92 84 84 98 Q78 116 68 122 Q58 112 56 96 Q54 82 62 74 Z" fill="#C9E0CE"/>
+            <path d="M108 60 Q124 52 138 60 Q150 68 146 80 Q140 86 132 86 Q130 98 124 108 Q118 100 116 90 Q106 84 104 72 Q104 64 108 60 Z" fill="#C9E0CE"/>
+            <ellipse cx="140" cy="126" rx="9" ry="7" fill="#C9E0CE"/>
+            <circle cx="48" cy="128" r="3.5" fill="#F08A76"/>
+            <path d="M48 128 Q72 58 144 70" fill="none" stroke="#F08A76" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="1 8"/>
+          </svg>
+          <svg class="plane" width="72" height="72" viewBox="0 0 32 32" style="position:absolute;left:98px;top:22px"><path d="M29 4L3 14.5l8.2 3.4L26 7.5 14.2 19.8l1 8.2 4.3-5.6 6 2.6z" fill="#FF6B57"/><path d="M11.2 17.9l3 1.9-1 8.2-2-6.6z" fill="#E85340"/></svg>
+        </div>
+        <div class="splash-word"><em>mobi</em>yatri</div>
+        <div class="tricolor"></div>
+        <div class="splash-tag">Travel data for Indian tourists</div>
+        <div class="splash-tag hindi" style="animation-delay:.75s;margin-top:2px;color:var(--orange)">शुभ यात्रा!</div>
+        <div class="loaddots"><span></span><span></span><span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ WELCOME ============ -->
+  <div class="screen" id="welcome">
+    <div class="statusbar"><span>9:41</span><span class="sicons">
+      <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#23253A"/><rect x="4.5" y="4" width="3" height="7" rx="1" fill="#23253A"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#23253A"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#23253A" opacity=".35"/></svg>
+      <svg width="16" height="11" viewBox="0 0 16 11"><path d="M8 9.5a1.4 1.4 0 100 .01zM4.9 7.2a4.6 4.6 0 016.2 0l-1.3 1.4a2.7 2.7 0 00-3.6 0zM2 4.4a8.6 8.6 0 0112 0l-1.3 1.4a6.7 6.7 0 00-9.4 0z" fill="#23253A"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" fill="none" stroke="#23253A" opacity=".4"/><rect x="2" y="2" width="18" height="8" rx="2" fill="#23253A"/><path d="M23.5 4v4a2 2 0 000-4z" fill="#23253A" opacity=".4"/></svg>
+    </span></div>
+    <div class="welcome-body">
+      <svg class="bgart" viewBox="0 0 400 900" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <radialGradient id="wgA"><stop offset="0%" stop-color="#FF6B57" stop-opacity=".30"/><stop offset="100%" stop-color="#FF6B57" stop-opacity="0"/></radialGradient>
+          <radialGradient id="wgB"><stop offset="0%" stop-color="#7B6CFF" stop-opacity=".30"/><stop offset="100%" stop-color="#7B6CFF" stop-opacity="0"/></radialGradient>
+          <radialGradient id="wgC"><stop offset="0%" stop-color="#3ED6C0" stop-opacity=".20"/><stop offset="100%" stop-color="#3ED6C0" stop-opacity="0"/></radialGradient>
+        </defs>
+        <circle cx="340" cy="90" r="190" fill="url(#wgB)"/>
+        <circle cx="30" cy="380" r="170" fill="url(#wgC)"/>
+        <circle cx="330" cy="660" r="180" fill="url(#wgA)"/>
+        <g fill="#C9CEF5">
+          <circle cx="58" cy="64" r="1.8" opacity=".55"/><circle cx="142" cy="36" r="1.3" opacity=".4"/><circle cx="332" cy="58" r="1.8" opacity=".6"/>
+          <circle cx="262" cy="26" r="1.2" opacity=".4"/><circle cx="372" cy="128" r="1.4" opacity=".45"/><circle cx="28" cy="152" r="1.3" opacity=".4"/>
+          <circle cx="205" cy="80" r="1.2" opacity=".35"/><circle cx="92" cy="112" r="1.2" opacity=".35"/><circle cx="360" cy="300" r="1.4" opacity=".35"/>
+          <circle cx="40" cy="520" r="1.4" opacity=".3"/><circle cx="150" cy="560" r="1.2" opacity=".25"/><circle cx="330" cy="480" r="1.3" opacity=".3"/>
+        </g>
+        <g stroke="#8A93E8" stroke-width="1" opacity=".32" fill="none">
+          <path d="M60 210L150 170L235 195L318 150M150 170L190 110M235 195L262 260"/>
+        </g>
+        <g fill="#AEB6F2">
+          <circle cx="60" cy="210" r="2.6"/><circle cx="150" cy="170" r="2.2"/><circle cx="235" cy="195" r="2.6"/><circle cx="318" cy="150" r="2.2"/><circle cx="190" cy="110" r="2"/><circle cx="262" cy="260" r="2"/>
+        </g>
+        <circle cx="235" cy="195" r="5.5" fill="none" stroke="#FF8A73" stroke-width="1.2" opacity=".6"/>
+        <path d="M-20 620 Q140 430 300 480 T460 420" fill="none" stroke="#FF8A73" stroke-width="6" stroke-linecap="round" opacity=".08"/>
+        <path d="M-20 620 Q140 430 300 480 T460 420" fill="none" stroke="#FF8A73" stroke-width="1.8" stroke-dasharray="2 9" stroke-linecap="round" opacity=".55"/>
+        <g transform="translate(292 470) rotate(12)"><path d="M18 0L0 7l5.5 2.3L15.5 4l-7.7 8.2.7 5.5 2.9-3.8 4 1.8z" fill="#FF8A73"/></g>
+      </svg>
+      <div class="confetti" style="top:7%;left:10%;width:34px;height:15px;background:#F6DBA6;transform:rotate(22deg)"></div>
+      <div class="confetti" style="top:13%;right:11%;width:26px;height:26px;background:#CFE6D6;border-radius:50%"></div>
+      <div class="confetti" style="top:40%;left:5%;width:18px;height:18px;background:#F3C98F;border-radius:50%;opacity:.4"></div>
+      <div class="confetti" style="bottom:19%;left:8%;width:22px;height:22px;background:#F6C185;transform:rotate(-15deg)"></div>
+      <div class="confetti" style="bottom:11%;right:10%;width:36px;height:14px;background:#CBE2DE;transform:rotate(30deg)"></div>
+      <div class="confetti" style="top:26%;right:5%;width:16px;height:35px;background:#F9E3BC;transform:rotate(-25deg);opacity:.5"></div>
+      <svg class="paisley" style="top:19%;left:4%;width:34px;opacity:.5" viewBox="0 0 40 44"><path d="M20 4C32 8 36 22 28 32 22 40 10 40 6 32 2 24 8 20 12 22 18 25 22 20 18 14 16 10 17 6 20 4Z" fill="#F08A76"/></svg>
+      <svg class="paisley" style="bottom:15%;right:6%;width:30px;opacity:.45;transform:rotate(160deg)" viewBox="0 0 40 44"><path d="M20 4C32 8 36 22 28 32 22 40 10 40 6 32 2 24 8 20 12 22 18 25 22 20 18 14 16 10 17 6 20 4Z" fill="#8FC7A2"/></svg>
+      <svg class="paisley" style="left:0;right:0;bottom:-4px;width:100%;height:60px;opacity:.55" viewBox="0 0 560 64" preserveAspectRatio="xMidYMax slice">
+        <g fill="#D9DAE8">
+          <rect x="0" y="52" width="560" height="12"/>
+          <!-- Eiffel Tower -->
+          <path d="M18 52q11-5 13-16l2-16 2 16q2 11 13 16h-10q-4-5-5-9-1 4-5 9z"/>
+          <rect x="25" y="38" width="16" height="3"/>
+          <rect x="32" y="13" width="2.5" height="8"/>
+          <!-- Big Ben -->
+          <path d="M62 26l7-11 7 11z"/>
+          <path fill-rule="evenodd" d="M62 52V26h14v26zM73.5 33.5a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/>
+          <!-- Colosseum -->
+          <path fill-rule="evenodd" d="M92 52v-13q21-9 42 0v13zM99 52v-6a3.5 3.5 0 017 0v6zM109.5 52v-7a3.5 3.5 0 017 0v7zM120 52v-6a3.5 3.5 0 017 0v6z"/>
+          <!-- Pyramids of Giza -->
+          <path d="M146 52l20-25 14 18 8-10 15 17z"/>
+          <!-- Taj Mahal -->
+          <rect x="212" y="31" width="4" height="21" rx="2"/><circle cx="214" cy="28" r="3"/>
+          <rect x="220" y="46" width="44" height="6"/>
+          <path d="M230 46v-8q0-9 12-12 12 3 12 12v8z"/><rect x="240.5" y="21" width="3" height="6" rx="1.5"/>
+          <rect x="268" y="31" width="4" height="21" rx="2"/><circle cx="270" cy="28" r="3"/>
+          <!-- Burj Khalifa -->
+          <path d="M282 52l3-10h3l1.5-22 1.5-5 1.5 5 1.5 22h3l3 10z"/>
+          <!-- Great Wall -->
+          <rect x="306" y="38" width="44" height="14"/>
+          <rect x="308" y="34" width="5" height="5"/><rect x="317" y="34" width="5" height="5"/><rect x="335" y="34" width="5" height="5"/><rect x="344" y="34" width="5" height="5"/>
+          <rect x="324" y="26" width="10" height="26"/><rect x="324" y="22" width="3" height="5"/><rect x="331" y="22" width="3" height="5"/>
+          <!-- Statue of Liberty -->
+          <rect x="363" y="49" width="20" height="3"/>
+          <rect x="366" y="42" width="14" height="8"/>
+          <path d="M370 42q-1-8 3-10 4 2 3 10z"/>
+          <circle cx="373" cy="29" r="2.5"/>
+          <rect x="376.5" y="21" width="2.5" height="10" rx="1.2" transform="rotate(22 378 26)"/>
+          <circle cx="380" cy="20" r="2"/>
+          <!-- Sydney Opera House -->
+          <path d="M396 52q2-14 16-18-6 10-2 18zM414 52q2-16 18-20-7 11-3 20zM434 52q2-12 14-15-5 8-2 15z"/>
+          <!-- Chichen Itza -->
+          <path d="M460 52v-5h7v-7h7v-7h7v-7h10v7h7v7h7v7h7v5z"/>
+          <!-- Mt Fuji -->
+          <path d="M516 52l17-20 5 5 5-5 15 20z"/>
+        </g>
+      </svg>
+      <div class="welcome-art">
+        <svg viewBox="0 0 200 170">
+          <ellipse cx="100" cy="158" rx="58" ry="6" fill="#DDDBE6"/>
+          <g transform="translate(16 96)"><rect x="0" y="22" width="34" height="44" rx="7" fill="#E8813C"/><rect x="0" y="22" width="34" height="12" fill="#D96F2B"/><rect x="10" y="12" width="14" height="12" rx="4" fill="none" stroke="#B95A1E" stroke-width="4"/><rect x="6" y="40" width="22" height="4" rx="2" fill="#FBE0C3" opacity=".7"/></g>
+          <g transform="translate(152 118)"><ellipse cx="16" cy="40" rx="14" ry="5" fill="#C2CCDE"/><rect x="10" y="22" width="12" height="18" rx="4" fill="#C46A32"/><path d="M16 0C22 9 29 11 29 20a13 13 0 01-26 0C3 11 10 9 16 0z" fill="#6FA97F"/></g>
+          <!-- phone -->
+          <rect x="68" y="14" width="64" height="140" rx="15" fill="#2A2E5C"/>
+          <rect x="74" y="20" width="52" height="128" rx="10" fill="#F0F0F8"/>
+          <path d="M74 118c12-10 20-4 28-12s16-8 24-2v32a10 10 0 01-10 10H84a10 10 0 01-10-10z" fill="#8FC7A2"/>
+          <rect x="90" y="142" width="20" height="3.5" rx="1.75" fill="#2A2E5C" opacity=".22"/>
+          <!-- dashed eSIM slot -->
+          <rect x="81" y="40" width="38" height="50" rx="7" fill="none" stroke="#C9CBE0" stroke-width="2" stroke-dasharray="4.5 4.5"/>
+          <circle class="glowring" cx="100" cy="65" r="31" fill="none" stroke="#8FC7A2" stroke-width="2.5"/>
+          <!-- flying eSIM chip -->
+          <g class="sim">
+            <path d="M93 45 L108 45 Q115 45 115 52 L115 78 Q115 85 108 85 L92 85 Q85 85 85 78 L85 53 Z" fill="#F5B93F" stroke="#DA9A2B" stroke-width="1.5"/>
+            <rect x="93" y="57" width="14" height="16" rx="3" fill="none" stroke="#B87F17" stroke-width="1.5"/>
+            <path d="M100 57v16M93 65h14" stroke="#B87F17" stroke-width="1.2"/>
+          </g>
+          <!-- signal waves -->
+          <path class="wave w1" d="M136 32a8 8 0 000-12" fill="none" stroke="#FF6B57" stroke-width="2.5" stroke-linecap="round"/>
+          <path class="wave w2" d="M141 35a14 14 0 000-18" fill="none" stroke="#FF6B57" stroke-width="2.5" stroke-linecap="round"/>
+          <path class="wave w3" d="M146 38a20 20 0 000-24" fill="none" stroke="#FF6B57" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="wordmark"><svg width="30" height="30" viewBox="0 0 32 32"><path d="M29 4L3 14.5l8.2 3.4L26 7.5 14.2 19.8l1 8.2 4.3-5.6 6 2.6z" fill="#FF6B57"/><path d="M11.2 17.9l3 1.9-1 8.2-2-6.6z" fill="#E85340"/></svg><span class="txt"><em>mobi</em>yatri</span></div>
+      <h1>Welcome to MobiYatri</h1>
+      <div class="tricolor"></div>
+      <p class="muted" style="margin-top:10px;font-size:14px;font-weight:600"><span class="hindi">नमस्ते!</span> Travel data for Indian tourists — pay in ₹, connect anywhere.</p>
+      <div class="valueprops">
+        <div><span class="vicon"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M11 3h7a2 2 0 012 2v7l-9.6 9.6a2 2 0 01-2.8 0L3 17a2 2 0 010-2.8z" fill="none" stroke="#23253A" stroke-width="1.9" stroke-linejoin="round"/><circle cx="15.5" cy="8.5" r="1.6" fill="#23253A"/></svg></span> No expensive international roaming</div>
+        <div><span class="vicon"><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#23253A" stroke-width="1.9"/><path d="M3 12h18M12 3c2.8 2.6 4 5.6 4 9s-1.2 6.4-4 9c-2.8-2.6-4-5.6-4-9s1.2-6.4 4-9z" fill="none" stroke="#23253A" stroke-width="1.9"/></svg></span> Coverage in 190+ destinations</div>
+        <div><span class="vicon"><svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#23253A" stroke-width="1.9"/><path d="M8.5 12.2l2.4 2.4 4.8-5" fill="none" stroke="#23253A" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Connect in minutes, no physical SIM</div>
+        <div><span class="vicon"><svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 4c4.7 0 8.5 3.2 8.5 7.2S16.7 18.4 12 18.4c-.9 0-1.8-.1-2.6-.3L5 20l1.2-3.4C4.6 15.3 3.5 13.4 3.5 11.2 3.5 7.2 7.3 4 12 4z" fill="none" stroke="#23253A" stroke-width="1.9" stroke-linejoin="round"/></svg></span> 24/7 support in English &amp; Hindi</div>
+      </div>
+    </div>
+    <div class="welcome-actions">
+      <button class="btn btn-outline" onclick="openAuth()">Sign up / Log in</button>
+      <button class="btn btn-primary" onclick="go('store')">Explore eSIMs</button>
+    </div>
+  </div>
+
+  <!-- ============ STORE ============ -->
+  <div class="screen" id="store">
+    <div class="statusbar"><span>9:41</span><span class="sicons">
+      <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#23253A"/><rect x="4.5" y="4" width="3" height="7" rx="1" fill="#23253A"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#23253A"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#23253A" opacity=".35"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" fill="none" stroke="#23253A" opacity=".4"/><rect x="2" y="2" width="18" height="8" rx="2" fill="#23253A"/><path d="M23.5 4v4a2 2 0 000-4z" fill="#23253A" opacity=".4"/></svg>
+    </span></div>
+    <div class="storehead">
+      <div class="walletrow"><span class="lbl">Cashback</span><span class="walletchip">₹0.00</span></div>
+      <div class="hi"><span class="hindi">नमस्ते</span>, <span id="greet-name" class="hindi">यात्री</span></div>
+      <div class="searchbar" onclick="go('search')"><svg width="20" height="20" viewBox="0 0 24 24" style="color:#76819B"><use href="#i-search"/></svg><span class="ph">Where are you travelling to?</span></div>
+    </div>
+    <div class="scroll" id="storescroll">
+      <div class="promo">
+        <button class="info">i</button>
+        <div class="promo-viewport">
+        <div class="promo-track" id="promotrack">
+          <div class="promo-slide">
+            <div class="art">
+              <svg viewBox="0 0 140 100">
+                <rect x="46" y="4" width="48" height="88" rx="10" fill="#2A2E5C"/>
+                <rect x="50" y="8" width="40" height="80" rx="7" fill="#CFE4D8"/>
+                <path class="route" d="M56 78c6-16 2-22 10-30s2-16 8-24" fill="none" stroke="#fff" stroke-width="3.4" stroke-dasharray="1 6" stroke-linecap="round"/>
+                <g class="pin"><circle cx="74" cy="24" r="7" fill="#E8813C"/><circle cx="74" cy="24" r="2.8" fill="#fff"/></g>
+                <g transform="translate(8 40)"><circle cx="14" cy="8" r="8" fill="#F0A56B"/><path d="M2 44c1-14 5-22 12-22s11 8 12 22z" fill="#5C8DBF"/><rect x="20" y="14" width="10" height="16" rx="3" fill="#C46A32"/></g>
+                <g transform="translate(104 46)"><circle cx="12" cy="7" r="7" fill="#E8A06B"/><path d="M2 38c1-12 4-19 10-19s9 7 10 19z" fill="#C75B4A"/><path d="M4 16l-4 8M20 16l4 8" stroke="#E8A06B" stroke-width="3.4" stroke-linecap="round"/></g>
+              </svg>
+            </div>
+            <h3>New to MobiYatri?</h3>
+            <p>Let's pick the perfect eSIM together — learn how eSIMs work and get set for your next trip abroad.</p>
+          </div>
+          <div class="promo-slide">
+            <div class="art">
+              <svg viewBox="0 0 140 100">
+                <path class="tw" d="M28 22l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#F5C043"/>
+                <path class="tw t2" d="M108 14l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#F5C043"/>
+                <path class="tw t3" d="M112 62l1.8 4.4 4.4 1.8-4.4 1.8-1.8 4.4-1.8-4.4-4.4-1.8 4.4-1.8z" fill="#FF8A73"/>
+                <g class="coinhop">
+                  <ellipse cx="70" cy="82" rx="20" ry="4" fill="#C2CCDE" opacity=".55"/>
+                  <circle cx="70" cy="48" r="26" fill="#F5C043"/>
+                  <circle cx="70" cy="48" r="26" fill="none" stroke="#D99A22" stroke-width="3"/>
+                  <circle cx="70" cy="48" r="19" fill="none" stroke="#D99A22" stroke-width="1.4" opacity=".6"/>
+                  <text x="70" y="58" text-anchor="middle" font-size="28" font-weight="800" fill="#8A5A00">₹</text>
+                </g>
+              </svg>
+            </div>
+            <h3>Refer friends. Earn ₹150.</h3>
+            <p>Get ₹150 cashback for every friend you bring — they get a discount on their first eSIM.</p>
+          </div>
+          <div class="promo-slide">
+            <div class="art">
+              <svg viewBox="0 0 140 100">
+                <circle cx="70" cy="52" r="30" fill="#EAF3FB" stroke="#6B8FC9" stroke-width="2.2"/>
+                <ellipse cx="70" cy="52" rx="13" ry="30" fill="none" stroke="#6B8FC9" stroke-width="1.5" opacity=".55"/>
+                <path d="M40 52h60M45 37h50M45 67h50" stroke="#6B8FC9" stroke-width="1.5" opacity=".55"/>
+                <path d="M52 40l12-3 8 5-4 6-9 2z" fill="#8BC09A"/>
+                <path d="M74 58l9-2 5 4-4 8-7 1z" fill="#8BC09A"/>
+                <g class="orbitg" style="transform-origin:70px 52px">
+                  <g transform="translate(70 10) rotate(90)"><path d="M12 0L0 4.6l3.7 1.5L10.4 2.5 5.2 8l.5 3.7 2-2.6 2.7 1.2z" fill="#FF6B57"/></g>
+                </g>
+              </svg>
+            </div>
+            <h3>190+ countries. One app.</h3>
+            <p>Land, switch on, connect — trusted local networks across the world, paid in ₹.</p>
+          </div>
+        </div>
+        </div>
+        <div class="dots" id="promodots"><span class="on" onclick="setPromo(0)"></span><span onclick="setPromo(1)"></span><span onclick="setPromo(2)"></span></div>
+      </div>
+      <div class="svcgrid">
+        <button class="svc" onclick="svcCat('popular',0)">
+          <span class="si" style="background:#E7ECF8"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#33386E" stroke-width="1.9"><use href="#i-sim"/></svg></span>
+          <span>Country eSIM</span></button>
+        <button class="svc" onclick="svcCat('regional',2)">
+          <span class="si" style="background:#E2F1E6"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#1F7A40" stroke-width="1.9"><circle cx="12" cy="12" r="8.5"/><path d="M8 5.5c2 2.5-1 4 1 6.5s5 1 5 4" stroke-linecap="round"/></svg></span>
+          <span>Regional</span></button>
+        <button class="svc" onclick="svcCat('global',3)">
+          <span class="si" style="background:#FBF0DA"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="1.9"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5z"/></svg></span>
+          <span>Global</span></button>
+        <button class="svc" onclick="openInsurance()">
+          <span class="si" style="background:#FDE9E4"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#E85340" stroke-width="1.9"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span>Insurance</span></button>
+        <button class="svc" onclick="go('myesims')">
+          <span class="si" style="background:#FBF0DA"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="1.9"><path d="M4.5 9a8 8 0 0114-2.5M19.5 15a8 8 0 01-14 2.5M18.5 3v4h-4M5.5 21v-4h4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <span>Top-up</span></button>
+        <button class="svc" onclick="openCompat()">
+          <span class="si" style="background:#E7ECF8"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#33386E" stroke-width="1.9"><use href="#i-phone"/></svg></span>
+          <span>Device check</span></button>
+        <button class="svc" onclick="toast('Refer & earn ₹150 — coming with launch')">
+          <span class="si" style="background:#E2F1E6"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#1F7A40" stroke-width="1.9"><rect x="3.5" y="8" width="17" height="12" rx="2.5"/><path d="M3.5 12h17M12 8v12M12 8s-1-4.5-4-4.5S5.5 8 8 8m4 0s1-4.5 4-4.5S18.5 8 16 8" stroke-linecap="round"/></svg></span>
+          <span>Refer &amp; Earn</span></button>
+        <button class="svc" onclick="openAssistant()">
+          <span class="si" style="background:#FDE9E4"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#E85340" stroke-width="1.9"><path d="M12 4c4.7 0 8.5 3.2 8.5 7.2S16.7 18.4 12 18.4c-.9 0-1.8-.1-2.6-.3L5 20l1.2-3.4C4.6 15.3 3.5 13.4 3.5 11.2 3.5 7.2 7.3 4 12 4z" stroke-linejoin="round"/></svg></span>
+          <span>Ask AI</span></button>
+      </div>
+      <div class="cattabs" id="cattabs">
+        <button class="on" onclick="setCat('popular',this)">Popular</button>
+        <button onclick="setCat('countries',this)">Countries</button>
+        <button onclick="setCat('regional',this)">Regional</button>
+        <button onclick="setCat('global',this)">Global</button>
+      </div>
+      <div class="catnote" id="catnote">Top destinations for Indian travellers — packages start from the shown price.</div>
+      <div id="countrylist"></div>
+      <div style="height:16px"></div>
+    </div>
+    <button class="fab" title="Support" onclick="openAssistant()"><svg width="26" height="26" viewBox="0 0 24 24"><use href="#i-chat"/></svg></button>
+    <div class="tabbar">
+      <button class="on" onclick="go('store',this)"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><use href="#i-store"/></svg></span>Store</button>
+      <button onclick="go('myesims',this)"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><use href="#i-sim"/></svg></span>My eSIMs</button>
+      <button onclick="go('profile',this)"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><use href="#i-user"/></svg></span>Profile</button>
+    </div>
+  </div>
+
+  <!-- ============ SEARCH ============ -->
+  <div class="screen" id="search" onclick="if(event.target===this)go('store')">
+    <div class="searchpanel">
+      <div class="inputrow"><svg width="20" height="20" viewBox="0 0 24 24" style="color:#76819B"><use href="#i-search"/></svg><input id="searchinput" placeholder="Where are you travelling to?" oninput="doSearch(this.value)"><button class="closebtn" onclick="go('store')"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#i-close"/></svg></button></div>
+      <div class="results" id="searchresults"></div>
+    </div>
+  </div>
+
+  <!-- ============ COUNTRY DETAIL ============ -->
+  <div class="screen" id="country">
+    <div class="statusbar"><span>9:41</span><span class="sicons">
+      <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#23253A"/><rect x="4.5" y="4" width="3" height="7" rx="1" fill="#23253A"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#23253A"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#23253A" opacity=".35"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" fill="none" stroke="#23253A" opacity=".4"/><rect x="2" y="2" width="18" height="8" rx="2" fill="#23253A"/><path d="M23.5 4v4a2 2 0 000-4z" fill="#23253A" opacity=".4"/></svg>
+    </span></div>
+    <div class="topbar"><button class="backbtn" onclick="go('store')"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#i-back"/></svg></button><div class="title"></div><div style="width:38px"></div></div>
+    <div class="scroll">
+      <h1 id="cd-name" style="margin-bottom:12px">Thailand</h1>
+      <div class="card opcard">
+        <div class="oprow"><span class="flag" id="cd-flag"></span> <span id="cd-name2">Thailand</span></div>
+        <div class="oprow" style="margin-top:13px;font-size:14px"><svg width="18" height="18" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#23253A"/><rect x="4.5" y="4" width="3" height="7" rx="1" fill="#23253A"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#23253A"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#23253A"/></svg> <span id="cd-op">AIS</span> <span class="chip">5G</span> <u class="muted" style="font-size:12px;font-weight:700">+1 others</u></div>
+        <div class="cmprow" style="cursor:pointer" onclick="openCompat()"><span style="display:flex;align-items:center;gap:8px"><svg width="18" height="18" viewBox="0 0 24 24" style="color:#23253A" fill="none" stroke="currentColor"><use href="#i-phone"/></svg> Is this device compatible?</span><span class="pill">Check ›</span></div>
+      </div>
+      <div class="dtabs"><button class="on">Data</button><button onclick="toast('Data / Calls / Texts packs coming soon')">Data / Calls / Texts</button></div>
+      <div class="segment"><button class="on" id="seg-std" onclick="setSeg('std')">Standard</button><button id="seg-unl" onclick="setSeg('unl')">Unlimited</button></div>
+      <h3>Choose your package</h3>
+      <div id="pkglist"></div>
+      <button class="pdbtn" onclick="openSheet('pkgdetails')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 9h6M9 13h6M9 17h3" stroke-linecap="round"/></svg> Package details</button>
+      <div class="buynote">By completing your order, you confirm the intended device is eSIM-compatible and network-unlocked.</div>
+      <div class="divider"></div>
+      <div class="faq" onclick="this.classList.toggle('open')"><div class="q">When should I buy an eSIM? <svg class="car" width="18" height="18" viewBox="0 0 24 24"><use href="#i-chev"/></svg></div><div class="a">Buy any time before your trip — your validity only starts when the eSIM connects to a network at your destination.</div></div>
+      <div class="faq" onclick="this.classList.toggle('open')"><div class="q">When should I install my eSIM? <svg class="car" width="18" height="18" viewBox="0 0 24 24"><use href="#i-chev"/></svg></div><div class="a">Install on Wi-Fi before you fly, ideally the day before departure. Turn on data roaming for the eSIM line when you land.</div></div>
+      <div class="faq" onclick="this.classList.toggle('open')"><div class="q">Can I reuse my eSIM? <svg class="car" width="18" height="18" viewBox="0 0 24 24"><use href="#i-chev"/></svg></div><div class="a">Yes — keep the eSIM installed and simply top it up on your next trip to the same coverage area.</div></div>
+      <div class="faq" onclick="this.classList.toggle('open')"><div class="q">What are renewals? <svg class="car" width="18" height="18" viewBox="0 0 24 24"><use href="#i-chev"/></svg></div><div class="a">Renewals automatically add a fresh package when your data or validity runs low, so you never lose connection mid-trip.</div></div>
+      <button class="pdbtn" onclick="toast('Help centre')">Go to help center</button>
+      <h3 style="margin:14px 0 6px">Support</h3>
+      <p class="muted" style="font-size:13.5px;margin-bottom:10px;font-weight:600">Need help? We offer 24/7, multi-language support.</p>
+      <button class="pdbtn" onclick="openAssistant()">Contact support</button>
+      <button class="pdbtn" onclick="toast('Opening WhatsApp…')">Chat on WhatsApp</button>
+      <div style="height:8px"></div>
+    </div>
+    <div class="buybar">
+      <div class="totrow"><span class="muted">Total</span><b id="cd-total">₹329</b></div>
+      <button class="btn btn-primary" onclick="buyNow()">Buy now</button>
+    </div>
+  </div>
+
+  <!-- ============ CHECKOUT ============ -->
+  <div class="screen" id="checkout">
+    <div class="statusbar"><span>9:41</span><span class="sicons">
+      <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#23253A"/><rect x="4.5" y="4" width="3" height="7" rx="1" fill="#23253A"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#23253A"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#23253A" opacity=".35"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" fill="none" stroke="#23253A" opacity=".4"/><rect x="2" y="2" width="18" height="8" rx="2" fill="#23253A"/><path d="M23.5 4v4a2 2 0 000-4z" fill="#23253A" opacity=".4"/></svg>
+    </span></div>
+    <div class="topbar"><button class="backbtn" onclick="go('country')"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#i-back"/></svg></button><div class="title">Secure checkout</div><div style="width:38px"></div></div>
+    <div class="scroll">
+      <div id="ins-addon"></div>
+      <div class="paysec">Pay with UPI</div>
+      <div class="payopt sel" onclick="selPay(this)"><span class="plogo" style="background:#fff;border:1.5px solid #E9E2D5"><svg width="19" height="19" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></span><span>Google Pay<span class="sub">UPI · instant</span></span><span class="upibadge">RECOMMENDED</span></div>
+      <div class="payopt" onclick="selPay(this)"><span class="plogo" style="background:#5F259F">पे</span><span>PhonePe<span class="sub">UPI · instant</span></span></div>
+      <div class="payopt" onclick="selPay(this)"><span class="plogo" style="background:#00BAF2">Pt</span><span>Paytm UPI<span class="sub">UPI · instant</span></span></div>
+      <div class="payopt" onclick="selPay(this)"><span class="plogo" style="background:#EFE7D9;color:#6B6154">@</span><span>Other UPI ID<span class="sub">yourname@bank</span></span><span class="arr"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+      <div class="paysec">Pay with card</div>
+      <div class="payopt" onclick="selPay(this)"><span class="plogo" style="background:#EFE7D9"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B6154" stroke-width="1.9"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 9.5h19" stroke-linecap="round"/><path d="M6 15h5" stroke-linecap="round"/></svg></span><span>Add new card<span class="sub">Visa, Mastercard, RuPay, AMEX</span></span><span class="arr"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+      <div class="paysec">Cashback or code</div>
+      <div class="payopt" onclick="toast('No cashback available yet')"><span class="coin" style="width:34px;height:34px">₹</span><span>Use cashback or promo code</span><span class="arr"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+      <div style="height:10px"></div>
+    </div>
+    <div class="buybar">
+      <div class="totrow"><span class="muted">Total</span><b id="ck-total">₹329</b></div>
+      <button class="btn btn-primary" onclick="completeOrder()">Pay now</button>
+    </div>
+  </div>
+
+  <!-- ============ ORDER COMPLETE ============ -->
+  <div class="screen oc" id="ordercomplete">
+    <div class="statusbar"><span>9:41</span><span></span></div>
+    <div class="topbar"><div style="width:38px"></div><div class="title">Order complete</div><button class="closebtn" onclick="go('myesims')"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#i-close"/></svg></button></div>
+    <div class="scroll">
+      <div class="oc-art">
+        <svg viewBox="0 0 160 110">
+          <rect x="55" y="6" width="50" height="94" rx="10" fill="#F3D9BC"/>
+          <rect x="60" y="11" width="40" height="84" rx="7" fill="#FBF0DF"/>
+          <g transform="translate(66 30) rotate(-12)"><rect width="26" height="32" rx="5" fill="#E8813C"/><rect x="5" y="6" width="12" height="10" rx="2.5" fill="#FBE0C3"/><path d="M26 0l-7 7" stroke="#D96F2B" stroke-width="3"/></g>
+          <circle cx="112" cy="30" r="12" fill="#E8813C"/><path d="M108 26a5.5 5.5 0 018 0M116 34a5.5 5.5 0 01-8 0" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
+          <circle cx="42" cy="22" r="4" fill="#CFE6D6"/><circle cx="126" cy="72" r="5" fill="#F6DBA6"/>
+          <rect x="30" y="62" width="10" height="10" rx="2" fill="#F3C98F" transform="rotate(20 35 67)"/>
+        </svg>
+      </div>
+      <p class="sub hindi" style="margin-bottom:2px;font-size:16px;color:var(--orange);font-weight:800">शुभ यात्रा!</p>
+      <h2>Never run out of data</h2>
+      <p class="sub">Automatically renew your eSIM package when you need more data. Turn renewals on and off, as you need.</p>
+      <button class="pdbtn" onclick="toast('Renewals add a fresh pack when you run low')">How renewals work</button>
+      <div class="card" id="ins-upsell" style="margin:14px 0;display:flex;gap:13px;align-items:center;cursor:pointer" onclick="openInsurance()">
+        <span style="width:44px;height:44px;border-radius:12px;background:#E2EBF9;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#33386E" stroke-width="1.9"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span style="flex:1"><b style="font-size:14.5px">Protect your trip</b><br><span class="muted" style="font-size:12.5px;font-weight:600">Medical + baggage + delay cover from ~₹350 · required for Schengen visas</span></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#B2BFD4"><use href="#i-arr"/></svg>
+      </div>
+      <div class="divider"></div>
+      <h3 style="margin-bottom:10px;display:flex;align-items:center;gap:9px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#23253A"><use href="#i-sim"/></svg> You've got your eSIM. What next?</h3>
+      <div class="faq" onclick="this.classList.toggle('open')"><div class="q">When to install your eSIM <svg class="car" width="18" height="18" viewBox="0 0 24 24"><use href="#i-chev"/></svg></div><div class="a">Install on Wi-Fi before you fly. Your validity starts only when you connect at your destination.</div></div>
+      <div class="faq" onclick="this.classList.toggle('open')"><div class="q">How to avoid roaming charges <svg class="car" width="18" height="18" viewBox="0 0 24 24"><use href="#i-chev"/></svg></div><div class="a">Turn OFF data roaming on your Jio / Airtel / Vi line abroad, and use only your MobiYatri eSIM line for mobile data.</div></div>
+      <div style="height:10px"></div>
+    </div>
+    <div class="buybar" style="display:grid;gap:10px">
+      <button class="btn btn-primary" onclick="go('myesims')">Go to My eSIMs</button>
+      <button class="btn btn-deep" onclick="openSheet('installsheet')">Install or share</button>
+    </div>
+  </div>
+
+  <!-- ============ MY ESIMS ============ -->
+  <div class="screen" id="myesims">
+    <div class="statusbar"><span>9:41</span><span class="sicons">
+      <svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="6" width="3" height="5" rx="1" fill="#23253A"/><rect x="4.5" y="4" width="3" height="7" rx="1" fill="#23253A"/><rect x="9" y="2" width="3" height="9" rx="1" fill="#23253A"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#23253A" opacity=".35"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" fill="none" stroke="#23253A" opacity=".4"/><rect x="2" y="2" width="18" height="8" rx="2" fill="#23253A"/><path d="M23.5 4v4a2 2 0 000-4z" fill="#23253A" opacity=".4"/></svg>
+    </span></div>
+    <div class="storehead">
+      <div class="walletrow"><span class="lbl">Cashback</span><span class="walletchip">₹150</span></div>
+      <div class="hi">My eSIMs</div>
+    </div>
+    <div class="scroll">
+      <div class="refbanner" onclick="toast('Referral programme')"><span class="coin">₹</span><span>Get ₹150 cashback for each friend you refer</span><span style="margin-left:auto;color:#B2BFD4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+      <div id="esimlist"><div class="card" style="text-align:center;padding:34px 20px" id="noesims">
+        <div style="margin-bottom:12px"><svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#BCC9DB" stroke-width="1.4"><use href="#i-sim"/></svg></div>
+        <h3 style="margin-bottom:6px">No eSIMs yet</h3>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;font-weight:600">Buy your first eSIM and it will appear here, ready to install.</p>
+        <button class="btn btn-primary" onclick="go('store')">Browse eSIMs</button>
+      </div></div>
+      <div style="height:16px"></div>
+    </div>
+    <div class="tabbar">
+      <button onclick="go('store',this)"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><use href="#i-store"/></svg></span>Store</button>
+      <button class="on" onclick="go('myesims',this)"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><use href="#i-sim"/></svg></span>My eSIMs</button>
+      <button onclick="go('profile',this)"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><use href="#i-user"/></svg></span>Profile</button>
+    </div>
+  </div>
+
+  <!-- ============ ESIM DETAIL ============ -->
+  <div class="screen" id="esimdetail">
+    <div class="statusbar"><span>9:41</span><span></span></div>
+    <div class="topbar"><button class="backbtn" onclick="go('myesims')"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#i-back"/></svg></button><div class="title" id="ed-title">Thailand</div><div style="width:38px"></div></div>
+    <div class="scroll">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h3>Renewals</h3>
+          <button class="switch" onclick="this.classList.toggle('on');toast(this.classList.contains('on')?'Renewals on':'Renewals off')"></button>
+        </div>
+        <p class="muted" style="font-size:13.5px;margin-top:6px;line-height:1.65;font-weight:600">Turn on to automatically renew your package when your eSIM has 10% data remaining.</p>
+        <button class="pdbtn" style="margin-top:12px" onclick="toast('Add a payment method')">Add payment method</button>
+        <button class="pdbtn" onclick="openSheet('pkgdetails')">Package info</button>
+        <button class="pdbtn" style="margin-bottom:0" onclick="toast('Renewals explainer')">How renewals work</button>
+      </div>
+      <h3 style="margin:16px 0 8px">Ready to use your eSIM?</h3>
+      <div class="card">
+        <div style="display:flex;gap:10px;align-items:center;font-weight:800;font-size:15px"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#23253A"><use href="#i-sim"/></svg> Install your eSIM</div>
+        <p class="muted" style="font-size:13.5px;margin:8px 0 12px;line-height:1.65;font-weight:600">Installation takes a few minutes — <b style="color:var(--ink)">you only need to do this once.</b></p>
+        <button class="pdbtn" style="margin:0" onclick="openSheet('installsheet')">Install or share</button>
+      </div>
+      <div class="faq" style="margin-top:14px" onclick="this.classList.toggle('open')"><div class="q">Package history <svg class="car" width="18" height="18" viewBox="0 0 24 24"><use href="#i-chev"/></svg></div><div class="a" id="pkg-history">Thailand 1 GB · 7 days — purchased today · ₹329</div></div>
+      <h3 style="margin:16px 0 8px">Troubleshooting and FAQs</h3>
+      <div class="faq" onclick="this.classList.toggle('open')"><div class="q">When should I install my eSIM? <svg class="car" width="18" height="18" viewBox="0 0 24 24"><use href="#i-chev"/></svg></div><div class="a">On Wi-Fi, before departure. Activation completes once you connect at your destination.</div></div>
+      <div class="faq" onclick="this.classList.toggle('open')"><div class="q">Where can I see that my eSIM is installed? <svg class="car" width="18" height="18" viewBox="0 0 24 24"><use href="#i-chev"/></svg></div><div class="a">Settings → Mobile Data (iPhone) or Settings → SIMs (Android). Your MobiYatri line will be listed there.</div></div>
+      <div class="faq" onclick="this.classList.toggle('open')"><div class="q">Why is my eSIM not working? <svg class="car" width="18" height="18" viewBox="0 0 24 24"><use href="#i-chev"/></svg></div><div class="a">Check that data roaming is ON for the MobiYatri line and that you're inside the coverage area, then restart your phone.</div></div>
+      <div style="height:8px"></div>
+    </div>
+    <div class="buybar"><button class="btn btn-deep" onclick="openSheet('installsheet')">Install or share</button></div>
+  </div>
+
+  <!-- ============ PROFILE ============ -->
+  <div class="screen" id="profile">
+    <div class="statusbar"><span>9:41</span><span></span></div>
+    <div class="storehead"><div class="hi">Profile</div></div>
+    <div class="scroll">
+      <div class="avatar">G</div>
+      <div class="profname" id="prof-name">Guest</div>
+      <div class="profmail" id="prof-mail" style="cursor:pointer;text-decoration:underline" onclick="openAuth()">Sign in / create account</div>
+      <div class="menu">
+        <div class="mitem" onclick="toast('Cashback wallet')"><span class="mi"><span class="coin" style="width:24px;height:24px;font-size:11px">₹</span></span>Cashback wallet<span class="val">₹150</span><span class="car"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+        <div class="mitem" onclick="toast('Refer & earn ₹150')"><span class="mi"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><rect x="3.5" y="8" width="17" height="12" rx="2.5"/><path d="M3.5 12h17M12 8v12M12 8s-1-4.5-4-4.5S5.5 8 8 8m4 0s1-4.5 4-4.5S18.5 8 16 8" stroke-linecap="round"/></svg></span>Refer &amp; earn<span class="car" style="margin-left:auto"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+        <div class="mitem" onclick="toast('Order history')"><span class="mi"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M9 8.5h6M9 12h6M9 15.5h3" stroke-linecap="round"/></svg></span>Order history<span class="car" style="margin-left:auto"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+        <div class="mitem" onclick="openInsurance()"><span class="mi"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Travel insurance<span class="car" style="margin-left:auto"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+      </div>
+      <div class="menu">
+        <div class="mitem" onclick="toast('Currency')"><span class="mi" style="font-weight:800;font-size:16px">₹</span>Currency<span class="val">INR</span><span class="car"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+        <div class="mitem" onclick="toast('Language')"><span class="mi"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5z"/></svg></span>Language<span class="val">English</span><span class="car"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+        <div class="mitem" onclick="toast('Notifications')"><span class="mi"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><path d="M6 10a6 6 0 0112 0c0 4 1.5 5.5 1.5 5.5h-15S6 14 6 10z" stroke-linejoin="round"/><path d="M10 18.5a2 2 0 004 0" stroke-linecap="round"/></svg></span>Notifications<span class="car" style="margin-left:auto"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+      </div>
+      <div class="menu">
+        <div class="mitem" onclick="openCompat()"><span class="mi"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#23253A"><use href="#i-phone"/></svg></span>Check device compatibility<span class="car" style="margin-left:auto"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+        <div class="mitem" onclick="toast('Help centre')"><span class="mi"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><path d="M12 4c4.7 0 8.5 3.2 8.5 7.2S16.7 18.4 12 18.4c-.9 0-1.8-.1-2.6-.3L5 20l1.2-3.4C4.6 15.3 3.5 13.4 3.5 11.2 3.5 7.2 7.3 4 12 4z" stroke-linejoin="round"/></svg></span>Help centre<span class="car" style="margin-left:auto"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+        <div class="mitem" onclick="logOut()"><span class="mi"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><path d="M14 4H7a2 2 0 00-2 2v12a2 2 0 002 2h7M10 12h10m0 0l-3.5-3.5M20 12l-3.5 3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Log out<span class="car" style="margin-left:auto"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"><use href="#i-arr"/></svg></span></div>
+      </div>
+      <p class="muted" style="text-align:center;font-size:12px;margin:6px 0 16px;font-weight:600">MobiYatri v1.0 · Made in India with ❤️ · <span class="hindi">शुभ यात्रा</span></p>
+    </div>
+    <div class="tabbar">
+      <button onclick="go('store',this)"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><use href="#i-store"/></svg></span>Store</button>
+      <button onclick="go('myesims',this)"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><use href="#i-sim"/></svg></span>My eSIMs</button>
+      <button class="on" onclick="go('profile',this)"><span class="ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><use href="#i-user"/></svg></span>Profile</button>
+    </div>
+  </div>
+
+  <!-- ============ SHEETS & MODALS ============ -->
+  <div class="sheet-backdrop" id="backdrop" onclick="closeSheets()"></div>
+
+  <!-- auth sheet -->
+  <div class="sheet" id="authsheet">
+    <div class="grab"></div>
+    <div style="display:flex;justify-content:flex-end;padding:0 14px"><button class="closebtn" onclick="closeSheets()"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#i-close"/></svg></button></div>
+    <div class="sheet-scroll">
+      <div class="authtabs"><button onclick="authTab(this,'login')">Log in</button><button class="on" onclick="authTab(this,'signup')">Sign up</button></div>
+      <div class="socialrow">
+        <button aria-label="Continue with Apple" onclick="socialLogin('apple')"><svg width="21" height="21" viewBox="0 0 24 24"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.56-1.702z" fill="#000"/></svg></button>
+        <button aria-label="Continue with Google" onclick="socialLogin('google')"><svg width="21" height="21" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg></button>
+        <button aria-label="Continue with Facebook" onclick="socialLogin('facebook')"><svg width="21" height="21" viewBox="0 0 24 24"><path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></button>
+      </div>
+      <div id="signupfields">
+        <input class="field" id="au-first" placeholder="First name">
+        <input class="field" id="au-last" placeholder="Last name (Optional)">
+      </div>
+      <input class="field" id="au-email" type="email" placeholder="Email">
+      <input class="field" id="au-pass" type="password" placeholder="Password">
+      <div class="pwrules" id="pwrules">— Minimum 8 characters<br>— Uppercase &amp; lowercase<br>— Numbers 1234567890<br>— A symbol +-*/=?:!%$#</div>
+      <input class="field" placeholder="Referral or voucher code" id="reffield">
+      <label class="checkrow"><input type="checkbox" checked style="margin-top:2px"> Send me promotions, product updates, and account rewards via email.</label>
+      <button class="btn btn-primary" onclick="authSubmit(this)" id="authcta">Agree and sign up</button>
+      <div class="legal">By signing up for an MobiYatri account, I agree to the <u>Terms and Conditions</u>. Learn more about how we use and protect your data in our <u>Privacy Policy</u>.</div>
+    </div>
+  </div>
+
+  <!-- package details sheet -->
+  <div class="sheet" id="pkgdetails">
+    <div class="grab"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 22px 10px">
+      <h3 style="font-size:18px">Package details</h3><button class="closebtn" onclick="closeSheets()"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="sheet-scroll">
+      <div class="pd-item"><div class="hd"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2" stroke-linecap="round" stroke-linejoin="round"/></svg> Provider activation policy</div><p>You have 365 days from purchase to start using this eSIM — this means connecting to a supported network in the coverage area.</p></div>
+      <div class="pd-item"><div class="hd"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke-linecap="round"/></svg> Validity policy</div><p>The validity period starts when the eSIM connects to a mobile network in its coverage area. Install before you leave India — you'll connect when you arrive.</p></div>
+      <div class="pd-item"><div class="hd"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><path d="M4 7h13m0 0l-3-3m3 3l-3 3M20 17H7m0 0l3-3m-3 3l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg> IP routing</div><p>The eSIM's IP address may appear from outside its coverage area — this won't affect your data usage.</p></div>
+      <div class="pd-item"><div class="hd"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><path d="M12 19V6m0 0l-5 5m5-5l5 5" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 21h16" stroke-linecap="round"/></svg> Top-up option</div><p>You can top up this eSIM when your data or validity runs out — top-ups are available once the eSIM is installed.</p></div>
+      <div class="pd-item"><div class="hd"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#23253A" stroke-width="1.9"><path d="M4.5 9a8 8 0 0114-2.5M19.5 15a8 8 0 01-14 2.5M18.5 3v4h-4M5.5 21v-4h4" stroke-linecap="round" stroke-linejoin="round"/></svg> Renewals</div><p>Automatically renew your eSIM package when you need more data. Turn renewals on and off, as you need.</p></div>
+    </div>
+  </div>
+
+  <!-- install sheet -->
+  <div class="sheet" id="installsheet">
+    <div class="grab"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 22px 10px">
+      <h3 style="font-size:18px">Install your eSIM</h3><button class="closebtn" onclick="closeSheets()"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="sheet-scroll">
+      <div class="qrwrap">
+        <svg viewBox="0 0 33 33" style="display:block">
+          <rect width="33" height="33" fill="#fff"/>
+          <g fill="#23253A">
+            <path d="M0 0h7v7H0zM2 2v3h3V2zM26 0h7v7h-7zM28 2v3h3V2zM0 26h7v7H0zM2 28v3h3V28z"/>
+            <path d="M9 0h2v2H9zM13 1h2v2h-2zM17 0h1v3h-1zM20 1h2v1h-2zM23 0h1v2h-1zM9 3h1v2H9zM11 4h2v1h-2zM15 3h2v2h-2zM19 4h1v2h-1zM22 3h2v1h-2zM10 6h2v2h-2zM14 7h2v1h-2zM18 6h2v2h-2zM21 7h2v1h-2zM0 9h2v2H0zM3 10h2v1H3zM6 9h1v2H6zM8 9h3v2H8zM12 10h2v2h-2zM16 9h1v2h-1zM18 10h2v1h-2zM22 9h2v2h-2zM25 10h1v2h-1zM27 9h2v1h-2zM31 10h2v2h-2zM1 12h2v2H1zM4 13h2v1H4zM7 12h2v2H7zM11 13h1v2h-1zM14 12h2v2h-2zM17 13h2v1h-2zM20 12h2v2h-2zM24 13h2v1h-2zM28 12h2v2h-2zM31 13h1v2h-1zM0 15h1v2H0zM2 16h2v1H2zM5 15h2v2H5zM9 16h2v2H9zM13 15h1v2h-1zM15 16h2v1h-2zM18 15h2v2h-2zM22 16h1v2h-1zM25 15h2v2h-2zM29 16h2v1h-2zM32 15h1v2h-1zM1 18h2v2H1zM4 19h1v2H4zM6 18h2v2H6zM10 19h2v1h-2zM13 18h2v2h-2zM16 19h2v2h-2zM20 18h1v2h-1zM23 19h2v1h-2zM26 18h2v2h-2zM30 19h2v2h-2zM0 21h2v2H0zM3 22h2v1H3zM7 21h2v2H7zM11 22h2v1h-2zM14 21h2v2h-2zM18 22h1v2h-1zM21 21h2v2h-2zM25 22h1v1h-1zM27 21h2v2h-2zM31 22h2v1h-2zM9 24h2v2H9zM12 25h2v1h-2zM16 24h1v2h-1zM19 25h2v1h-2zM22 24h2v2h-2zM26 25h1v2h-1zM29 24h2v2h-2zM9 27h1v2H9zM11 28h2v1h-2zM14 27h2v2h-2zM18 27h2v2h-2zM21 28h2v1h-2zM24 27h2v2h-2zM28 28h1v2h-1zM30 27h2v2h-2zM10 30h2v2h-2zM13 31h2v1h-2zM17 30h2v2h-2zM20 31h1v1h-1zM23 30h2v2h-2zM27 31h2v1h-2zM31 30h1v2h-1z"/>
+          </g>
+        </svg>
+      </div>
+      <p class="muted" id="activation-line" style="display:none;text-align:center;font-size:12px;margin:-8px 0 14px;font-weight:600"></p>
+      <div id="install-actions"></div>
+      <div class="install-steps">
+        <div class="istep"><span class="n"></span><div><h4>Stay on Wi-Fi</h4><p>Make sure you're connected to stable Wi-Fi before starting the installation.</p></div></div>
+        <div class="istep"><span class="n"></span><div><h4>Install in one step</h4><p>iPhone (iOS 17.4+): tap "Install in one tap" and the eSIM installer opens with your code pre-filled. Android: copy the code, then Settings → Connections → SIM manager → Add eSIM → enter manually.</p></div></div>
+        <div class="istep"><span class="n"></span><div><h4>Turn on when you land</h4><p>At your destination, enable the MobiYatri line and switch on data roaming for that line only.</p></div></div>
+      </div>
+      <button class="btn btn-deep" style="margin-bottom:10px" onclick="installDone()">Start installation</button>
+      <button class="btn btn-outline" onclick="toast('Share the QR to another device')">Share and more</button>
+    </div>
+  </div>
+
+  <!-- travel insurance sheet -->
+  <div class="sheet" id="insurancesheet">
+    <div class="grab"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 22px 10px">
+      <h3 style="font-size:18px">Travel insurance</h3><button class="closebtn" onclick="closeSheets()"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="sheet-scroll">
+      <p class="muted" style="font-size:13.5px;font-weight:600;margin-bottom:14px">A hospital visit abroad can cost more than your whole trip. Single-trip cover typically starts around ₹350.</p>
+      <div class="devlist">
+        <div class="devrow"><span class="brand">🏥</span>Emergency medical<span class="ok">up to $50k–500k</span></div>
+        <div class="devrow"><span class="brand">🧳</span>Lost baggage &amp; passport<span class="ok">covered</span></div>
+        <div class="devrow"><span class="brand">✈️</span>Flight delay / cancellation<span class="ok">covered</span></div>
+        <div class="devrow"><span class="brand">🚑</span>Medical evacuation<span class="ok">covered</span></div>
+      </div>
+      <div class="tipbox"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1F7A40" stroke-width="2" style="flex-shrink:0;margin-top:1px"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z" stroke-linejoin="round"/></svg><span><b>Travelling to Europe?</b> Schengen visas <b>require</b> travel insurance with at least €30,000 medical cover — you cannot get the visa without it.</span></div>
+      <button class="btn btn-primary" style="margin:6px 0 10px" onclick="window.open('https://www.policybazaar.com/travel-insurance/','_blank')">Get a quote from our partner</button>
+      <button class="btn btn-outline" onclick="closeSheets();openAssistant();setTimeout(()=>sendAssist('Do I need travel insurance for my trip?'),400)">Ask Yatri Sahayak</button>
+      <p class="muted" style="font-size:11.5px;font-weight:600;text-align:center;line-height:1.6;margin:14px 0 4px">Insurance is offered by IRDAI-licensed insurers via our referral partners. MobiYatri does not sell or underwrite insurance and is not an insurance intermediary — quotes, purchase, and claims happen directly with the insurer.</p>
+    </div>
+  </div>
+
+  <!-- device compatibility sheet -->
+  <div class="sheet" id="compatsheet">
+    <div class="grab"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 22px 10px">
+      <h3 style="font-size:18px">Check device compatibility</h3><button class="closebtn" onclick="closeSheets()"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="sheet-scroll">
+      <p class="muted" style="font-size:13.5px;font-weight:600;margin-bottom:10px">The 10-second test — dial this on your phone:</p>
+      <span class="dialcode">*#06#</span>
+      <div class="tipbox" style="margin-bottom:16px"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1F7A40" stroke-width="2.2" style="flex-shrink:0;margin-top:1px"><path d="M4.5 12.5l5 5 10-11" stroke-linecap="round" stroke-linejoin="round"/></svg><span>If you see an <b>EID</b> number in the list that appears, your phone supports eSIM.</span></div>
+      <h3 style="margin:4px 0 4px;font-size:15px">Supported devices</h3>
+      <div class="devlist">
+        <div class="devrow"><span class="brand"><svg width="15" height="15" viewBox="0 0 24 24" style="vertical-align:-2px"><path d="M16.7 12.7c0-2.5 2-3.7 2.1-3.8-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9s-2-.9-3.2-.9C6.7 7 5.2 8 4.4 9.5c-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.7 2.5 3 2.4 1.2 0 1.7-.8 3.1-.8s1.9.8 3.2.8 2.1-1.2 2.9-2.4c.9-1.4 1.3-2.7 1.3-2.8-.1 0-2.4-1-2.4-3.8zM14.4 5.3c.7-.8 1.1-1.9 1-3-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.9-1.5z" fill="#76819B"/></svg></span>iPhone<span class="ok">XS / XR &amp; newer</span></div>
+        <div class="devrow"><span class="brand">S</span>Samsung Galaxy<span class="ok">S20 &amp; newer</span></div>
+        <div class="devrow"><span class="brand">G</span>Google Pixel<span class="ok">Pixel 3 &amp; newer</span></div>
+        <div class="devrow"><span class="brand">+</span>Other brands<span class="ok">most flagships after 2020</span></div>
+      </div>
+      <div class="tipbox"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2" style="flex-shrink:0;margin-top:1px"><path d="M12 9v5M12 17.5v.1M10.3 4.2L2.8 17.5A2 2 0 004.5 20.5h15a2 2 0 001.7-3L13.7 4.2a2 2 0 00-3.4 0z" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Your phone must be <b>network-unlocked</b>. Phones bought on installment plans from some carriers can be locked — check with your carrier if unsure.</span></div>
+      <p class="muted" id="compat-device" style="font-size:12.5px;font-weight:600;text-align:center;margin:12px 0 14px"></p>
+      <button class="btn btn-primary" onclick="closeSheets();openAssistant();setTimeout(()=>sendAssist('Is my phone compatible with eSIM? Here is my device info: '+navigator.userAgent),400)">Not sure? Ask Yatri Sahayak</button>
+    </div>
+  </div>
+
+  <!-- AI assistant chat sheet -->
+  <div class="sheet" id="assistsheet">
+    <div class="grab"></div>
+    <div class="chathead">
+      <span class="cbot"><svg width="22" height="22" viewBox="0 0 32 32"><path d="M29 4L3 14.5l8.2 3.4L26 7.5 14.2 19.8l1 8.2 4.3-5.6 6 2.6z" fill="#fff"/></svg></span>
+      <div style="flex:1">
+        <div class="nm">Yatri Sahayak</div>
+        <div class="st">AI support · English + हिन्दी · 24/7</div>
+      </div>
+      <button class="closebtn" onclick="closeSheets()"><svg width="18" height="18" viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="chatlog" id="chatlog"></div>
+    <div class="chatchips" id="chatchips">
+      <button class="chip-q" onclick="sendAssist('How do I install my eSIM?')">How do I install?</button>
+      <button class="chip-q" onclick="sendAssist('My eSIM is not connecting to any network')">eSIM not working</button>
+      <button class="chip-q" onclick="sendAssist('Is my phone compatible with eSIM?')">Is my phone compatible?</button>
+      <button class="chip-q" onclick="sendAssist('मुझे हिंदी में मदद चाहिए')">हिंदी में पूछें</button>
+    </div>
+    <div class="chatinput">
+      <input id="chatinput" placeholder="Ask anything about your eSIM…" onkeydown="if(event.key==='Enter')sendAssist()">
+      <button onclick="sendAssist()" aria-label="Send"><svg width="20" height="20" viewBox="0 0 24 24"><path d="M3 11.5L21 3l-8.5 18-2.3-7.2z" fill="#fff"/></svg></button>
+    </div>
+  </div>
+
+  <!-- installed modal -->
+  <div class="modal-backdrop" id="installedmodal">
+    <div class="modal">
+      <div class="ck"><svg width="34" height="34" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11" fill="none" stroke="#23253A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h3>Your eSIM is installed</h3>
+      <p>Need help using your eSIM? Follow the instructions to connect.</p>
+      <div class="tipbox"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#76819B" stroke-width="1.9" style="flex-shrink:0;margin-top:1px"><path d="M9 18h6M10 21h4M12 3a6.5 6.5 0 00-4 11.6c.7.6 1 1.4 1 2.4h6c0-1 .3-1.8 1-2.4A6.5 6.5 0 0012 3z" stroke-linejoin="round"/></svg><span>You can connect once you're in the eSIM's coverage area.</span></div>
+      <button class="btn btn-primary" style="margin-bottom:10px" onclick="closeModal()">OK, I got it</button>
+      <button class="btn btn-outline" onclick="closeModal();toast('Connection guide')">How to connect</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ================= Supabase config =================
+   Paste the anon/public key from: Dashboard -> Settings -> API.
+   Until it's set, auth runs in demo mode. */
+const SUPABASE_URL='https://acvjjepiyoxzwleggqvs.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjdmpqZXBpeW94endsZWdncXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MjE3NDIsImV4cCI6MjEwMTE5Nzc0Mn0.wBsCo6aX1arPpKR8Z9Qqj4Ful_VAsKex1903qmz1xcg';
+const sb=(SUPABASE_ANON_KEY&&window.supabase)?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
+</script>
+<script>
+/* ================= data ================= */
+const COUNTRIES=[
+ {iso:"ae",n:"UAE (Dubai)",op:"Etisalat",from:399,pop:1},
+ {iso:"th",n:"Thailand",op:"AIS",from:329,pop:1},
+ {iso:"sg",n:"Singapore",op:"StarHub",from:349,pop:1},
+ {iso:"id",n:"Indonesia (Bali)",op:"Telkomsel",from:379,pop:1},
+ {iso:"vn",n:"Vietnam",op:"Viettel",from:299,pop:1},
+ {iso:"us",n:"United States",op:"T-Mobile",from:449,pop:1},
+ {iso:"gb",n:"United Kingdom",op:"O2",from:399,pop:1},
+ {iso:"my",n:"Malaysia",op:"Maxis",from:329,pop:1},
+ {iso:"lk",n:"Sri Lanka",op:"Dialog",from:279},
+ {iso:"np",n:"Nepal",op:"Ncell",from:249},
+ {iso:"jp",n:"Japan",op:"SoftBank",from:429},
+ {iso:"kr",n:"South Korea",op:"SK Telecom",from:429},
+ {iso:"sa",n:"Saudi Arabia",op:"STC",from:449},
+ {iso:"tr",n:"Türkiye",op:"Turkcell",from:399},
+ {iso:"fr",n:"France",op:"Orange",from:379},
+ {iso:"it",n:"Italy",op:"TIM",from:379},
+ {iso:"ch",n:"Switzerland",op:"Swisscom",from:429},
+ {iso:"au",n:"Australia",op:"Optus",from:399},
+ {iso:"mv",n:"Maldives",op:"Dhiraagu",from:499},
+ {iso:"ge",n:"Georgia",op:"Magti",from:349},
+];
+const regionGlobe=(id,blob)=>`<svg viewBox="0 0 38 28"><defs><clipPath id="${id}"><circle cx="19" cy="14" r="11"/></clipPath></defs><circle cx="19" cy="14" r="11" fill="#EAF3FB"/><g clip-path="url(#${id})"><path d="${blob}" fill="#8BC09A"/></g><circle cx="19" cy="14" r="11" fill="none" stroke="#6B8FC9" stroke-width="1.8"/><ellipse cx="19" cy="14" rx="5" ry="11" fill="none" stroke="#6B8FC9" stroke-width="1.2" opacity=".55"/><path d="M8 14h22M10 8.5h18M10 19.5h18" stroke="#6B8FC9" stroke-width="1.2" opacity=".55"/></svg>`;
+const REGION_ICONS={
+ asia:regionGlobe('gcA','M19 5l9 2 4 6-3 6-7 1-4-6-2-4z'),
+ gulf:regionGlobe('gcG','M19 10l7-1 4 3-3 6-5 2-3-5z'),
+ europe:regionGlobe('gcE','M12 3l9-1 6 4-2 5-9 1-5-4z'),
+ africa:regionGlobe('gcF','M14 11l8-1 4 4-3 8-6 2-3-7z'),
+ na:regionGlobe('gcN','M7 5l9-2 6 3-3 5-7 2-5-3z'),
+ global:'<svg viewBox="0 0 38 28"><circle cx="19" cy="14" r="11" fill="#EAF3FB"/><circle cx="19" cy="14" r="11" fill="none" stroke="#6B8FC9" stroke-width="1.8"/><ellipse cx="19" cy="14" rx="5" ry="11" fill="none" stroke="#6B8FC9" stroke-width="1.3"/><path d="M8 14h22M10 8.5h18M10 19.5h18" stroke="#6B8FC9" stroke-width="1.3"/></svg>',
+};
+const REGIONS=[
+ {icon:"asia",n:"Asia (14 countries)",op:"Multi-network",from:399},
+ {icon:"gulf",n:"Gulf & Middle East",op:"Multi-network",from:499},
+ {icon:"europe",n:"Europe (39 countries)",op:"Multi-network",from:449},
+ {icon:"africa",n:"Africa",op:"Multi-network",from:1099},
+ {icon:"na",n:"North America",op:"Multi-network",from:549},
+];
+const GLOBAL=[{icon:"global",n:"Global (130+ countries)",op:"Multi-network",from:799}];
+const PKGS={
+ std:[{d:"7 days",list:[["1 GB",1],["3 GB",2.2]]},{d:"15 days",list:[["5 GB",3.2],["10 GB",5.2]]},{d:"30 days",list:[["10 GB",6],["20 GB",9.5]]}],
+ unl:[{d:"5 days",list:[["Unlimited",8]]},{d:"10 days",list:[["Unlimited",13]]}]
+};
+let cur={c:COUNTRIES[1],price:329,pkg:"1 GB · 7 days",seg:"std",bundle:null,activation:null};
+let owned=false;
+
+/* ---- backend (eSIM Go seam) — falls back to built-in data if not running ---- */
+// Same-origin when served by server.js (locally or deployed); absolute only for file:// dev opens.
+const API=location.protocol==='file:'?'http://127.0.0.1:4000':'';
+let SERVER_MODE=null;
+function applyCountries(cs,mode,msg){
+  if(!cs.length)return false;
+  SERVER_MODE=mode;
+  COUNTRIES.length=0;COUNTRIES.push(...cs);
+  setCat('popular',document.querySelector('#cattabs button'));
+  toast(msg);
+  return true;
+}
+function loadFromLocal(attempt){
+  fetch(API+'/api/catalogue').then(r=>r.json()).then(d=>{
+    if(!d||!d.countries||!d.countries.length)return;
+    applyCountries(d.countries.filter(c=>c.iso),d.mode,
+      d.mode==='live'?'Live eSIM Go catalogue loaded':'Catalogue loaded from local server (mock)');
+  }).catch(()=>{if(attempt<3)setTimeout(()=>loadFromLocal(attempt+1),700);});
+}
+function applyRegions(regs,glob){
+  if(regs&&regs.length){REGIONS.length=0;REGIONS.push(...regs);}
+  if(glob&&glob.length){GLOBAL.length=0;GLOBAL.push(...glob);}
+}
+function loadFromSupabase(){
+  if(!sb){loadFromLocal(0);return;}
+  sb.from('catalogue_cache').select('iso,name,operator,from_inr,popular,packages').then(({data,error})=>{
+    if(error||!data||!data.length){loadFromLocal(0);return;}
+    const toRegion=r=>({icon:(r.packages.meta||{}).icon,n:r.name,op:r.operator,from:r.from_inr,packages:{std:r.packages.std,unl:r.packages.unl}});
+    applyRegions(
+      data.filter(r=>!r.iso&&r.packages&&r.packages.meta&&r.packages.meta.kind==='regional').map(toRegion),
+      data.filter(r=>!r.iso&&r.packages&&r.packages.meta&&r.packages.meta.kind==='global').map(toRegion));
+    applyCountries(
+      data.filter(r=>r.iso).map(r=>({iso:r.iso,n:r.name,op:r.operator,from:r.from_inr,pop:r.popular?1:undefined,packages:r.packages})),
+      'supabase','Catalogue loaded from Supabase');
+  });
+}
+function loadCatalogue(){
+  // Prefer the local server when it has LIVE vendor inventory; otherwise Supabase cache; otherwise local mock.
+  fetch(API+'/api/catalogue').then(r=>r.json()).then(d=>{
+    if(d&&d.mode&&d.mode.startsWith('live')&&d.countries&&d.countries.length){
+      applyRegions(d.regions,d.global);
+      applyCountries(d.countries.filter(c=>c.iso),d.mode,'Live catalogue loaded ('+d.mode.replace('live:','')+')');
+    }else loadFromSupabase();
+  }).catch(()=>loadFromSupabase());
+}
+loadCatalogue();
+
+function flagHTML(c,cls){
+  cls=cls||'';
+  if(c.iso)return `<span class="flag ${cls}"><img src="https://flagcdn.com/w80/${c.iso}.png" alt="${c.n} flag" loading="lazy"></span>`;
+  return `<span class="flag region ${cls}">${REGION_ICONS[c.icon]||REGION_ICONS.global}</span>`;
+}
+
+/* ================= nav ================= */
+function go(id,btn){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  closeSheets();
+  if(id==='search'){const i=document.getElementById('searchinput');i.value='';doSearch('');setTimeout(()=>i.focus(),50);}
+  if(id==='myesims')loadMyEsims();
+  if(id==='checkout')loadInsuranceQuote();
+}
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+/* ================= store ================= */
+const NOTES={
+ popular:"Top destinations for Indian travellers — packages start from the shown price.",
+ countries:"All destinations, A to Z — local eSIMs with the best rates.",
+ regional:"Get regional coverage with one eSIM — perfect for multi-country trips.",
+ global:"One eSIM for your whole world tour — 130+ countries covered."
+};
+function rowHTML(c){return `<div class="countryrow" onclick='openCountry(${JSON.stringify(c.n)})'>
+  ${flagHTML(c)}<span class="nm">${c.n}</span><span class="pr">₹${c.from} <small>INR</small></span></div>`;}
+function setCat(cat,btn){
+  document.querySelectorAll('#cattabs button').forEach(b=>b.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  document.getElementById('catnote').textContent=NOTES[cat];
+  let list;
+  if(cat==='popular')list=COUNTRIES.filter(c=>c.pop);
+  else if(cat==='countries')list=[...COUNTRIES].sort((a,b)=>a.n.localeCompare(b.n));
+  else if(cat==='regional')list=REGIONS;
+  else list=GLOBAL;
+  document.getElementById('countrylist').innerHTML=list.map(rowHTML).join('');
+}
+setCat('popular',document.querySelector('#cattabs button'));
+
+/* ================= quick services grid ================= */
+function svcCat(cat,idx){
+  setCat(cat,document.querySelectorAll('#cattabs button')[idx]);
+  document.getElementById('cattabs').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ================= promo carousel ================= */
+let promoIdx=0,promoTimer=null;
+function setPromo(i){
+  promoIdx=((i%3)+3)%3;
+  document.getElementById('promotrack').style.transform=`translateX(-${promoIdx*100}%)`;
+  document.querySelectorAll('#promodots span').forEach((d,j)=>d.classList.toggle('on',j===promoIdx));
+  clearTimeout(promoTimer);
+  promoTimer=setTimeout(()=>setPromo(promoIdx+1),4200);
+}
+promoTimer=setTimeout(()=>setPromo(promoIdx+1),4200);
+
+/* ================= search ================= */
+function doSearch(q){
+  q=q.trim().toLowerCase();
+  const res=document.getElementById('searchresults');
+  const hits=COUNTRIES.filter(c=>c.n.toLowerCase().includes(q));
+  const reg=REGIONS.concat(GLOBAL);
+  let html=hits.slice(0,6).map(c=>`<div class="sresult" onclick='openCountry(${JSON.stringify(c.n)})'>${flagHTML(c,'sm')}${c.n}</div>`).join('');
+  html+=`<div class="shead">Also available in…</div>`;
+  html+=reg.slice(0,3).map(c=>`<div class="sresult" onclick='openCountry(${JSON.stringify(c.n)})'>${flagHTML(c,'sm')}${c.n}</div>`).join('');
+  res.innerHTML=html||'<div class="sresult">No matches</div>';
+}
+
+/* ================= country detail ================= */
+function openCountry(name){
+  const all=COUNTRIES.concat(REGIONS,GLOBAL);
+  cur.c=all.find(c=>c.n===name)||COUNTRIES[1];
+  document.getElementById('cd-name').textContent=cur.c.n;
+  document.getElementById('cd-name2').textContent=cur.c.n;
+  document.getElementById('cd-flag').outerHTML=flagHTML(cur.c).replace('class="flag','id="cd-flag" class="flag');
+  document.getElementById('cd-op').textContent=cur.c.op;
+  cur.seg='std';
+  document.getElementById('seg-std').classList.add('on');
+  document.getElementById('seg-unl').classList.remove('on');
+  renderPkgs();
+  go('country');
+}
+function setSeg(s){
+  cur.seg=s;
+  document.getElementById('seg-std').classList.toggle('on',s==='std');
+  document.getElementById('seg-unl').classList.toggle('on',s==='unl');
+  renderPkgs();
+}
+function renderPkgs(){
+  let html='',first=true;
+  const row=(label,dur,price,bundle)=>{
+    html+=`<div class="pkg ${first?'sel':''}" onclick="selPkg(this,'${label} · ${dur}',${price},'${bundle||''}')"><span>${label.split(' ')[0]} <small>${label.includes('GB')?'GB':''}</small></span><span>₹${price} <small>INR</small></span></div>`;
+    if(first){cur.price=price;cur.pkg=`${label} · ${dur}`;cur.bundle=bundle||null;first=false;}
+  };
+  if(cur.c.packages){
+    (cur.c.packages[cur.seg]||[]).forEach(g=>{
+      html+=`<div class="validity">${g.d}</div>`;
+      g.list.forEach(p=>row(p.label,g.d,p.price,p.bundle));
+    });
+  }else{
+    const base=cur.c.from;
+    PKGS[cur.seg].forEach(g=>{
+      html+=`<div class="validity">${g.d}</div>`;
+      g.list.forEach(p=>row(p[0],g.d,Math.round(base*p[1]/10)*10-1,''));
+    });
+  }
+  document.getElementById('pkglist').innerHTML=html;
+  updateTotals();
+}
+function selPkg(el,pkg,price,bundle){
+  document.querySelectorAll('.pkg').forEach(p=>p.classList.remove('sel'));
+  el.classList.add('sel');cur.pkg=pkg;cur.price=price;cur.bundle=bundle||null;updateTotals();
+}
+function updateTotals(){
+  document.getElementById('cd-total').textContent='₹'+cur.price;
+  const insExtra=(INS.selected&&INS.quote)?INS.quote.premiumINR:0;
+  document.getElementById('ck-total').textContent='₹'+(cur.price+insExtra);
+}
+
+/* ---- trip-protection add-on at checkout (embedded insurance, DEMO adapter) ---- */
+let INS={quote:null,selected:false};
+async function loadInsuranceQuote(){
+  const box=document.getElementById('ins-addon');
+  INS={quote:null,selected:false};updateTotals();
+  if(!SERVER_MODE){box.innerHTML='';return;}
+  box.innerHTML='<div class="card" style="margin-bottom:4px;font-size:13px;font-weight:600;color:var(--ink-soft)">Checking trip protection for this trip…</div>';
+  try{
+    const days=parseInt((cur.pkg.split('·')[1]||'7'))||7;
+    const q=await fetch(API+'/api/insurance/quote',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({destination:cur.c.n,iso:cur.c.iso||null,days})}).then(r=>r.json());
+    if(!q||!q.premiumINR)throw 0;
+    INS.quote=q;
+    box.innerHTML=`<div class="card" style="margin-bottom:4px;display:flex;gap:12px;align-items:center">
+      <span style="width:40px;height:40px;border-radius:11px;background:#E2EBF9;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#33386E" stroke-width="1.9"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span style="flex:1"><b style="font-size:14px">Add trip protection</b> <span class="chip">DEMO</span><br>
+      <span class="muted" style="font-size:12px;font-weight:600">₹${q.premiumINR} · medical ${q.coverage.medical} + baggage + delays · ${q.days} days</span></span>
+      <button class="switch" onclick="toggleIns(this)"></button>
+    </div>`;
+  }catch(e){box.innerHTML='';}
+}
+function toggleIns(el){
+  INS.selected=!INS.selected;
+  el.classList.toggle('on',INS.selected);
+  updateTotals();
+}
+async function issuePolicy(){
+  try{
+    const headers={'Content-Type':'application/json'};
+    if(sb){const {data:{session}}=await sb.auth.getSession();if(session)headers.Authorization='Bearer '+session.access_token;}
+    const p=await fetch(API+'/api/insurance/policy',{method:'POST',headers,
+      body:JSON.stringify({quoteId:INS.quote.quoteId,destination:cur.c.n,premium:INS.quote.premiumINR,days:INS.quote.days})}).then(r=>r.json());
+    if(p&&p.policyNumber){
+      cur.policy=p;
+      const u=document.getElementById('ins-upsell');
+      if(u)u.innerHTML=`<span style="width:44px;height:44px;border-radius:12px;background:#D6EBDB;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F7A40" stroke-width="1.9"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span style="flex:1"><b style="font-size:14.5px">Trip protection active</b> <span class="chip">DEMO</span><br>
+        <span class="muted" style="font-size:12.5px;font-weight:600">Policy ${p.policyNumber} · ₹${INS.quote.premiumINR}${p.persisted?' · saved to your account':''}</span></span>`;
+      toast('Trip protection added · '+p.policyNumber);
+    }
+  }catch(e){}
+}
+
+/* ================= checkout / order ================= */
+function selPay(el){document.querySelectorAll('.payopt').forEach(p=>p.classList.remove('sel'));el.classList.add('sel');}
+let INS_UPSELL_DEFAULT=null;
+async function completeOrder(){
+  if(sb&&!SESSION_USER){PENDING_BUY=true;openAuth();toast('Sign in to complete your purchase');return;}
+  const done=()=>{
+    owned=true;renderEsims();
+    const u=document.getElementById('ins-upsell');
+    if(u){if(INS_UPSELL_DEFAULT===null)INS_UPSELL_DEFAULT=u.innerHTML;u.innerHTML=INS_UPSELL_DEFAULT;}
+    go('ordercomplete');
+    if(INS.selected&&INS.quote)issuePolicy();
+  };
+  if(!SERVER_MODE||!cur.bundle){toast('Payment successful');done();return;}
+  const headers={'Content-Type':'application/json'};
+  if(sb){
+    const {data:{session}}=await sb.auth.getSession();
+    if(session)headers.Authorization='Bearer '+session.access_token;
+  }
+  fetch(API+'/api/orders',{method:'POST',headers,body:JSON.stringify({bundle:cur.bundle,country:cur.c.n,package:cur.pkg,price:cur.price})})
+    .then(r=>r.json()).then(o=>{
+      if(o.error)throw new Error(o.error);
+      cur.activation=o.esim;
+      toast('Shubh Yatra! Order '+o.orderReference+(o.emailSent?' — QR emailed to you':(o.persisted?' saved to your account':' confirmed')));
+      done();
+    })
+    .catch(()=>{toast('Payment successful (offline)');done();});
+}
+/* ---- My eSIMs from Supabase ---- */
+let MY_ESIMS=[];
+async function loadMyEsims(){
+  if(!sb)return;
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){
+    document.getElementById('esimlist').innerHTML=`<div class="card" style="text-align:center;padding:34px 20px">
+      <h3 style="margin-bottom:6px">Sign in to see your eSIMs</h3>
+      <p class="muted" style="font-size:14px;margin-bottom:16px;font-weight:600">Your purchases are saved to your account and available on any device.</p>
+      <button class="btn btn-primary" onclick="openAuth()">Sign up / Log in</button></div>`;
+    return;
+  }
+  const {data,error}=await sb.from('esims')
+    .select('iccid,matching_id,smdp_address,lpa_string,status,created_at,orders(country_name,package_label,price_inr)')
+    .order('created_at',{ascending:false});
+  if(error||!data||!data.length)return;
+  MY_ESIMS=data;
+  document.getElementById('esimlist').innerHTML=data.map((e,i)=>{
+    const o=e.orders||{};
+    const c=COUNTRIES.find(x=>x.n===o.country_name)||{n:o.country_name||'eSIM'};
+    const parts=(o.package_label||'— · —').split(' · ');
+    return `<div class="esimcard">
+      <div class="hd">${flagHTML(c)}<span class="nm">${c.n}</span></div>
+      <div class="lbl">Package</div>
+      <div class="statgrid">
+        <div class="stat"><div class="k">⇅ Data</div><div class="v">${parts[0]||'—'}</div></div>
+        <div class="stat"><div class="k">📅 Validity</div><div class="v">${parts[1]||'—'}</div></div>
+      </div>
+      <div class="renewrow"><span>Renewals</span><span class="togglelbl"><span class="dot-off"></span> Off</span></div>
+      <div class="actions">
+        <button class="btn btn-outline" onclick="selectEsim(${i});openEsimDetail()">View details</button>
+        <button class="btn btn-primary" onclick="selectEsim(${i});openSheet('installsheet')">Install or share</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function selectEsim(i){
+  const e=MY_ESIMS[i];if(!e)return;
+  const o=e.orders||{};
+  cur.c=COUNTRIES.find(x=>x.n===o.country_name)||{n:o.country_name||'eSIM'};
+  cur.pkg=o.package_label||'';cur.price=o.price_inr||0;
+  cur.activation={iccid:e.iccid,matchingId:e.matching_id,smdpAddress:e.smdp_address,lpa:e.lpa_string};
+  const hist=document.getElementById('pkg-history');
+  if(hist)hist.textContent=`${cur.c.n} ${cur.pkg} — ₹${cur.price}`;
+}
+function renderEsims(){
+  if(!owned)return;
+  document.getElementById('esimlist').innerHTML=`
+  <div class="esimcard">
+    <div class="hd">${flagHTML(cur.c)}<span class="nm">${cur.c.n}</span></div>
+    <div class="lbl">Package</div>
+    <div class="statgrid">
+      <div class="stat"><div class="k">⇅ Data</div><div class="v">${cur.pkg.split(' · ')[0]}</div></div>
+      <div class="stat"><div class="k">📅 Validity</div><div class="v">${cur.pkg.split(' · ')[1]}</div></div>
+    </div>
+    <div class="renewrow"><span>Renewals</span><span class="togglelbl"><span class="dot-off"></span> Off</span></div>
+    <div class="actions">
+      <button class="btn btn-outline" onclick="openEsimDetail()">View details</button>
+      <button class="btn btn-primary" onclick="openSheet('installsheet')">Install or share</button>
+    </div>
+  </div>`;
+  document.getElementById('pkg-history').textContent=`${cur.c.n} ${cur.pkg} — purchased today · ₹${cur.price}`;
+}
+function openEsimDetail(){
+  document.getElementById('ed-title').textContent=cur.c.n;
+  go('esimdetail');
+}
+
+/* ================= travel insurance (referral) ================= */
+function openInsurance(){openSheet('insurancesheet');}
+
+/* ================= one-tap install ================= */
+function oneTapInstall(){
+  if(!(cur.activation&&cur.activation.lpa))return;
+  location.href='https://esimsetup.apple.com/esim_qrcode_provisioning?carddata='+encodeURIComponent(cur.activation.lpa);
+}
+function copyActivation(){
+  if(!(cur.activation&&cur.activation.lpa))return;
+  navigator.clipboard.writeText(cur.activation.lpa)
+    .then(()=>toast('Activation code copied — paste it in Settings'))
+    .catch(()=>toast('Copy failed — use the QR instead'));
+}
+
+/* ================= compatibility checker ================= */
+function openCompat(){
+  const ua=navigator.userAgent;
+  let dev='You appear to be on a desktop browser — run the *#06# test on your phone.';
+  if(/iPhone/.test(ua))dev='You appear to be on an iPhone — most models from XS/XR (2018) onwards support eSIM.';
+  else if(/Android/.test(ua)){
+    const m=ua.match(/Android[^;]*;\s*([^)]+)\)/);
+    dev='You appear to be on an Android device'+(m?' ('+m[1].trim()+')':'')+' — dial *#06# to confirm.';
+  }
+  document.getElementById('compat-device').textContent=dev;
+  openSheet('compatsheet');
+}
+
+/* ================= AI assistant ================= */
+let CHAT=[],chatBusy=false;
+function chatBubble(role,text){
+  const log=document.getElementById('chatlog');
+  const d=document.createElement('div');
+  d.className='cmsg '+role;d.textContent=text;
+  log.appendChild(d);log.scrollTop=log.scrollHeight;
+  return d;
+}
+function openAssistant(){
+  openSheet('assistsheet');
+  if(!document.getElementById('chatlog').children.length){
+    chatBubble('bot',"Namaste! 🙏 I'm Yatri Sahayak, your eSIM assistant. Ask me about choosing, installing, or fixing your MobiYatri eSIM — English या हिंदी, दोनों चलेंगे!");
+  }
+  setTimeout(()=>document.getElementById('chatinput').focus(),100);
+}
+async function sendAssist(preset){
+  const inp=document.getElementById('chatinput');
+  const text=(preset||inp.value).trim();
+  if(!text||chatBusy)return;
+  inp.value='';
+  chatBubble('user',text);
+  CHAT.push({role:'user',content:text});
+  const typing=document.createElement('div');
+  typing.className='cmsg bot typing';typing.innerHTML='<i></i><i></i><i></i>';
+  document.getElementById('chatlog').appendChild(typing);
+  document.getElementById('chatlog').scrollTop=1e9;
+  chatBusy=true;
+  const headers={'Content-Type':'application/json'};
+  try{
+    if(sb){const {data:{session}}=await sb.auth.getSession();if(session)headers.Authorization='Bearer '+session.access_token;}
+    const context={
+      device:navigator.userAgent,
+      app_screen:(document.querySelector('.screen.active')||{}).id,
+      browsing_country:cur.c?cur.c.n:null,
+      selected_package:cur.pkg||null,
+    };
+    const d=await fetch(API+'/api/assistant',{method:'POST',headers,body:JSON.stringify({messages:CHAT.slice(-12),context})}).then(r=>r.json());
+    typing.remove();
+    const reply=d.reply||'Sorry — something went wrong, please try again.';
+    chatBubble('bot',reply);
+    CHAT.push({role:'assistant',content:reply});
+  }catch(e){
+    typing.remove();
+    chatBubble('bot','I could not reach support right now — please try again, or use "Chat on WhatsApp" for human help.');
+  }finally{chatBusy=false;}
+}
+
+/* ================= sheets / modals ================= */
+function openAuth(){openSheet('authsheet')}
+function openSheet(id){
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById(id).classList.add('open');
+  if(id==='installsheet'){
+    const a=document.getElementById('activation-line');
+    if(cur.activation&&cur.activation.iccid){a.style.display='block';a.textContent=`ICCID ${cur.activation.iccid} · ${cur.activation.matchingId||''}`;}
+    else a.style.display='none';
+    const act=document.getElementById('install-actions');
+    const lpa=cur.activation&&cur.activation.lpa;
+    const ua=navigator.userAgent;
+    if(!lpa){
+      act.innerHTML='';
+    }else if(/iPhone|iPad/.test(ua)){
+      act.innerHTML='<button class="btn btn-primary" style="margin-bottom:8px" onclick="oneTapInstall()">⚡ Install in one tap</button>'+
+        '<p class="muted" style="font-size:12px;text-align:center;margin:0 0 14px;font-weight:600">Opens your iPhone\'s eSIM installer with the code pre-filled (iOS 17.4+)</p>';
+    }else if(/Android/.test(ua)){
+      act.innerHTML='<button class="btn btn-primary" style="margin-bottom:8px" onclick="copyActivation()">Copy activation code</button>'+
+        '<p class="muted" style="font-size:12px;text-align:center;margin:0 0 14px;font-weight:600">Then: Settings → Connections → SIM manager → Add eSIM → Enter code manually</p>';
+    }else{
+      act.innerHTML='<p class="muted" style="font-size:12.5px;text-align:center;margin:0 0 14px;font-weight:600">On iPhone, the emailed link installs in one tap. Or scan the QR above with your phone\'s camera.</p>';
+    }
+  }
+}
+function closeSheets(){
+  document.getElementById('backdrop').classList.remove('open');
+  document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('open'));
+}
+function closeModal(){document.getElementById('installedmodal').classList.remove('open')}
+function installDone(){
+  closeSheets();
+  document.getElementById('installedmodal').classList.add('open');
+}
+let AUTH_MODE='signup';
+let SESSION_USER=null;
+let PENDING_BUY=false;
+function applyUser(u){
+  if(!u)return;
+  SESSION_USER=u;
+  const name=(u.user_metadata&&u.user_metadata.full_name)||(u.email?u.email.split('@')[0]:'Traveller');
+  const first=name.split(' ')[0]||'Traveller';
+  const gn=document.getElementById('greet-name');gn.textContent=first;gn.classList.remove('hindi');
+  document.getElementById('prof-name').textContent=name;
+  const pm=document.getElementById('prof-mail');pm.textContent=u.email||'';pm.style.textDecoration='none';pm.onclick=null;
+  document.querySelector('.avatar').textContent=(first[0]||'T').toUpperCase();
+}
+function setGuestUI(){
+  const gn=document.getElementById('greet-name');gn.textContent='यात्री';gn.classList.add('hindi');
+  document.getElementById('prof-name').textContent='Guest';
+  const pm=document.getElementById('prof-mail');pm.textContent='Sign in / create account';pm.style.textDecoration='underline';pm.style.cursor='pointer';pm.onclick=openAuth;
+  document.querySelector('.avatar').textContent='G';
+}
+/* guests browse freely; buying requires an account */
+function buyNow(){
+  if(sb&&!SESSION_USER){PENDING_BUY=true;openAuth();toast('Sign in to buy your eSIM');return;}
+  go('checkout');
+}
+function authSubmit(btn){
+  if(btn.dataset.busy)return;
+  btn.dataset.busy='1';
+  const orig=btn.textContent;
+  btn.innerHTML='<span class="spinner"></span>Signing you in…';
+  const finish=(ok,msg)=>{delete btn.dataset.busy;btn.textContent=orig;if(msg)toast(msg);if(ok){closeSheets();go(PENDING_BUY?'checkout':'store');PENDING_BUY=false;}};
+  if(!sb){setTimeout(()=>finish(true,'Welcome! (demo mode — add Supabase anon key)'),1200);return;}
+  const email=document.getElementById('au-email').value.trim();
+  const pass=document.getElementById('au-pass').value;
+  if(!email||!pass){finish(false,'Enter your email and password');return;}
+  if(AUTH_MODE==='signup'){
+    const fullName=(document.getElementById('au-first').value.trim()+' '+document.getElementById('au-last').value.trim()).trim();
+    sb.auth.signUp({email,password:pass,options:{data:{full_name:fullName}}}).then(({data,error})=>{
+      if(error)return finish(false,error.message);
+      if(!data.session)return finish(false,'Check your email to confirm your account, then log in');
+      applyUser(data.user);finish(true,'Welcome to MobiYatri!');
+    });
+  }else{
+    sb.auth.signInWithPassword({email,password:pass}).then(({data,error})=>{
+      if(error)return finish(false,error.message);
+      applyUser(data.user);finish(true,'Welcome back!');
+    });
+  }
+}
+function logOut(){
+  if(sb)sb.auth.signOut();
+  SESSION_USER=null;
+  setGuestUI();
+  go('welcome');toast('Logged out');
+}
+let AUTH_EXTERNAL={};
+if(sb){
+  sb.auth.getSession().then(({data})=>{if(data.session)applyUser(data.session.user);});
+  fetch(SUPABASE_URL+'/auth/v1/settings',{headers:{apikey:SUPABASE_ANON_KEY}})
+    .then(r=>r.json()).then(s=>{AUTH_EXTERNAL=s.external||{};}).catch(()=>{});
+  sb.auth.onAuthStateChange((event,session)=>{
+    if(event==='SIGNED_IN'&&session){
+      applyUser(session.user);
+      if(PENDING_BUY){PENDING_BUY=false;closeSheets();go('checkout');toast('Signed in — complete your purchase');return;}
+      const cur=document.querySelector('.screen.active');
+      if(cur&&(cur.id==='welcome'||cur.id==='splash')){closeSheets();go('store');toast('Welcome to MobiYatri!');}
+    }
+  });
+}
+function socialLogin(provider){
+  if(!sb){toast('Demo mode — add Supabase anon key first');return;}
+  if(!AUTH_EXTERNAL[provider]){
+    toast(provider[0].toUpperCase()+provider.slice(1)+' login is not enabled in Supabase yet');
+    return;
+  }
+  if(location.protocol==='file:'){
+    toast('Open the app at http://localhost:4000 to use social login');
+    return;
+  }
+  sb.auth.signInWithOAuth({provider,options:{redirectTo:location.origin}}).then(({error})=>{
+    if(error)toast(error.message);
+  });
+}
+/* splash → welcome (or straight to store when already logged in) */
+setTimeout(()=>{
+  if(document.getElementById('splash').classList.contains('active'))go(SESSION_USER?'store':'welcome');
+},2400);
+function authTab(btn,mode){
+  document.querySelectorAll('.authtabs button').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const signup=mode==='signup';
+  document.getElementById('signupfields').style.display=signup?'block':'none';
+  document.getElementById('pwrules').style.display=signup?'block':'none';
+  document.getElementById('reffield').style.display=signup?'block':'none';
+  document.getElementById('authcta').textContent=signup?'Agree and sign up':'Log in';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+# Secrets — never commit
+.env
+
+# Local reference material (Airalo screens from Mobbin — copyrighted, reference only)
+mobbin-reference/
+
+# OS noise
+Thumbs.db
+desktop.ini
