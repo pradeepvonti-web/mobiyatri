@@ -1,4 +1,5 @@
 import React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header.jsx';
 import Hero from './components/Hero.jsx';
@@ -44,10 +45,84 @@ function JumpBar() {
   );
 }
 
+const CARD_MENUS = [
+  {
+    label: 'How MobiYatri works',
+    links: [
+      ['What is an eSIM?', '/#destinations'],
+      ['Connected in 3 steps', '/#how'],
+      ['Check phone compatibility', '/app'],
+      ['FAQ & support', '/#support'],
+    ]
+  },
+  {
+    label: 'Destinations',
+    links: [
+      ['Thailand eSIM', '/country/th'],
+      ['Dubai / UAE eSIM', '/country/ae'],
+      ['Singapore eSIM', '/country/sg'],
+      ['Bali / Indonesia eSIM', '/country/id'],
+      ['All 190+ destinations →', '/app'],
+    ]
+  },
+  {
+    label: 'Business & insurance',
+    links: [
+      ['MobiYatri for Business', '/#business'],
+      ['Travel insurance', '/#insurance'],
+      ['Refer & earn ₹150', '/profile'],
+    ]
+  },
+];
+
+function SectionCards() {
+  const [open, setOpen] = React.useState(-1);
+  return (
+    <div className="sectioncards-wrap" style={{ position: 'sticky', top: 82, zIndex: 45 }}>
+      <div className="container sectioncards" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, padding: '6px 24px 10px' }}>
+        {CARD_MENUS.map((m, i) => (
+          <div key={m.label} style={{ position: 'relative' }}>
+            <button onClick={() => setOpen(open === i ? -1 : i)} style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              background: '#fff', borderRadius: 16, padding: '17px 22px', fontWeight: 700, fontSize: 15.5,
+              color: 'var(--ink)', boxShadow: '0 6px 22px rgba(22,24,42,.10)'
+            }}>
+              {m.label}
+              <motion.svg animate={{ rotate: open === i ? 180 : 0 }} transition={{ duration: .2 }}
+                width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16182A" strokeWidth="2.4" strokeLinecap="round">
+                <path d="M12 4v16m0 0l-6-6m6 6l6-6" />
+              </motion.svg>
+            </button>
+            <AnimatePresence>
+              {open === i && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: .18 }}
+                  style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, background: '#fff',
+                    borderRadius: 16, boxShadow: '0 20px 50px rgba(22,24,42,.18)', overflow: 'hidden', zIndex: 46
+                  }}>
+                  {m.links.map(([label, href]) => (
+                    <a key={label} href={href} onClick={() => setOpen(-1)} style={{
+                      display: 'block', padding: '13px 22px', fontWeight: 600, fontSize: 14.5,
+                      borderBottom: '1px solid #F2EDE3'
+                    }}>{label}</a>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Landing() {
   return (
     <>
       <Hero />
+      <SectionCards />
       <WhyBand />
       <StoreBand />
       <WhatBand />

@@ -108,6 +108,13 @@ h1,h2,h3{font-family:var(--head);letter-spacing:-0.01em}
 @media(max-width:1360px){
   .bandart{display:none}
 }
+@media(max-width:900px){
+  .sectioncards-wrap{display:none}
+  .menulabel{display:none}
+}
+@media(min-width:901px){
+  .jumpbar{display:none}
+}
 @media(max-width:1080px){
   .whygrid{grid-template-columns:repeat(2,1fr) !important}
 }

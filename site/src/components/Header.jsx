@@ -26,6 +26,17 @@ function AccountArea({ closeMenu }) {
 
   if (!user) return (
     <>
+      <span title="Language: English + हिन्दी" style={{ display: 'inline-flex', padding: 6, opacity: .85 }}>
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#16182A" strokeWidth="1.9" strokeLinecap="round">
+          <circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9s-1.3 6.4-3.9 9M12 3c-2.6 2.6-3.9 5.6-3.9 9s1.3 6.4 3.9 9" />
+        </svg>
+      </span>
+      <span title="Currency: INR ₹" style={{ display: 'inline-flex', padding: 6, opacity: .85 }}>
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#16182A" strokeWidth="1.9" strokeLinecap="round">
+          <rect x="3" y="6" width="18" height="13" rx="3" /><path d="M3 10h18M8 15h4" />
+        </svg>
+      </span>
+      <span style={{ width: 1, height: 26, background: 'rgba(22,24,42,.2)', margin: '0 4px' }} />
       <button className="pill pill-white" onClick={() => { openAuth('login'); closeMenu?.(); }}
         style={{ padding: '11px 20px', fontSize: 14.5 }}>Log in</button>
       <button className="pill pill-coral" onClick={() => { openAuth('signup'); closeMenu?.(); }}
@@ -115,8 +126,8 @@ export default function Header() {
                 <motion.div className="hsearch-inline"
                   initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }}
                   transition={{ duration: .22 }}
-                  style={{ maxWidth: 620, margin: '0 auto' }}>
-                  <SearchBox compact placeholder="Where do you need data?" />
+                  style={{ margin: '0 10px' }}>
+                  <SearchBox compact placeholder="Where do you need an eSIM?" />
                 </motion.div>
               )}
             </AnimatePresence>
@@ -125,7 +136,11 @@ export default function Header() {
             <span className="acctarea" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <AccountArea />
             </span>
-            {Burger}
+            <span className="acctarea" style={{ width: 1, height: 26, background: 'rgba(22,24,42,.2)', margin: '0 6px' }} />
+            <span style={{ display: 'flex', alignItems: 'center' }}>
+              <span className="menulabel" style={{ fontWeight: 700, fontSize: 15 }}>Menu</span>
+              {Burger}
+            </span>
           </nav>
         </div>
       </header>
