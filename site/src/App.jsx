@@ -14,6 +14,7 @@ import MyEsims from './pages/MyEsims.jsx';
 import Profile from './pages/Profile.jsx';
 import { WhyBand, WhatBand, HowBand, InsuranceBand, ReferralBand, BusinessBand, SupportBand, AppBand } from './components/Bands.jsx';
 import { AuthProvider } from './lib/auth.jsx';
+import { ToastProvider } from './components/ui.jsx';
 import { useScrollY } from './hooks.js';
 
 const SECTIONS = [
@@ -69,6 +70,7 @@ function ScrollToTop() {
 
 export default function App() {
   return (
+    <ToastProvider>
     <AuthProvider>
       <BrowserRouter>
         <ScrollToTop />
@@ -89,5 +91,6 @@ export default function App() {
         <ChatWidget />
       </BrowserRouter>
     </AuthProvider>
+    </ToastProvider>
   );
 }

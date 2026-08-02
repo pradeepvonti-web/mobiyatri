@@ -92,6 +92,9 @@ h1,h2,h3{font-family:var(--head);letter-spacing:-0.01em}
 
 ::selection{background:var(--coral);color:#fff}
 
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 .acctlink{border-radius:10px;transition:background .12s}
 .acctlink:hover{background:rgba(22,24,42,.06)}
 @media(max-width:860px){

@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import SearchBox from '../components/SearchBox.jsx';
 import { useCatalogue, flag } from '../hooks.js';
+import { Skeleton } from '../components/ui.jsx';
 
 const TABS = [
   { key: 'popular', label: 'Popular', icon: '🚀' },
@@ -86,9 +87,9 @@ export default function StoreHome() {
             </Link>
           ))}
           {(!list || !list.length) && (
-            <p style={{ color: 'var(--muted)', fontWeight: 600, padding: 20 }}>
-              {countries.length ? 'No matches — try another spelling.' : 'Loading live catalogue…'}
-            </p>
+            countries.length
+              ? <p style={{ color: 'var(--muted)', fontWeight: 600, padding: 20 }}>No matches — try another spelling.</p>
+              : [...Array(8)].map((_, i) => <Skeleton key={i} h={64} r={16} />)
           )}
         </motion.div>
       </AnimatePresence>

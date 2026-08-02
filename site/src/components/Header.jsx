@@ -16,6 +16,14 @@ const NAV = [
 
 function AccountArea({ closeMenu }) {
   const { user, openAuth, logout } = useAuth();
+  const [open, setOpen] = useState(false);
+  const box = React.useRef(null);
+  React.useEffect(() => {
+    const close = e => { if (box.current && !box.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
+
   if (!user) return (
     <>
       <button className="pill pill-white" onClick={() => { openAuth('login'); closeMenu?.(); }}
@@ -24,16 +32,39 @@ function AccountArea({ closeMenu }) {
         style={{ padding: '11px 22px', fontSize: 14.5 }}>Sign up</button>
     </>
   );
+
+  const nm = user.user_metadata?.full_name || (user.email || '').split('@')[0];
+  const item = { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', fontWeight: 700, fontSize: 14.5, width: '100%', textAlign: 'left', color: 'var(--ink)' };
+
   return (
     <>
       <Link to="/my-esims" onClick={closeMenu} className="acctlink" style={{ fontWeight: 700, fontSize: 14.5, padding: '8px 10px' }}>My eSIMs</Link>
-      <Link to="/profile" onClick={closeMenu} className="acctlink" style={{ fontWeight: 700, fontSize: 14.5, padding: '8px 10px' }}>Profile</Link>
-      <span style={{
-        background: '#DCEDDC', color: '#1F5B33', fontWeight: 800, fontSize: 13.5,
-        borderRadius: 999, padding: '7px 14px', whiteSpace: 'nowrap'
-      }}>YatriCash ₹0</span>
-      <button className="pill pill-white" onClick={() => { logout(); closeMenu?.(); }}
-        style={{ padding: '10px 18px', fontSize: 14 }}>Log out</button>
+      <span style={{ background: '#DCEDDC', color: '#1F5B33', fontWeight: 800, fontSize: 13, borderRadius: 999, padding: '7px 13px', whiteSpace: 'nowrap' }}>₹0</span>
+      <span ref={box} style={{ position: 'relative' }}>
+        <button onClick={() => setOpen(o => !o)} aria-label="Account menu" style={{
+          width: 42, height: 42, borderRadius: '50%', background: 'linear-gradient(135deg,var(--coral),var(--coral-deep))',
+          color: '#fff', fontFamily: 'var(--head)', fontWeight: 800, fontSize: 17,
+          boxShadow: open ? '0 0 0 3px rgba(255,107,87,.3)' : 'none'
+        }}>{(nm[0] || 'Y').toUpperCase()}</button>
+        <AnimatePresence>
+          {open && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: .16 }}
+              style={{
+                position: 'absolute', right: 0, top: 52, width: 240, background: '#fff', borderRadius: 18,
+                boxShadow: '0 18px 50px rgba(22,24,42,.2)', overflow: 'hidden', zIndex: 70
+              }}>
+              <div style={{ padding: '14px 16px', borderBottom: '1px solid #F0EAE0' }}>
+                <b style={{ fontSize: 14.5, display: 'block' }}>{nm}</b>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{user.email}</span>
+              </div>
+              <Link to="/my-esims" onClick={() => setOpen(false)} style={item}>🧳 My eSIMs</Link>
+              <Link to="/profile" onClick={() => setOpen(false)} style={item}>👤 Profile</Link>
+              <Link to="/profile" onClick={() => setOpen(false)} style={item}>🎁 Refer & earn ₹150</Link>
+              <button onClick={() => { setOpen(false); logout(); }} style={{ ...item, color: 'var(--coral-deep)', borderTop: '1px solid #F0EAE0' }}>↪ Log out</button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </span>
     </>
   );
 }
