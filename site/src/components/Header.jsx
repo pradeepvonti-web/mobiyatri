@@ -107,7 +107,7 @@ export default function Header() {
         boxShadow: scrolled ? '0 2px 20px rgba(22,24,42,.08)' : 'none',
         transition: 'box-shadow .2s'
       }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: 14, height: 76 }}>
+        <div className="container-wide" style={{ display: 'flex', alignItems: 'center', gap: 14, height: 76 }}>
           <Logo />
           <div style={{ flex: 1, minWidth: 0 }}>
             <AnimatePresence>

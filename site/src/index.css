@@ -22,7 +22,8 @@ button{font-family:inherit;border:none;cursor:pointer;background:none}
 img{max-width:100%}
 h1,h2,h3{font-family:var(--head);letter-spacing:-0.01em}
 
-.container{max-width:1800px;margin:0 auto;padding:0 clamp(20px,3vw,60px)}
+.container{max-width:1440px;margin:0 auto;padding:0 clamp(20px,2.5vw,48px)}
+.container-wide{max-width:1800px;margin:0 auto;padding:0 clamp(20px,3vw,60px)}
 
 /* pill button */
 .pill{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:15px 30px;border-radius:999px;
@@ -34,7 +35,7 @@ h1,h2,h3{font-family:var(--head);letter-spacing:-0.01em}
 .pill-outline{background:transparent;color:var(--ink);border:2px solid var(--ink)}
 
 /* rounded page band */
-.band{border-radius:var(--band-radius);margin:28px 20px;padding:72px 24px;position:relative;overflow:hidden}
+.band{border-radius:var(--band-radius);margin:28px auto;max-width:1500px;padding:72px 24px;position:relative;overflow:hidden}
 @media(max-width:720px){.band{border-radius:28px;padding:48px 18px;margin:18px 10px}}
 
 .band-title{font-size:clamp(30px,4.5vw,48px);font-weight:800;text-align:center;line-height:1.15;margin-bottom:14px}
