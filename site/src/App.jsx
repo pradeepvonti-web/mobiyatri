@@ -1,10 +1,19 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header.jsx';
 import Hero from './components/Hero.jsx';
 import StoreBand from './components/StoreBand.jsx';
 import Faq from './components/Faq.jsx';
 import Footer from './components/Footer.jsx';
+import AuthModal from './components/AuthModal.jsx';
+import ChatWidget from './components/ChatWidget.jsx';
+import StoreHome from './pages/StoreHome.jsx';
+import Country from './pages/Country.jsx';
+import Checkout from './pages/Checkout.jsx';
+import MyEsims from './pages/MyEsims.jsx';
+import Profile from './pages/Profile.jsx';
 import { WhyBand, WhatBand, HowBand, InsuranceBand, ReferralBand, BusinessBand, SupportBand, AppBand } from './components/Bands.jsx';
+import { AuthProvider } from './lib/auth.jsx';
 import { useScrollY } from './hooks.js';
 
 const SECTIONS = [
@@ -18,6 +27,8 @@ const SECTIONS = [
 
 function JumpBar() {
   const y = useScrollY();
+  const { pathname } = useLocation();
+  if (pathname !== '/') return null;
   return (
     <div className={'jumpbar' + (y > 900 ? ' on' : '')}>
       <select defaultValue="" onChange={e => {
@@ -32,22 +43,9 @@ function JumpBar() {
   );
 }
 
-function ChatFab() {
-  return (
-    <a className="fab" href="/app" aria-label="Chat with Yatri Sahayak">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 12a8 8 0 01-8 8H4l2.5-3A8 8 0 1121 12z" />
-        <path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" strokeWidth="3" />
-      </svg>
-    </a>
-  );
-}
-
-export default function App() {
+function Landing() {
   return (
     <>
-      <Header />
-      <JumpBar />
       <Hero />
       <WhyBand />
       <StoreBand />
@@ -59,8 +57,37 @@ export default function App() {
       <SupportBand />
       <Faq />
       <AppBand />
-      <Footer />
-      <ChatFab />
     </>
+  );
+}
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  React.useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <ScrollToTop />
+        <Header />
+        <JumpBar />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/app" element={<StoreHome />} />
+          <Route path="/country/:iso" element={<Country />} />
+          <Route path="/region/:name" element={<Country byRegion />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/my-esims" element={<MyEsims />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="*" element={<Landing />} />
+        </Routes>
+        <Footer />
+        <AuthModal />
+        <ChatWidget />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

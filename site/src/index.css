@@ -91,3 +91,12 @@ h1,h2,h3{font-family:var(--head);letter-spacing:-0.01em}
   text-align:center;color:#fff;user-select:none;letter-spacing:-.03em}
 
 ::selection{background:var(--coral);color:#fff}
+
+.acctlink{border-radius:10px;transition:background .12s}
+.acctlink:hover{background:rgba(22,24,42,.06)}
+@media(max-width:860px){
+  .acctarea{display:none !important}
+  .profilegrid{grid-template-columns:1fr !important}
+  .profilegrid nav{flex-direction:row !important;overflow-x:auto;gap:6px !important}
+  .profilegrid nav button{border-left:none !important;border-radius:999px !important;white-space:nowrap;background:#fff !important}
+}

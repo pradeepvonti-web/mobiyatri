@@ -518,16 +518,20 @@ const server = http.createServer(async (req, res) => {
   const SITE_DIST = path.join(__dirname, 'site', 'dist');
   if (req.method === 'GET' && !req.url.startsWith('/api/')) {
     let urlPath = decodeURIComponent(req.url.split('?')[0]);
-    // marketing site: built React bundle in site/dist (fallback to site.html if not built)
-    if (urlPath === '/' || urlPath.startsWith('/assets/')) {
-      const distFp = path.join(SITE_DIST, urlPath === '/' ? 'index.html' : urlPath);
+    // React SPA (site/dist): serves the marketing site AND the full web app.
+    // Any extension-less route falls back to index.html so client-side routing works
+    // (/app, /country/:iso, /region/:name, /checkout, /my-esims, /profile).
+    const SPA_EXEMPT = ['/privacy', '/terms', '/legacy'];
+    if ((urlPath === '/' || urlPath.startsWith('/assets/') || !path.extname(urlPath)) && !SPA_EXEMPT.includes(urlPath)) {
+      const wantFile = urlPath.startsWith('/assets/') ? urlPath : 'index.html';
+      const distFp = path.join(SITE_DIST, wantFile);
       if (distFp.startsWith(SITE_DIST) && fs.existsSync(distFp) && fs.statSync(distFp).isFile()) {
         res.writeHead(200, { 'Content-Type': MIME[path.extname(distFp).toLowerCase()] || 'application/octet-stream' });
         res.end(fs.readFileSync(distFp)); return;
       }
     }
     if (urlPath === '/') urlPath = 'site.html';        // fallback if dist not built
-    else if (urlPath === '/app') urlPath = 'index.html'; // the store app
+    else if (urlPath === '/app' || urlPath === '/legacy') urlPath = 'index.html'; // legacy single-file app (fallback)
     else if (urlPath === '/privacy') urlPath = 'privacy.html';
     else if (urlPath === '/terms') urlPath = 'terms.html';
     const fp = path.join(__dirname, urlPath);

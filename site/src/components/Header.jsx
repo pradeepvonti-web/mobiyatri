@@ -1,16 +1,42 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import SearchBox from './SearchBox.jsx';
 import { useScrollY } from '../hooks.js';
+import { useAuth } from '../lib/auth.jsx';
 
 const NAV = [
-  { label: 'Destinations', href: '#destinations' },
-  { label: 'Why MobiYatri', href: '#why' },
-  { label: 'How it works', href: '#how' },
-  { label: 'Insurance', href: '#insurance' },
-  { label: 'Business', href: '#business' },
-  { label: 'Support', href: '#support' },
+  { label: 'Destinations', href: '/#destinations' },
+  { label: 'Why MobiYatri', href: '/#why' },
+  { label: 'How it works', href: '/#how' },
+  { label: 'Insurance', href: '/#insurance' },
+  { label: 'Business', href: '/#business' },
+  { label: 'Support', href: '/#support' },
 ];
+
+function AccountArea({ closeMenu }) {
+  const { user, openAuth, logout } = useAuth();
+  if (!user) return (
+    <>
+      <button className="pill pill-white" onClick={() => { openAuth('login'); closeMenu?.(); }}
+        style={{ padding: '11px 20px', fontSize: 14.5 }}>Log in</button>
+      <button className="pill pill-coral" onClick={() => { openAuth('signup'); closeMenu?.(); }}
+        style={{ padding: '11px 22px', fontSize: 14.5 }}>Sign up</button>
+    </>
+  );
+  return (
+    <>
+      <Link to="/my-esims" onClick={closeMenu} className="acctlink" style={{ fontWeight: 700, fontSize: 14.5, padding: '8px 10px' }}>My eSIMs</Link>
+      <Link to="/profile" onClick={closeMenu} className="acctlink" style={{ fontWeight: 700, fontSize: 14.5, padding: '8px 10px' }}>Profile</Link>
+      <span style={{
+        background: '#DCEDDC', color: '#1F5B33', fontWeight: 800, fontSize: 13.5,
+        borderRadius: 999, padding: '7px 14px', whiteSpace: 'nowrap'
+      }}>YatriCash ₹0</span>
+      <button className="pill pill-white" onClick={() => { logout(); closeMenu?.(); }}
+        style={{ padding: '10px 18px', fontSize: 14 }}>Log out</button>
+    </>
+  );
+}
 
 export function Logo({ light = false }) {
   return (
@@ -55,7 +81,9 @@ export default function Header() {
             </AnimatePresence>
           </div>
           <nav className="topnav" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <a className="pill pill-coral" href="/app" style={{ padding: '11px 22px', fontSize: 14.5 }}>Open the app</a>
+            <span className="acctarea" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AccountArea />
+            </span>
             <button aria-label="Menu" onClick={() => setMenu(m => !m)}
               style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
               <span style={{ width: 24, height: 2.6, background: 'var(--ink)', borderRadius: 2, transition: 'transform .2s', transform: menu ? 'translateY(7.6px) rotate(45deg)' : 'none' }} />
@@ -105,8 +133,11 @@ export default function Header() {
                 borderBottom: '1px solid rgba(22,24,42,.08)'
               }}>{n.label}</a>
             ))}
-            <a href="/app" onClick={() => setMenu(false)} className="pill pill-coral"
-              style={{ marginTop: 18, width: '100%' }}>Open the MobiYatri app</a>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 18, alignItems: 'center' }}>
+              <AccountArea closeMenu={() => setMenu(false)} />
+            </div>
+            <Link to="/app" onClick={() => setMenu(false)} className="pill pill-coral"
+              style={{ marginTop: 14, width: '100%' }}>Browse the eSIM store</Link>
           </motion.div>
         )}
       </AnimatePresence>
