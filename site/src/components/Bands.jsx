@@ -34,27 +34,50 @@ const wave = (delay = 0) => ({
 
 function CornerTraveller() {
   return (
-    <motion.svg className="bandart" viewBox="0 0 220 220" width="200"
-      style={{ position: 'absolute', top: -6, left: -6 }}
-      animate={{ y: [0, -7, 0] }} transition={{ duration: 4.6, repeat: Infinity, ease: 'easeInOut' }}>
-      <rect x="52" y="128" width="96" height="62" rx="12" fill="#E85340" />
-      <rect x="52" y="150" width="96" height="6" fill="#C43A28" />
-      <circle cx="100" cy="70" r="22" fill="#B4744C" />
-      <path d="M84 62q-6-16 8-22" {...stroke} stroke="#7A4B2B" strokeWidth="5" fill="none" />
-      <rect x="76" y="92" width="48" height="42" rx="16" fill="#33386E" />
-      <path d="M76 104q-18 6-22 22" stroke="#33386E" strokeWidth="12" strokeLinecap="round" fill="none" />
+    <motion.svg className="bandart" viewBox="0 0 210 240" width="185"
+      style={{ position: 'absolute', top: -14, left: 6 }}
+      animate={{ y: [0, -6, 0] }} transition={{ duration: 4.6, repeat: Infinity, ease: 'easeInOut' }}>
+      {/* rolling suitcase */}
+      <rect x="36" y="152" width="132" height="66" rx="15" fill="#E85340" />
+      <rect x="36" y="176" width="132" height="9" fill="#C43A28" />
+      <rect x="88" y="142" width="28" height="13" rx="5" fill="#C43A28" />
+      <rect x="120" y="192" width="30" height="17" rx="3.5" fill="#FFD166" transform="rotate(-7 135 200)" />
+      <circle cx="60" cy="222" r="8.5" fill="#16182A" /><circle cx="60" cy="222" r="3.2" fill="#F5F0E7" />
+      <circle cx="144" cy="222" r="8.5" fill="#16182A" /><circle cx="144" cy="222" r="3.2" fill="#F5F0E7" />
+      {/* crossed legs */}
+      <path d="M72 146q-10 20 10 27 21 7 44-4 13-8 6-21z" fill="#33386E" />
+      <path d="M126 158q16 2 18 14" stroke="#33386E" strokeWidth="13" strokeLinecap="round" fill="none" />
+      <ellipse cx="147" cy="176" rx="13" ry="8.5" fill="#F5F0E7" />
+      <ellipse cx="66" cy="176" rx="13" ry="8.5" fill="#F5F0E7" />
+      {/* torso — mustard kurti */}
+      <path d="M76 94q-10 38 6 58 23 9 46 0 15-19 5-58-28-13-57 0z" fill="#F4B63F" />
+      <path d="M79 118q24 10 48 0" stroke="#D89A22" strokeWidth="3" fill="none" opacity=".6" />
+      {/* resting arm */}
+      <path d="M78 106q-19 17-9 40" stroke="#F4B63F" strokeWidth="13" strokeLinecap="round" fill="none" />
+      <circle cx="70" cy="149" r="7.5" fill="#B4744C" />
       {/* waving arm */}
       <motion.g {...wave(0.4)}>
-        <path d="M124 100q16-14 12-30" stroke="#33386E" strokeWidth="12" strokeLinecap="round" fill="none" />
-        <circle cx="136" cy="64" r="8" fill="#B4744C" />
+        <path d="M128 104q21-11 24-35" stroke="#F4B63F" strokeWidth="13" strokeLinecap="round" fill="none" />
+        <circle cx="153" cy="65" r="8.5" fill="#B4744C" />
       </motion.g>
-      <path d="M64 190v14M136 190v14" stroke="#16182A" strokeWidth="7" strokeLinecap="round" />
+      {/* head */}
+      <circle cx="104" cy="68" r="27" fill="#B4744C" />
+      {/* hair — side-swept bob with bun */}
+      <path d="M77 64q-2-32 29-32 27 0 28 27-9-13-21-12-4 7-15 7-15 0-21 10z" fill="#2E1F14" />
+      <circle cx="131" cy="42" r="8" fill="#2E1F14" />
+      {/* face */}
+      <circle cx="96" cy="70" r="2.7" fill="#16182A" /><circle cx="114" cy="70" r="2.7" fill="#16182A" />
+      <path d="M100 80q5.5 5.5 12 0" stroke="#16182A" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+      <circle cx="88" cy="78" r="3.6" fill="#D98E63" opacity=".65" />
+      <circle cx="121" cy="78" r="3.6" fill="#D98E63" opacity=".65" />
+      {/* earring */}
+      <circle cx="82" cy="76" r="2.2" fill="#FFD166" />
       {/* drifting paper plane */}
-      <motion.g animate={{ x: [0, 10, 0], y: [0, -8, 0], rotate: [0, -6, 0] }}
+      <motion.g animate={{ x: [0, 12, 0], y: [0, -9, 0], rotate: [0, -8, 0] }}
         transition={{ duration: 5.4, repeat: Infinity, ease: 'easeInOut' }}
         style={{ transformBox: 'fill-box', transformOrigin: 'center' }}>
-        <path d="M20 40q10-18 30-14" {...stroke} strokeDasharray="3 6" />
-        <path d="M46 18 30 44l12 2z" fill="#FF6B57" />
+        <path d="M12 36q10-18 30-16" {...stroke} strokeDasharray="3 6" opacity=".6" />
+        <path d="M44 10 26 38l13 2z" fill="#FF6B57" />
       </motion.g>
     </motion.svg>
   );
@@ -62,30 +85,62 @@ function CornerTraveller() {
 
 function CornerFriends() {
   return (
-    <motion.svg className="bandart" viewBox="0 0 220 200" width="210"
-      style={{ position: 'absolute', bottom: -8, right: -4 }}
-      animate={{ y: [0, -6, 0] }} transition={{ duration: 5.2, repeat: Infinity, ease: 'easeInOut', delay: .8 }}>
-      <ellipse cx="110" cy="188" rx="95" ry="10" fill="rgba(22,24,42,.08)" />
-      <circle cx="78" cy="78" r="20" fill="#8A5A3B" />
-      <rect x="56" y="98" width="44" height="60" rx="18" fill="#FF6B57" />
-      <path d="M56 112q-16 8-18 26" stroke="#FF6B57" strokeWidth="11" strokeLinecap="round" fill="none" />
-      {/* phone arm lifts */}
-      <motion.g animate={{ rotate: [0, -8, 0] }} transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
-        style={{ transformBox: 'fill-box', transformOrigin: '20% 90%' }}>
-        <path d="M100 108q14-20 10-34" stroke="#FF6B57" strokeWidth="11" strokeLinecap="round" fill="none" />
-        <rect x="102" y="62" width="14" height="22" rx="4" fill="#16182A" />
+    <motion.svg className="bandart" viewBox="0 0 240 230" width="205"
+      style={{ position: 'absolute', bottom: -10, right: 2 }}
+      animate={{ y: [0, -5, 0] }} transition={{ duration: 5.2, repeat: Infinity, ease: 'easeInOut', delay: .8 }}>
+      <ellipse cx="120" cy="218" rx="105" ry="10" fill="rgba(22,24,42,.08)" />
+      {/* red suitcase behind */}
+      <rect x="168" y="150" width="58" height="66" rx="10" fill="#D93B2B" />
+      <rect x="168" y="172" width="58" height="8" fill="#B02A1D" />
+      <rect x="186" y="140" width="22" height="12" rx="5" fill="#B02A1D" />
+      {/* leafy sprig */}
+      <path d="M228 150q16-8 10-26M232 152q14 2 20-10" stroke="#4E8D62" strokeWidth="4" fill="none" strokeLinecap="round" />
+      <ellipse cx="236" cy="120" rx="7" ry="11" fill="#4E8D62" transform="rotate(20 236 120)" />
+      <ellipse cx="254" cy="140" rx="6" ry="9" fill="#4E8D62" transform="rotate(60 254 140)" />
+
+      {/* Friend A — coral kurta, selfie arm */}
+      <path d="M60 196v22" stroke="#33386E" strokeWidth="13" strokeLinecap="round" />
+      <path d="M84 196v22" stroke="#33386E" strokeWidth="13" strokeLinecap="round" />
+      <ellipse cx="57" cy="222" rx="12" ry="7.5" fill="#16182A" />
+      <ellipse cx="87" cy="222" rx="12" ry="7.5" fill="#16182A" />
+      <path d="M52 120q-8 48 10 78 16 7 38 0 16-30 8-78-28-11-56 0z" fill="#FF6B57" />
+      <path d="M55 146q22 9 46 0" stroke="#E85340" strokeWidth="3" fill="none" opacity=".7" />
+      <path d="M54 130q-15 17-8 38" stroke="#FF6B57" strokeWidth="12" strokeLinecap="round" fill="none" />
+      <circle cx="47" cy="170" r="7" fill="#8A5A3B" />
+      {/* selfie arm raised */}
+      <motion.g animate={{ rotate: [0, -9, 0] }} transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ transformBox: 'fill-box', transformOrigin: '15% 95%' }}>
+        <path d="M104 130q20-16 18-42" stroke="#FF6B57" strokeWidth="12" strokeLinecap="round" fill="none" />
+        <rect x="112" y="62" width="17" height="28" rx="5" fill="#16182A" />
+        <rect x="115" y="66" width="11" height="17" rx="2.5" fill="#BFE3F2" />
       </motion.g>
-      <circle cx="148" cy="88" r="20" fill="#B4744C" />
-      <path d="M132 78q-4-14 10-18" stroke="#7A4B2B" strokeWidth="5" fill="none" strokeLinecap="round" />
-      <rect x="126" y="108" width="44" height="52" rx="18" fill="#33386E" />
-      {/* waving arm with phone */}
+      {/* head — short crop hair */}
+      <circle cx="76" cy="98" r="23" fill="#8A5A3B" />
+      <path d="M54 92q1-24 23-24 21 0 22 19-9-9-20-7-13 2-25 12z" fill="#1F1710" />
+      <circle cx="69" cy="99" r="2.5" fill="#16182A" /><circle cx="85" cy="99" r="2.5" fill="#16182A" />
+      <path d="M72 108q4.5 4.5 10 0" stroke="#16182A" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+
+      {/* Friend B — indigo top, gold pants, waving, ponytail */}
+      <path d="M148 198v20" stroke="#D89A22" strokeWidth="12" strokeLinecap="round" />
+      <path d="M168 198v20" stroke="#D89A22" strokeWidth="12" strokeLinecap="round" />
+      <ellipse cx="146" cy="222" rx="11" ry="7" fill="#7A4B00" />
+      <ellipse cx="171" cy="222" rx="11" ry="7" fill="#7A4B00" />
+      <path d="M142 138q-7 40 8 64 14 6 32 0 13-24 7-64-23-10-47 0z" fill="#33386E" />
+      <path d="M143 128q-13 14-8 32" stroke="#33386E" strokeWidth="11" strokeLinecap="round" fill="none" />
+      <circle cx="137" cy="162" r="6.5" fill="#B4744C" />
+      {/* waving arm */}
       <motion.g {...wave(1.2)}>
-        <path d="M170 118q16 6 18 24" stroke="#33386E" strokeWidth="11" strokeLinecap="round" fill="none" />
-        <rect x="180" y="128" width="13" height="20" rx="4" fill="#16182A" />
+        <path d="M186 140q18-10 20-32" stroke="#33386E" strokeWidth="11" strokeLinecap="round" fill="none" />
+        <circle cx="207" cy="105" r="7.5" fill="#B4744C" />
       </motion.g>
-      <path d="M66 158v26M90 158v26M136 160v24M160 160v24" stroke="#16182A" strokeWidth="7" strokeLinecap="round" />
-      <path d="M196 168q14-2 16-14" {...stroke} />
-      <path d="M204 176q10 0 14-8" {...stroke} />
+      {/* head — ponytail */}
+      <circle cx="164" cy="114" r="21" fill="#B4744C" />
+      <path d="M144 110q0-22 21-22 19 0 20 18-8-9-18-7-12 2-23 11z" fill="#2E1F14" />
+      <path d="M184 100q14 4 12 24-6-4-10-12" fill="#2E1F14" />
+      <circle cx="158" cy="115" r="2.4" fill="#16182A" /><circle cx="172" cy="115" r="2.4" fill="#16182A" />
+      <path d="M160 123q4 4 9 0" stroke="#16182A" strokeWidth="2.1" fill="none" strokeLinecap="round" />
+      <circle cx="150" cy="121" r="3" fill="#D98E63" opacity=".6" />
+      <circle cx="179" cy="121" r="3" fill="#D98E63" opacity=".6" />
     </motion.svg>
   );
 }
@@ -99,7 +154,7 @@ export function WhyBand() {
         <Reveal><h2 className="band-title">Why do Indian travellers<br />pick MobiYatri?</h2></Reveal>
         <Stagger className="whygrid" style={{
           display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
-          gap: '38px 30px', maxWidth: 1240, margin: '52px auto 0'
+          gap: '38px 26px', maxWidth: 880, margin: '52px auto 0'
         }}>
           {WHY.map(w => (
             <motion.div key={w.text}
