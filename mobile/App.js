@@ -23,11 +23,11 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
 });
 
-/* ---------------- theme (matches the website: warm cream + coral + indigo) ---------------- */
+/* ---------------- theme (original app palette: ice-blue light surfaces + indigo/coral brand) ---------------- */
 const T = {
-  bg: '#F5F0E7', bgDeep: '#EDE6D9', card: '#FFFFFF', ink: '#16182A', soft: '#565B72',
-  line: '#E8E1D2', coral: '#FF6B57', coralDeep: '#E85340', indigo: '#33386E',
-  powder: '#A5C8D8', sage: '#8FC09B', gold: '#F4B63F', mint: '#DCEDDC', mintInk: '#1F5B33',
+  bg: '#F1F5FB', bgDeep: '#E4EAF6', card: '#FFFFFF', ink: '#23253A', soft: '#76819B',
+  line: '#E5EBF5', coral: '#FF6B57', coralDeep: '#E85340', indigo: '#33386E',
+  powder: '#A5C8D8', sage: '#8FC09B', gold: '#F4B63F', mint: '#D6EBDB', mintInk: '#1F7A40',
   goldBg: '#FFE9C9', goldInk: '#8A5A00', night: '#151834',
 };
 const TOPPAD = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 8 : 54;
@@ -96,7 +96,7 @@ function Accordion({ title, children, icon }) {
 function Toggle({ on, onChange }) {
   return (
     <Pressable onPress={() => onChange(!on)} style={{
-      width: 50, height: 29, borderRadius: 999, backgroundColor: on ? T.indigo : '#D8D2C4', padding: 3,
+      width: 50, height: 29, borderRadius: 999, backgroundColor: on ? T.indigo : '#CBD2E4', padding: 3,
       alignItems: on ? 'flex-end' : 'flex-start', justifyContent: 'center',
     }}>
       <View style={{ width: 23, height: 23, borderRadius: 12, backgroundColor: '#fff' }} />
@@ -335,7 +335,7 @@ function StoreHome({ ctx }) {
               <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, textAlign: 'center', marginTop: 4, lineHeight: 19 }}>{INTRO_SLIDES[intro].d}</Text>
               <View style={{ flexDirection: 'row', gap: 6, marginTop: 14 }}>
                 {INTRO_SLIDES.map((_, x) => (
-                  <View key={x} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: x === intro ? T.ink : '#DDD5C4' }} />
+                  <View key={x} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: x === intro ? T.ink : '#CBD5E8' }} />
                 ))}
               </View>
             </Pressable>
@@ -466,7 +466,7 @@ function CountryScreen({ ctx, c }) {
                   style={[s.card, { marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: isSel ? T.indigo : 'transparent' }]}>
                   <View style={{
                     width: 20, height: 20, borderRadius: 10, borderWidth: isSel ? 6 : 2,
-                    borderColor: isSel ? T.indigo : '#C9C2B2', marginRight: 12,
+                    borderColor: isSel ? T.indigo : '#C5CBDD', marginRight: 12,
                   }} />
                   <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 15.5 }}>{p.label}</Text>
                   <Text style={{ color: T.ink, fontWeight: '800', fontSize: 16 }}>₹{p.price}</Text>
@@ -614,7 +614,7 @@ function CheckoutScreen({ ctx, order }) {
               <Text style={{ color: T.ink, fontWeight: '700', fontSize: 14.5 }}>{label}</Text>
               <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5 }}>{sub}</Text>
             </View>
-            <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: pay === k ? 6 : 2, borderColor: pay === k ? T.indigo : '#C9C2B2' }} />
+            <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: pay === k ? 6 : 2, borderColor: pay === k ? T.indigo : '#C5CBDD' }} />
           </Pressable>
         ))}
         <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12, marginTop: 8 }}>
@@ -1231,7 +1231,7 @@ const s = StyleSheet.create({
     borderRadius: 999, paddingVertical: 14, paddingHorizontal: 18,
   },
   input: {
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#DDD5C6', borderRadius: 13,
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#D6DDEB', borderRadius: 13,
     paddingHorizontal: 14, paddingVertical: 11, fontSize: 14.5, color: T.ink, fontWeight: '500',
   },
   label: { color: T.soft, fontWeight: '700', fontSize: 12.5, marginTop: 16, marginBottom: 6 },
