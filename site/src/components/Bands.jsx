@@ -25,43 +25,68 @@ const WHY = [
   },
 ];
 
-/* original corner art — traveller on a suitcase (top-left), pair with phones (bottom-right) */
+/* original corner art — animated: bobbing bodies, waving arms, drifting plane */
+const wave = (delay = 0) => ({
+  animate: { rotate: [0, 16, -4, 16, 0] },
+  transition: { duration: 2.2, repeat: Infinity, repeatDelay: 1.4, delay, ease: 'easeInOut' },
+  style: { transformBox: 'fill-box', transformOrigin: '85% 90%' }
+});
+
 function CornerTraveller() {
   return (
-    <svg className="bandart" viewBox="0 0 220 220" width="200" style={{ position: 'absolute', top: -6, left: -6 }}>
+    <motion.svg className="bandart" viewBox="0 0 220 220" width="200"
+      style={{ position: 'absolute', top: -6, left: -6 }}
+      animate={{ y: [0, -7, 0] }} transition={{ duration: 4.6, repeat: Infinity, ease: 'easeInOut' }}>
       <rect x="52" y="128" width="96" height="62" rx="12" fill="#E85340" />
       <rect x="52" y="150" width="96" height="6" fill="#C43A28" />
       <circle cx="100" cy="70" r="22" fill="#B4744C" />
       <path d="M84 62q-6-16 8-22" {...stroke} stroke="#7A4B2B" strokeWidth="5" fill="none" />
       <rect x="76" y="92" width="48" height="42" rx="16" fill="#33386E" />
       <path d="M76 104q-18 6-22 22" stroke="#33386E" strokeWidth="12" strokeLinecap="round" fill="none" />
-      <path d="M124 100q16-14 12-30" stroke="#33386E" strokeWidth="12" strokeLinecap="round" fill="none" />
-      <circle cx="136" cy="64" r="8" fill="#B4744C" />
+      {/* waving arm */}
+      <motion.g {...wave(0.4)}>
+        <path d="M124 100q16-14 12-30" stroke="#33386E" strokeWidth="12" strokeLinecap="round" fill="none" />
+        <circle cx="136" cy="64" r="8" fill="#B4744C" />
+      </motion.g>
       <path d="M64 190v14M136 190v14" stroke="#16182A" strokeWidth="7" strokeLinecap="round" />
-      <path d="M20 40q10-18 30-14" {...stroke} strokeDasharray="3 6" />
-      <path d="M46 18 30 44l12 2z" fill="#FF6B57" />
-    </svg>
+      {/* drifting paper plane */}
+      <motion.g animate={{ x: [0, 10, 0], y: [0, -8, 0], rotate: [0, -6, 0] }}
+        transition={{ duration: 5.4, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ transformBox: 'fill-box', transformOrigin: 'center' }}>
+        <path d="M20 40q10-18 30-14" {...stroke} strokeDasharray="3 6" />
+        <path d="M46 18 30 44l12 2z" fill="#FF6B57" />
+      </motion.g>
+    </motion.svg>
   );
 }
 
 function CornerFriends() {
   return (
-    <svg className="bandart" viewBox="0 0 220 200" width="210" style={{ position: 'absolute', bottom: -8, right: -4 }}>
+    <motion.svg className="bandart" viewBox="0 0 220 200" width="210"
+      style={{ position: 'absolute', bottom: -8, right: -4 }}
+      animate={{ y: [0, -6, 0] }} transition={{ duration: 5.2, repeat: Infinity, ease: 'easeInOut', delay: .8 }}>
       <ellipse cx="110" cy="188" rx="95" ry="10" fill="rgba(22,24,42,.08)" />
       <circle cx="78" cy="78" r="20" fill="#8A5A3B" />
       <rect x="56" y="98" width="44" height="60" rx="18" fill="#FF6B57" />
       <path d="M56 112q-16 8-18 26" stroke="#FF6B57" strokeWidth="11" strokeLinecap="round" fill="none" />
-      <path d="M100 108q14-20 10-34" stroke="#FF6B57" strokeWidth="11" strokeLinecap="round" fill="none" />
-      <rect x="102" y="62" width="14" height="22" rx="4" fill="#16182A" />
+      {/* phone arm lifts */}
+      <motion.g animate={{ rotate: [0, -8, 0] }} transition={{ duration: 3.4, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ transformBox: 'fill-box', transformOrigin: '20% 90%' }}>
+        <path d="M100 108q14-20 10-34" stroke="#FF6B57" strokeWidth="11" strokeLinecap="round" fill="none" />
+        <rect x="102" y="62" width="14" height="22" rx="4" fill="#16182A" />
+      </motion.g>
       <circle cx="148" cy="88" r="20" fill="#B4744C" />
       <path d="M132 78q-4-14 10-18" stroke="#7A4B2B" strokeWidth="5" fill="none" strokeLinecap="round" />
       <rect x="126" y="108" width="44" height="52" rx="18" fill="#33386E" />
-      <path d="M170 118q16 6 18 24" stroke="#33386E" strokeWidth="11" strokeLinecap="round" fill="none" />
-      <rect x="180" y="128" width="13" height="20" rx="4" fill="#16182A" />
+      {/* waving arm with phone */}
+      <motion.g {...wave(1.2)}>
+        <path d="M170 118q16 6 18 24" stroke="#33386E" strokeWidth="11" strokeLinecap="round" fill="none" />
+        <rect x="180" y="128" width="13" height="20" rx="4" fill="#16182A" />
+      </motion.g>
       <path d="M66 158v26M90 158v26M136 160v24M160 160v24" stroke="#16182A" strokeWidth="7" strokeLinecap="round" />
       <path d="M196 168q14-2 16-14" {...stroke} />
       <path d="M204 176q10 0 14-8" {...stroke} />
-    </svg>
+    </motion.svg>
   );
 }
 
@@ -77,12 +102,23 @@ export function WhyBand() {
           gap: '38px 30px', maxWidth: 1240, margin: '52px auto 0'
         }}>
           {WHY.map(w => (
-            <motion.div key={w.text} variants={item} style={{ textAlign: 'center' }}>
-              <span style={{
-                width: 96, height: 96, borderRadius: '50%', background: '#fff',
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 6px 18px rgba(22,24,42,.10)'
-              }}>{w.icon}</span>
+            <motion.div key={w.text}
+              variants={{
+                hide: { opacity: 0, y: 34 },
+                show: { opacity: 1, y: 0, transition: { duration: .5, ease: [0.22, 1, 0.36, 1] } }
+              }}
+              style={{ textAlign: 'center' }}>
+              <motion.span
+                variants={{
+                  hide: { scale: 0.3, opacity: 0 },
+                  show: { scale: 1, opacity: 1, transition: { type: 'spring', stiffness: 260, damping: 15 } }
+                }}
+                whileHover={{ scale: 1.12, rotate: 6, transition: { type: 'spring', stiffness: 400, damping: 12 } }}
+                style={{
+                  width: 96, height: 96, borderRadius: '50%', background: '#fff',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 6px 18px rgba(22,24,42,.10)', cursor: 'default'
+                }}>{w.icon}</motion.span>
               <p style={{ fontWeight: 700, fontSize: 16.5, marginTop: 18, lineHeight: 1.5, maxWidth: 280, marginLeft: 'auto', marginRight: 'auto' }}>{w.text}</p>
             </motion.div>
           ))}
