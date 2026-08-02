@@ -4,30 +4,86 @@ import Reveal, { Stagger, item } from './Reveal.jsx';
 import { ChipViz, PhoneMock } from './Illustrations.jsx';
 
 /* ---------- Why band (powder blue) ---------- */
+const stroke = { fill: 'none', stroke: '#16182A', strokeWidth: 2.1, strokeLinecap: 'round', strokeLinejoin: 'round' };
+
 const WHY = [
-  { icon: '🌏', text: 'Local, regional and global packs for 190+ destinations' },
-  { icon: '₹', text: 'True Indian pricing — UPI, RuPay and cards, packs from ₹49' },
-  { icon: '⚡', text: 'Instant QR delivery with one-tap install on iOS 17.4+' },
-  { icon: '💬', text: 'Yatri Sahayak AI support, 24/7 in English and हिन्दी' },
+  {
+    icon: <svg width="38" height="38" viewBox="0 0 24 24" {...stroke}><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.6 2.6 3.9 5.6 3.9 9S14.6 18.4 12 21M12 3c-2.6 2.6-3.9 5.6-3.9 9s1.3 6.4 3.9 9" /></svg>,
+    text: 'Local, regional and global packs for 190+ destinations'
+  },
+  {
+    icon: <svg width="38" height="38" viewBox="0 0 24 24" {...stroke}><path d="M6 3h12M6 8h12M6 3c4 0 7 1 7 5s-3 5-7 5l8 8" /></svg>,
+    text: 'True Indian pricing — UPI, RuPay and cards, packs from ₹49'
+  },
+  {
+    icon: <svg width="38" height="38" viewBox="0 0 24 24" {...stroke}><path d="M13 2 5 13.5h6L11 22l8-11.5h-6z" /></svg>,
+    text: 'Instant QR delivery with one-tap install on iOS 17.4+'
+  },
+  {
+    icon: <svg width="38" height="38" viewBox="0 0 24 24" {...stroke}><path d="M21 12a8 8 0 0 1-8 8H4l2.5-3A8 8 0 1 1 21 12z" /><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01" strokeWidth="3" /></svg>,
+    text: 'Yatri Sahayak AI support, 24/7 in English and हिन्दी'
+  },
 ];
+
+/* original corner art — traveller on a suitcase (top-left), pair with phones (bottom-right) */
+function CornerTraveller() {
+  return (
+    <svg className="bandart" viewBox="0 0 220 220" width="200" style={{ position: 'absolute', top: -6, left: -6 }}>
+      <rect x="52" y="128" width="96" height="62" rx="12" fill="#E85340" />
+      <rect x="52" y="150" width="96" height="6" fill="#C43A28" />
+      <circle cx="100" cy="70" r="22" fill="#B4744C" />
+      <path d="M84 62q-6-16 8-22" {...stroke} stroke="#7A4B2B" strokeWidth="5" fill="none" />
+      <rect x="76" y="92" width="48" height="42" rx="16" fill="#33386E" />
+      <path d="M76 104q-18 6-22 22" stroke="#33386E" strokeWidth="12" strokeLinecap="round" fill="none" />
+      <path d="M124 100q16-14 12-30" stroke="#33386E" strokeWidth="12" strokeLinecap="round" fill="none" />
+      <circle cx="136" cy="64" r="8" fill="#B4744C" />
+      <path d="M64 190v14M136 190v14" stroke="#16182A" strokeWidth="7" strokeLinecap="round" />
+      <path d="M20 40q10-18 30-14" {...stroke} strokeDasharray="3 6" />
+      <path d="M46 18 30 44l12 2z" fill="#FF6B57" />
+    </svg>
+  );
+}
+
+function CornerFriends() {
+  return (
+    <svg className="bandart" viewBox="0 0 220 200" width="210" style={{ position: 'absolute', bottom: -8, right: -4 }}>
+      <ellipse cx="110" cy="188" rx="95" ry="10" fill="rgba(22,24,42,.08)" />
+      <circle cx="78" cy="78" r="20" fill="#8A5A3B" />
+      <rect x="56" y="98" width="44" height="60" rx="18" fill="#FF6B57" />
+      <path d="M56 112q-16 8-18 26" stroke="#FF6B57" strokeWidth="11" strokeLinecap="round" fill="none" />
+      <path d="M100 108q14-20 10-34" stroke="#FF6B57" strokeWidth="11" strokeLinecap="round" fill="none" />
+      <rect x="102" y="62" width="14" height="22" rx="4" fill="#16182A" />
+      <circle cx="148" cy="88" r="20" fill="#B4744C" />
+      <path d="M132 78q-4-14 10-18" stroke="#7A4B2B" strokeWidth="5" fill="none" strokeLinecap="round" />
+      <rect x="126" y="108" width="44" height="52" rx="18" fill="#33386E" />
+      <path d="M170 118q16 6 18 24" stroke="#33386E" strokeWidth="11" strokeLinecap="round" fill="none" />
+      <rect x="180" y="128" width="13" height="20" rx="4" fill="#16182A" />
+      <path d="M66 158v26M90 158v26M136 160v24M160 160v24" stroke="#16182A" strokeWidth="7" strokeLinecap="round" />
+      <path d="M196 168q14-2 16-14" {...stroke} />
+      <path d="M204 176q10 0 14-8" {...stroke} />
+    </svg>
+  );
+}
 
 export function WhyBand() {
   return (
     <section id="why" className="band" style={{ background: 'var(--powder)' }}>
+      <CornerTraveller />
+      <CornerFriends />
       <div className="container">
         <Reveal><h2 className="band-title">Why do Indian travellers<br />pick MobiYatri?</h2></Reveal>
-        <Stagger style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(230px,1fr))',
-          gap: '38px 26px', maxWidth: 980, margin: '48px auto 0'
+        <Stagger className="whygrid" style={{
+          display: 'grid', gridTemplateColumns: 'repeat(4,1fr)',
+          gap: '38px 30px', maxWidth: 1240, margin: '52px auto 0'
         }}>
           {WHY.map(w => (
             <motion.div key={w.text} variants={item} style={{ textAlign: 'center' }}>
               <span style={{
-                width: 86, height: 86, borderRadius: '50%', background: '#fff', fontSize: 34,
+                width: 96, height: 96, borderRadius: '50%', background: '#fff',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'var(--head)', fontWeight: 800, boxShadow: '0 6px 18px rgba(22,24,42,.10)'
+                boxShadow: '0 6px 18px rgba(22,24,42,.10)'
               }}>{w.icon}</span>
-              <p style={{ fontWeight: 700, fontSize: 16.5, marginTop: 16, lineHeight: 1.45 }}>{w.text}</p>
+              <p style={{ fontWeight: 700, fontSize: 16.5, marginTop: 18, lineHeight: 1.5, maxWidth: 280, marginLeft: 'auto', marginRight: 'auto' }}>{w.text}</p>
             </motion.div>
           ))}
         </Stagger>

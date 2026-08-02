@@ -105,6 +105,13 @@ h1,h2,h3{font-family:var(--head);letter-spacing:-0.01em}
   .secnav{justify-content:flex-start !important}
   .hrule{display:none}
 }
+@media(max-width:1080px){
+  .whygrid{grid-template-columns:repeat(2,1fr) !important}
+  .bandart{display:none}
+}
+@media(max-width:560px){
+  .whygrid{grid-template-columns:1fr !important}
+}
 @media(max-width:860px){
   .acctarea{display:none !important}
   .profilegrid{grid-template-columns:1fr !important}
