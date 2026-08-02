@@ -1,11 +1,15 @@
 // MobiYatri — native app (Expo / React Native, SDK 57)
+// Complete store: onboarding, auth, store home (tabs + search + intro carousel),
+// country detail (packages, policy sheet, compatibility), checkout (insurance,
+// payment methods), order complete, My eSIMs + eSIM detail (install, troubleshooting),
+// full profile (account, orders, refer, notifications), Yatri Sahayak AI chat.
 // Same backend + Supabase as the web app. Dev API points at the desktop server on LAN;
 // switch API to the deployed URL (e.g. https://mobiyatri.onrender.com) for production builds.
 import 'react-native-url-polyfill/auto';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Linking, Modal,
-  Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
+  ActivityIndicator, Animated, FlatList, Image, KeyboardAvoidingView, Linking, Modal,
+  Platform, Pressable, ScrollView, Share, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
@@ -19,687 +23,1241 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
 });
 
-/* ---------------- theme ---------------- */
+/* ---------------- theme (matches the website: warm cream + coral + indigo) ---------------- */
 const T = {
-  bg: '#F1F5FB', bgTop: '#E4EAF6', card: '#FFFFFF', ink: '#23253A', soft: '#76819B',
-  line: '#E5EBF5', coral: '#FF6B57', coralDeep: '#E85340', indigo: '#33386E',
-  indigoDark: '#20234A', night: '#151834', mint: '#D6EBDB', mintInk: '#1F7A40', tint: '#E7ECF8',
+  bg: '#F5F0E7', bgDeep: '#EDE6D9', card: '#FFFFFF', ink: '#16182A', soft: '#565B72',
+  line: '#E8E1D2', coral: '#FF6B57', coralDeep: '#E85340', indigo: '#33386E',
+  powder: '#A5C8D8', sage: '#8FC09B', gold: '#F4B63F', mint: '#DCEDDC', mintInk: '#1F5B33',
+  goldBg: '#FFE9C9', goldInk: '#8A5A00', night: '#151834',
 };
 const TOPPAD = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 8 : 54;
 
-/* ---------------- fallback data (until catalogue loads) ---------------- */
 const FALLBACK = [
-  { iso: 'th', n: 'Thailand', op: 'AIS', from: 329, pop: 1 },
-  { iso: 'ae', n: 'UAE (Dubai)', op: 'Etisalat', from: 399, pop: 1 },
-  { iso: 'sg', n: 'Singapore', op: 'StarHub', from: 349, pop: 1 },
-  { iso: 'id', n: 'Indonesia (Bali)', op: 'Telkomsel', from: 379, pop: 1 },
+  { iso: 'th', n: 'Thailand', op: 'AIS', from: 49, pop: 1 },
+  { iso: 'ae', n: 'UAE (Dubai)', op: 'Etisalat', from: 99, pop: 1 },
+  { iso: 'sg', n: 'Singapore', op: 'StarHub', from: 49, pop: 1 },
+  { iso: 'id', n: 'Indonesia (Bali)', op: 'Telkomsel', from: 49, pop: 1 },
 ];
-
 const flagUrl = iso => `https://flagcdn.com/w160/${iso}.png`;
+const qrUrl = (lpa, size = 210) => `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(lpa)}`;
+const ONE_TAP = lpa => 'https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=' + encodeURIComponent(lpa);
+const fmtDate = d => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+const firstName = session =>
+  session?.user?.user_metadata?.full_name?.split(' ')[0] || (session?.user?.email || '').split('@')[0] || 'Yatri';
+
+async function authHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) headers.Authorization = 'Bearer ' + session.access_token;
+  return headers;
+}
+
+/* ================= tiny UI kit ================= */
+const Btn = ({ label, onPress, kind = 'coral', style, small, disabled, left }) => (
+  <Pressable onPress={disabled ? null : onPress} style={({ pressed }) => [
+    s.btn, kind === 'coral' && s.btnCoral, kind === 'white' && s.btnWhite, kind === 'outline' && s.btnOutline,
+    small && { paddingVertical: 10, paddingHorizontal: 18 }, disabled && { opacity: .55 },
+    pressed && { transform: [{ scale: .98 }] }, style,
+  ]}>
+    {left}
+    <Text style={[s.btnTxt, kind !== 'coral' && { color: T.ink }, small && { fontSize: 14 }]}>{label}</Text>
+  </Pressable>
+);
+
+const Chip = ({ txt, bg = T.goldBg, fg = T.goldInk, style }) => (
+  <View style={[{ backgroundColor: bg, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 3 }, style]}>
+    <Text style={{ color: fg, fontSize: 10.5, fontWeight: '800', textTransform: 'uppercase', letterSpacing: .4 }}>{txt}</Text>
+  </View>
+);
+
+const StatTile = ({ k, v, flex = 1 }) => (
+  <View style={{ flex, backgroundColor: T.bg, borderRadius: 12, padding: 10 }}>
+    <Text style={{ color: T.soft, fontSize: 11, fontWeight: '700' }}>{k}</Text>
+    <Text style={{ color: T.ink, fontSize: 15, fontWeight: '800', marginTop: 2 }}>{v}</Text>
+  </View>
+);
+
+function Accordion({ title, children, icon }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={s.accWrap}>
+      <Pressable onPress={() => setOpen(o => !o)} style={s.accHead}>
+        {icon ? <Text style={{ fontSize: 16, marginRight: 8 }}>{icon}</Text> : null}
+        <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 14.5 }}>{title}</Text>
+        <Text style={{ color: T.ink, fontSize: 15, transform: [{ rotate: open ? '180deg' : '0deg' }] }}>⌄</Text>
+      </Pressable>
+      {open && <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
+        <Text style={{ color: T.soft, fontSize: 13.5, lineHeight: 20, fontWeight: '500' }}>{children}</Text>
+      </View>}
+    </View>
+  );
+}
+
+function Toggle({ on, onChange }) {
+  return (
+    <Pressable onPress={() => onChange(!on)} style={{
+      width: 50, height: 29, borderRadius: 999, backgroundColor: on ? T.indigo : '#D8D2C4', padding: 3,
+      alignItems: on ? 'flex-end' : 'flex-start', justifyContent: 'center',
+    }}>
+      <View style={{ width: 23, height: 23, borderRadius: 12, backgroundColor: '#fff' }} />
+    </Pressable>
+  );
+}
+
+/* toast */
+let pushToast = () => {};
+function ToastHost() {
+  const [msg, setMsg] = useState(null);
+  const op = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    pushToast = m => {
+      setMsg(m);
+      Animated.timing(op, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+      setTimeout(() => Animated.timing(op, { toValue: 0, duration: 260, useNativeDriver: true }).start(() => setMsg(null)), 3200);
+    };
+  }, []);
+  if (!msg) return null;
+  return (
+    <Animated.View pointerEvents="none" style={{
+      position: 'absolute', bottom: 100, left: 24, right: 24, opacity: op, alignItems: 'center', zIndex: 99,
+    }}>
+      <View style={{ backgroundColor: T.ink, borderRadius: 999, paddingVertical: 11, paddingHorizontal: 22, maxWidth: '100%' }}>
+        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13.5, textAlign: 'center' }}>{msg}</Text>
+      </View>
+    </Animated.View>
+  );
+}
 
 /* ================= root ================= */
 export default function App() {
-  const [screen, setScreen] = useState('splash');
-  const [tab, setTab] = useState('store');
+  const [phase, setPhase] = useState('splash');           // splash | welcome | main
+  const [tab, setTab] = useState('store');                // store | esims | profile
+  const [stack, setStack] = useState([]);                 // pushed screens over tabs
   const [countries, setCountries] = useState(FALLBACK);
   const [regions, setRegions] = useState([]);
   const [globalPacks, setGlobalPacks] = useState([]);
-  const [mode, setMode] = useState(null);
-  const [cat, setCat] = useState('popular');
-  const [query, setQuery] = useState('');
-  const [sel, setSel] = useState(null);
-  const [pkg, setPkg] = useState(null);
   const [session, setSession] = useState(null);
+  const [myEsims, setMyEsims] = useState(null);
+  const [orders, setOrders] = useState(null);
+  const [refCode, setRefCode] = useState(null);
+  // modals
   const [authOpen, setAuthOpen] = useState(false);
-  const [pendingBuy, setPendingBuy] = useState(false);
-  const [order, setOrder] = useState(null);
-  const [installOpen, setInstallOpen] = useState(false);
-  const [installEsim, setInstallEsim] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [myEsims, setMyEsims] = useState([]);
-  const [insQuote, setInsQuote] = useState(null);
-  const [insOn, setInsOn] = useState(false);
-  const [policy, setPolicy] = useState(null);
-  const [paying, setPaying] = useState(false);
+  const [installEsim, setInstallEsim] = useState(null);
+  const [compatOpen, setCompatOpen] = useState(false);
+  const pendingBuy = useRef(null);
+
+  const push = (name, params) => setStack(st => [...st, { name, params }]);
+  const pop = () => setStack(st => st.slice(0, -1));
+  const home = () => setStack([]);
 
   useEffect(() => {
     sb.auth.getSession().then(({ data }) => setSession(data.session || null));
-    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => setSession(s || null));
+    const { data: sub } = sb.auth.onAuthStateChange((_e, sn) => setSession(sn || null));
     fetch(API + '/api/catalogue').then(r => r.json()).then(d => {
-      if (d && d.countries && d.countries.length) {
+      if (d?.countries?.length) {
         setCountries(d.countries.filter(c => c.iso));
         setRegions(d.regions || []);
         setGlobalPacks(d.global || []);
-        setMode(d.mode);
       }
     }).catch(() => {});
-    const t = setTimeout(() => setScreen(s => (s === 'splash' ? 'welcome' : s)), 2200);
-    return () => { clearTimeout(t); sub && sub.subscription && sub.subscription.unsubscribe(); };
+    const t = setTimeout(() => setPhase(p => (p === 'splash' ? 'welcome' : p)), 2000);
+    AsyncStorage.getItem('seenWelcome').then(v => { if (v) setTimeout(() => setPhase('main'), 2000); });
+    return () => { clearTimeout(t); sub?.subscription?.unsubscribe(); };
   }, []);
 
-  useEffect(() => {
-    if (session && (screen === 'splash' || screen === 'welcome')) {
-      const t = setTimeout(() => setScreen('main'), screen === 'splash' ? 2200 : 0);
-      return () => clearTimeout(t);
-    }
-  }, [session]);
-
-  const userName = useMemo(() => {
-    if (!session) return 'यात्री';
-    const n = (session.user.user_metadata && session.user.user_metadata.full_name) || session.user.email || 'Traveller';
-    return n.split(' ')[0].split('@')[0];
-  }, [session]);
-
-  const list = useMemo(() => {
-    let base;
-    if (cat === 'popular') base = countries.filter(c => c.pop);
-    else if (cat === 'countries') base = [...countries].sort((a, b) => a.n.localeCompare(b.n));
-    else if (cat === 'regional') base = regions;
-    else base = globalPacks;
-    if (query.trim()) base = countries.filter(c => c.n.toLowerCase().includes(query.trim().toLowerCase()));
-    return base;
-  }, [cat, countries, regions, globalPacks, query]);
-
-  const openCountry = c => { setSel(c); setPkg(firstPkg(c)); setScreen('country'); };
-
-  const loadInsurance = async selc => {
-    try {
-      const days = pkg ? parseInt(pkg.days) || 7 : 7;
-      const q = await fetch(API + '/api/insurance/quote', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ destination: (selc || sel).n, iso: (selc || sel).iso || null, days }),
-      }).then(r => r.json());
-      if (q && q.premiumINR) setInsQuote(q);
-    } catch (e) {}
-  };
-
-  const buyNow = () => {
-    if (!session) { setPendingBuy(true); setAuthOpen(true); return; }
-    setInsQuote(null); setInsOn(false); setScreen('checkout'); loadInsurance();
-  };
-
-  const payNow = async () => {
-    if (paying) return;           // guard against double-tap double-purchases
-    setPaying(true);
-    try {
-      const headers = { 'Content-Type': 'application/json' };
-      if (session) headers.Authorization = 'Bearer ' + session.access_token;
-      const o = await fetch(API + '/api/orders', {
-        method: 'POST', headers,
-        body: JSON.stringify({ bundle: pkg.bundle, country: sel.n, package: pkg.label + ' · ' + pkg.days, price: pkg.price }),
-      }).then(r => r.json());
-      if (o.error) throw new Error(o.error);
-      setOrder(o); setPolicy(null); setScreen('ordercomplete');
-      if (insOn && insQuote) {
-        const p = await fetch(API + '/api/insurance/policy', {
-          method: 'POST', headers,
-          body: JSON.stringify({ quoteId: insQuote.quoteId, destination: sel.n, premium: insQuote.premiumINR, days: insQuote.days }),
-        }).then(r => r.json());
-        if (p && p.policyNumber) setPolicy(p);
-      }
-    } catch (e) { Alert.alert('Payment', 'Could not complete the order — is the server reachable?'); }
-    setPaying(false);
-  };
-
-  const loadMyEsims = async () => {
-    if (!session) { setMyEsims([]); return; }
-    const { data } = await sb.from('esims')
+  const loadAccount = async () => {
+    if (!session) { setMyEsims(null); setOrders(null); return; }
+    const { data: es } = await sb.from('esims')
       .select('iccid,matching_id,smdp_address,lpa_string,status,created_at,orders(country_name,package_label,price_inr)')
       .order('created_at', { ascending: false });
-    setMyEsims(data || []);
+    setMyEsims(es || []);
+    const { data: os } = await sb.from('orders')
+      .select('order_reference,country_name,package_label,price_inr,created_at')
+      .order('created_at', { ascending: false });
+    setOrders(os || []);
+    const { data: pr } = await sb.from('profiles').select('referral_code').eq('id', session.user.id).single();
+    setRefCode(pr?.referral_code || null);
   };
-  useEffect(() => { if (screen === 'main' && tab === 'esims') loadMyEsims(); }, [screen, tab, session]);
+  useEffect(() => { loadAccount(); }, [session]);
 
-  if (screen === 'splash') return <Splash />;
-  if (screen === 'welcome') return (
-    <Welcome onExplore={() => setScreen('main')} onAuth={() => setAuthOpen(true)}
-      authModal={<AuthModal open={authOpen} onClose={() => setAuthOpen(false)} onDone={() => { setAuthOpen(false); setScreen('main'); }} />} />
-  );
+  const requireAuth = (fn) => {
+    if (!session) { pendingBuy.current = fn; setAuthOpen(true); pushToast('Sign in to continue'); return; }
+    fn();
+  };
+  useEffect(() => {
+    if (session && pendingBuy.current) { const f = pendingBuy.current; pendingBuy.current = null; f(); }
+  }, [session]);
 
+  const ctx = {
+    countries, regions, globalPacks, session, myEsims, orders, refCode, loadAccount,
+    push, pop, home, setTab, requireAuth,
+    openAuth: () => setAuthOpen(true), openSearch: () => setSearchOpen(true),
+    openChat: () => setChatOpen(true), openInstall: setInstallEsim, openCompat: () => setCompatOpen(true),
+    logout: () => { sb.auth.signOut(); home(); setTab('store'); pushToast('Logged out'); },
+  };
+
+  if (phase === 'splash') return <Splash />;
+  if (phase === 'welcome') return <Welcome done={() => { AsyncStorage.setItem('seenWelcome', '1'); setPhase('main'); }} />;
+
+  const top = stack[stack.length - 1];
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
-      <StatusBar barStyle="dark-content" />
-      {screen === 'main' && tab === 'store' && (
-        <Store userName={userName} query={query} setQuery={setQuery} cat={cat} setCat={setCat}
-          list={list} mode={mode} onCountry={openCountry} onChat={() => setChatOpen(true)} />
-      )}
-      {screen === 'main' && tab === 'esims' && (
-        <MyEsims esims={myEsims} session={session} countries={countries}
-          onAuth={() => setAuthOpen(true)}
-          onInstall={e => { setInstallEsim(e); setInstallOpen(true); }}
-          onBrowse={() => setTab('store')} />
-      )}
-      {screen === 'main' && tab === 'profile' && (
-        <Profile session={session} onAuth={() => setAuthOpen(true)}
-          onLogout={async () => { await sb.auth.signOut(); }}
-          onChat={() => setChatOpen(true)} />
-      )}
-      {screen === 'country' && sel && (
-        <Country c={sel} pkg={pkg} setPkg={setPkg} onBack={() => setScreen('main')} onBuy={buyNow} />
-      )}
-      {screen === 'checkout' && (
-        <Checkout price={pkg ? pkg.price : 0} insQuote={insQuote} insOn={insOn} setInsOn={setInsOn}
-          onBack={() => setScreen('country')} onPay={payNow} paying={paying} />
-      )}
-      {screen === 'ordercomplete' && (
-        <OrderComplete order={order} policy={policy} country={sel ? sel.n : ''}
-          onDone={() => { setScreen('main'); setTab('esims'); }}
-          onInstall={() => { setInstallEsim({ lpa_string: order && order.esim && order.esim.lpa, iccid: order && order.esim && order.esim.iccid }); setInstallOpen(true); }} />
-      )}
+      <StatusBar barStyle="dark-content" backgroundColor={T.bg} />
+      {!top && tab === 'store' && <StoreHome ctx={ctx} />}
+      {!top && tab === 'esims' && <MyEsimsScreen ctx={ctx} />}
+      {!top && tab === 'profile' && <ProfileScreen ctx={ctx} />}
+      {top?.name === 'country' && <CountryScreen ctx={ctx} c={top.params} />}
+      {top?.name === 'checkout' && <CheckoutScreen ctx={ctx} order={top.params} />}
+      {top?.name === 'complete' && <CompleteScreen ctx={ctx} result={top.params} />}
+      {top?.name === 'esimdetail' && <EsimDetailScreen ctx={ctx} e={top.params} />}
+      {top?.name === 'account' && <AccountScreen ctx={ctx} />}
+      {top?.name === 'orders' && <OrdersScreen ctx={ctx} />}
+      {top?.name === 'refer' && <ReferScreen ctx={ctx} />}
+      {top?.name === 'notify' && <NotifyScreen ctx={ctx} />}
 
-      {screen === 'main' && (
-        <View style={s.tabbar}>
-          {[['store', 'Store', '🛍'], ['esims', 'My eSIMs', '▦'], ['profile', 'Profile', '👤']].map(([k, label, ic]) => (
-            <Pressable key={k} style={s.tabbtn} onPress={() => setTab(k)}>
-              <Text style={{ fontSize: 20, opacity: tab === k ? 1 : 0.45 }}>{ic}</Text>
-              <Text style={[s.tablbl, tab === k && { color: T.ink }]}>{label}</Text>
-              {tab === k && <View style={s.tabdot} />}
-            </Pressable>
-          ))}
-        </View>
-      )}
+      {!top && <TabBar tab={tab} setTab={setTab} />}
+      {!top && <ChatFab onPress={() => setChatOpen(true)} />}
 
-      <AuthModal open={authOpen} onClose={() => { setAuthOpen(false); setPendingBuy(false); }}
-        onDone={() => { setAuthOpen(false); if (pendingBuy) { setPendingBuy(false); setScreen('checkout'); loadInsurance(); } }} />
-      <InstallModal open={installOpen} esim={installEsim} onClose={() => setInstallOpen(false)} />
-      <ChatModal open={chatOpen} session={session} onClose={() => setChatOpen(false)} />
+      <AuthModal open={authOpen} close={() => setAuthOpen(false)} />
+      <SearchModal open={searchOpen} close={() => setSearchOpen(false)} ctx={ctx} />
+      <InstallModal esim={installEsim} close={() => setInstallEsim(null)} />
+      <CompatModal open={compatOpen} close={() => setCompatOpen(false)} />
+      <ChatModal open={chatOpen} close={() => setChatOpen(false)} session={session} />
+      <ToastHost />
     </View>
   );
 }
 
-/* ================= helpers ================= */
-function firstPkg(c) {
-  if (c.packages && c.packages.std && c.packages.std.length) {
-    const g = c.packages.std[0]; const p = g.list[0];
-    return { label: p.label, days: g.d, price: p.price, bundle: p.bundle };
-  }
-  return { label: '1 GB', days: '7 days', price: c.from, bundle: null };
-}
-
-/* ================= screens ================= */
+/* ================= splash + welcome ================= */
 function Splash() {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+    ])).start();
+  }, []);
   return (
-    <View style={[s.fill, { backgroundColor: T.night, alignItems: 'center', justifyContent: 'center' }]}>
-      <StatusBar barStyle="light-content" />
-      <Text style={{ fontSize: 64 }}>🛫</Text>
-      <Text style={{ fontSize: 34, fontWeight: '800', marginTop: 10 }}>
-        <Text style={{ color: T.coral }}>mobi</Text><Text style={{ color: '#F5F6FC' }}>yatri</Text>
+    <View style={{ flex: 1, backgroundColor: T.night, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.Text style={{ fontSize: 54, transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.15] }) }] }}>✈️</Animated.Text>
+      <Text style={{ marginTop: 14, fontSize: 30, fontWeight: '800' }}>
+        <Text style={{ color: T.coral }}>mobi</Text><Text style={{ color: '#fff' }}>yatri</Text>
       </Text>
-      <View style={{ flexDirection: 'row', marginTop: 10 }}>
-        <View style={{ width: 22, height: 4, backgroundColor: '#FF9933', borderRadius: 2 }} />
-        <View style={{ width: 22, height: 4, backgroundColor: '#F3ECDF', borderRadius: 2, marginHorizontal: 2 }} />
-        <View style={{ width: 22, height: 4, backgroundColor: '#2E7D4F', borderRadius: 2 }} />
-      </View>
-      <Text style={{ color: '#A9ACC9', marginTop: 12, fontWeight: '600' }}>Travel data for Indian tourists</Text>
-      <Text style={{ color: T.coral, marginTop: 4, fontWeight: '700' }}>शुभ यात्रा!</Text>
-      <ActivityIndicator color={T.coral} style={{ marginTop: 26 }} />
+      <Text style={{ color: '#8E93BC', marginTop: 6, fontWeight: '600' }}>नमस्ते · शुभ यात्रा</Text>
     </View>
   );
 }
 
-function Welcome({ onExplore, onAuth, authModal }) {
+const WELCOME_SLIDES = [
+  { icon: '🌏', t: 'Global connection,\nIndian prices.', d: 'Instant travel eSIMs for 190+ countries — Thailand from ₹49. Pay with UPI, RuPay or cards.' },
+  { icon: '⚡', t: 'Installed before\nyou board.', d: 'Your QR arrives the second you pay. iPhones install it in one tap — no SIM shops, no queues.' },
+  { icon: '💬', t: 'Yatri Sahayak,\nalways on.', d: '24/7 AI help in English and हिन्दी that knows your orders and walks you through setup.' },
+];
+
+function Welcome({ done }) {
+  const [i, setI] = useState(0);
+  const sl = WELCOME_SLIDES[i];
   return (
-    <View style={[s.fill, { backgroundColor: T.indigoDark }]}>
-      <StatusBar barStyle="light-content" />
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 }}>
-        <Text style={{ fontSize: 66 }}>📲</Text>
-        <Text style={{ fontSize: 26, fontWeight: '800', color: '#F5F6FC', marginTop: 14 }}>Welcome to MobiYatri</Text>
-        <View style={{ flexDirection: 'row', marginTop: 10 }}>
-          <View style={{ width: 22, height: 4, backgroundColor: '#FF9933', borderRadius: 2 }} />
-          <View style={{ width: 22, height: 4, backgroundColor: '#F3ECDF', borderRadius: 2, marginHorizontal: 2 }} />
-          <View style={{ width: 22, height: 4, backgroundColor: '#2E7D4F', borderRadius: 2 }} />
-        </View>
-        <Text style={{ color: '#A9ACC9', textAlign: 'center', marginTop: 10, fontWeight: '600' }}>
-          नमस्ते! Travel data for Indian tourists — pay in ₹, connect anywhere.
+    <View style={{ flex: 1, backgroundColor: T.night, padding: 28, paddingTop: TOPPAD + 30 }}>
+      <Text style={{ fontSize: 24, fontWeight: '800' }}>
+        <Text style={{ color: T.coral }}>mobi</Text><Text style={{ color: '#fff' }}>yatri</Text>
+      </Text>
+      <View style={{ flex: 1, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 74, marginBottom: 22 }}>{sl.icon}</Text>
+        <Text style={{ color: '#fff', fontSize: 34, fontWeight: '800', lineHeight: 42 }}>{sl.t}</Text>
+        <Text style={{ color: '#A9ACC9', fontSize: 16, marginTop: 14, lineHeight: 24, fontWeight: '500' }}>{sl.d}</Text>
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 26 }}>
+        {WELCOME_SLIDES.map((_, x) => (
+          <View key={x} style={{ height: 5, flex: 1, borderRadius: 3, backgroundColor: x <= i ? T.coral : '#2A2D55' }} />
+        ))}
+      </View>
+      <Btn label={i < 2 ? 'Next' : "Let's go — शुभ यात्रा!"} onPress={() => (i < 2 ? setI(i + 1) : done())} />
+      {i < 2 && <Pressable onPress={done} style={{ alignItems: 'center', marginTop: 16 }}>
+        <Text style={{ color: '#8E93BC', fontWeight: '700' }}>Skip</Text>
+      </Pressable>}
+    </View>
+  );
+}
+
+/* ================= store home ================= */
+const STORE_TABS = [['popular', 'Popular'], ['local', 'Local'], ['regional', 'Regional'], ['global', 'Global']];
+const INTRO_SLIDES = [
+  { t: 'New to MobiYatri?', d: 'Pick a destination, pay in ₹, scan one QR — you land connected. That simple.' },
+  { t: 'Keep your Indian SIM', d: 'WhatsApp and OTPs keep working on your number. The eSIM only carries your data.' },
+  { t: 'Check your phone', d: 'Dial *#06# — if an EID appears, your phone is eSIM-ready. Tap here to learn more.' },
+];
+
+function StoreHome({ ctx }) {
+  const { countries, regions, globalPacks, session, push, openSearch, openCompat, openAuth } = ctx;
+  const [cat, setCat] = useState('popular');
+  const [intro, setIntro] = useState(0);
+  useEffect(() => { const t = setInterval(() => setIntro(i => (i + 1) % INTRO_SLIDES.length), 5000); return () => clearInterval(t); }, []);
+
+  let list = countries;
+  if (cat === 'popular') list = countries.filter(c => c.pop);
+  else if (cat === 'regional') list = regions;
+  else if (cat === 'global') list = globalPacks;
+  if (!list?.length) list = countries.slice(0, 12);
+
+  return (
+    <View style={{ flex: 1 }}>
+      {/* header: greeting + wallet chip */}
+      <View style={{ paddingTop: TOPPAD, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={{ flex: 1, fontSize: 26, fontWeight: '800', color: T.ink }}>
+          {session ? `Hi ${firstName(session)}` : 'नमस्ते!'}
         </Text>
-        <View style={{ marginTop: 22, alignSelf: 'stretch' }}>
-          {['🏷  No expensive international roaming', '🌏  Coverage in 190+ destinations',
-            '⚡  Connect in minutes, no physical SIM', '💬  24/7 support in English & हिन्दी'].map(t => (
-              <Text key={t} style={{ color: '#E7E9F6', fontWeight: '700', fontSize: 14.5, marginVertical: 7 }}>{t}</Text>
-            ))}
-        </View>
+        <Pressable onPress={() => (session ? push('refer') : openAuth())} style={{ alignItems: 'flex-end' }}>
+          <Text style={{ color: T.soft, fontSize: 11, fontWeight: '700' }}>YatriCash</Text>
+          <View style={{ backgroundColor: T.mint, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, marginTop: 2 }}>
+            <Text style={{ color: T.mintInk, fontWeight: '800', fontSize: 13 }}>₹0</Text>
+          </View>
+        </Pressable>
       </View>
-      <View style={{ padding: 20, paddingBottom: 34 }}>
-        <Pressable style={s.btnOutlineDark} onPress={onAuth}><Text style={{ color: '#F5F6FC', fontWeight: '700', fontSize: 16 }}>Sign up / Log in</Text></Pressable>
-        <Pressable style={[s.btnPrimary, { marginTop: 12 }]} onPress={onExplore}><Text style={s.btnPrimaryTxt}>Explore eSIMs</Text></Pressable>
-      </View>
-      {authModal}
-    </View>
-  );
-}
 
-function Store({ userName, query, setQuery, cat, setCat, list, mode, onCountry, onChat }) {
-  return (
-    <View style={s.fill}>
       <FlatList
         data={list}
-        keyExtractor={(item, i) => (item.iso || item.n) + i}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        keyExtractor={(c, i) => (c.iso || c.n) + i}
+        contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: 20 }}
         ListHeaderComponent={
-          <View style={{ paddingHorizontal: 16, paddingTop: TOPPAD }}>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 11, color: T.soft, fontWeight: '700' }}>Cashback</Text>
-              <View style={{ backgroundColor: T.mint, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
-                <Text style={{ color: T.mintInk, fontWeight: '800', fontSize: 13 }}>₹0.00</Text>
-              </View>
-            </View>
-            <Text style={{ fontSize: 24, fontWeight: '800', color: T.ink, marginBottom: 12 }}>नमस्ते, {userName}</Text>
-            <TextInput style={s.search} placeholder="Where are you travelling to?" placeholderTextColor={T.soft}
-              value={query} onChangeText={setQuery} />
-            <View style={s.promo}>
-              <Text style={{ fontSize: 34, textAlign: 'center' }}>🌐</Text>
-              <Text style={{ color: '#F5F6FC', fontWeight: '800', fontSize: 16, textAlign: 'center', marginTop: 6 }}>190+ countries. One app.</Text>
-              <Text style={{ color: '#A9ACC9', fontWeight: '600', fontSize: 12.5, textAlign: 'center', marginTop: 4 }}>
-                Land, switch on, connect — trusted local networks, paid in ₹.
-              </Text>
-            </View>
-            <View style={s.svcgrid}>
-              {[['📶', 'Country', () => setCat('popular')], ['🌏', 'Regional', () => setCat('regional')],
-                ['🌐', 'Global', () => setCat('global')], ['💬', 'Ask AI', onChat]].map(([ic, lb, fn]) => (
-                  <Pressable key={lb} style={s.svc} onPress={fn}>
-                    <View style={s.svcIcon}><Text style={{ fontSize: 20 }}>{ic}</Text></View>
-                    <Text style={s.svcLbl}>{lb}</Text>
-                  </Pressable>
+          <View>
+            {/* search */}
+            <Pressable onPress={openSearch} style={[s.searchBar, { marginTop: 14 }]}>
+              <Text style={{ fontSize: 16 }}>🔍</Text>
+              <Text style={{ color: '#8B8FA5', fontSize: 15.5, fontWeight: '600', marginLeft: 10 }}>Where do you need an eSIM?</Text>
+            </Pressable>
+            {/* intro carousel card */}
+            <Pressable onPress={openCompat} style={{ backgroundColor: T.bgDeep, borderRadius: 20, padding: 20, marginTop: 14 }}>
+              <Text style={{ fontSize: 34, textAlign: 'center' }}>{['🧳', '📱', '☎️'][intro]}</Text>
+              <Text style={{ color: T.ink, fontWeight: '800', fontSize: 16.5, textAlign: 'center', marginTop: 8 }}>{INTRO_SLIDES[intro].t}</Text>
+              <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, textAlign: 'center', marginTop: 4, lineHeight: 19 }}>{INTRO_SLIDES[intro].d}</Text>
+              <View style={{ flexDirection: 'row', gap: 6, marginTop: 14 }}>
+                {INTRO_SLIDES.map((_, x) => (
+                  <View key={x} style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: x === intro ? T.ink : '#DDD5C4' }} />
                 ))}
-            </View>
-            <View style={{ flexDirection: 'row', gap: 22, borderBottomWidth: 1.5, borderColor: '#DDE4F0', marginBottom: 10 }}>
-              {[['popular', 'Popular'], ['countries', 'Countries'], ['regional', 'Regional'], ['global', 'Global']].map(([k, lb]) => (
-                <Pressable key={k} onPress={() => setCat(k)} style={{ paddingVertical: 10, borderBottomWidth: 2.5, borderColor: cat === k ? T.ink : 'transparent', marginBottom: -1.5 }}>
-                  <Text style={{ fontWeight: '700', color: cat === k ? T.ink : T.soft, fontSize: 14 }}>{lb}</Text>
+              </View>
+            </Pressable>
+            {/* tabs */}
+            <View style={{ flexDirection: 'row', marginTop: 18, borderBottomWidth: 1.5, borderBottomColor: 'rgba(22,24,42,.14)' }}>
+              {STORE_TABS.map(([k, label]) => (
+                <Pressable key={k} onPress={() => setCat(k)} style={{ flex: 1, alignItems: 'center', paddingBottom: 10 }}>
+                  <Text style={{ fontWeight: '800', fontSize: 14.5, color: T.ink, opacity: cat === k ? 1 : .5 }}>{label}</Text>
+                  {cat === k && <View style={{ position: 'absolute', bottom: -1.5, left: 12, right: 12, height: 3, borderRadius: 2, backgroundColor: T.ink }} />}
                 </Pressable>
               ))}
             </View>
-            {mode ? <Text style={{ fontSize: 11, color: T.soft, fontWeight: '600', marginBottom: 8 }}>
-              {mode.startsWith('live') ? '● Live catalogue · ' + mode.replace('live:', '') : 'Demo catalogue'}</Text> : null}
+            <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5, marginVertical: 12 }}>
+              Live ₹ prices — packages start from the shown price.
+            </Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <Pressable style={s.crow} onPress={() => onCountry(item)}>
-            {item.iso
-              ? <Image source={{ uri: flagUrl(item.iso) }} style={s.flag} />
-              : <View style={[s.flag, { backgroundColor: '#C9DEF2', alignItems: 'center', justifyContent: 'center' }]}><Text>🌏</Text></View>}
-            <Text style={{ flex: 1, fontWeight: '700', fontSize: 15, color: T.ink }}>{item.n}</Text>
-            <Text style={{ fontWeight: '800', fontSize: 15, color: T.ink }}>₹{item.from} <Text style={{ color: T.soft, fontSize: 11 }}>INR</Text></Text>
-          </Pressable>
-        )}
+        renderItem={({ item: c }) => <CountryRow c={c} onPress={() => push('country', c)} />}
       />
-      <Pressable style={s.fab} onPress={onChat}><Text style={{ fontSize: 22 }}>💬</Text></Pressable>
     </View>
   );
 }
 
-function Country({ c, pkg, setPkg, onBack, onBuy }) {
-  const groups = (c.packages && [...(c.packages.std || []), ...((c.packages.unl || []).map(g => ({ ...g, unl: true })))]) || [];
+function CountryRow({ c, onPress }) {
   return (
-    <View style={s.fill}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 140 }}>
-        <Pressable onPress={onBack}><Text style={{ fontSize: 22, color: T.ink, fontWeight: '700' }}>‹ Back</Text></Pressable>
-        <Text style={{ fontSize: 26, fontWeight: '800', color: T.ink, marginVertical: 10 }}>{c.n}</Text>
-        <View style={s.card}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            {c.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <Text style={{ fontSize: 22 }}>🌏</Text>}
-            <Text style={{ fontWeight: '800', fontSize: 15, color: T.ink }}>{c.n}</Text>
+    <Pressable onPress={onPress} style={s.row}>
+      {c.iso
+        ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} />
+        : <View style={[s.flag, { backgroundColor: T.indigo, alignItems: 'center', justifyContent: 'center' }]}><Text style={{ fontSize: 15 }}>🌐</Text></View>}
+      <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 15.5, marginLeft: 12 }}>{c.n}</Text>
+      <Text style={{ color: T.ink, fontWeight: '800', fontSize: 16 }}>₹{c.from}</Text>
+      <Text style={{ color: T.soft, fontSize: 11, fontWeight: '600', marginLeft: 4 }}>per pack</Text>
+    </Pressable>
+  );
+}
+
+/* ================= search modal ================= */
+function SearchModal({ open, close, ctx }) {
+  const { countries, regions, globalPacks, push } = ctx;
+  const [q, setQ] = useState('');
+  const hits = q.trim() ? countries.filter(c => c.n.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 8) : [];
+  const also = [...regions, ...globalPacks].slice(0, 3);
+  const go = c => { close(); setQ(''); push('country', c); };
+  return (
+    <Modal visible={open} animationType="slide" onRequestClose={close}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: T.bg, paddingTop: TOPPAD }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 10 }}>
+          <View style={[s.searchBar, { flex: 1, marginTop: 0 }]}>
+            <Text style={{ fontSize: 16 }}>🔍</Text>
+            <TextInput autoFocus value={q} onChangeText={setQ} placeholder="Where do you need an eSIM?"
+              placeholderTextColor="#8B8FA5" style={{ flex: 1, marginLeft: 10, fontSize: 15.5, fontWeight: '600', color: T.ink }} />
           </View>
-          <Text style={{ color: T.soft, fontWeight: '600', marginTop: 8, fontSize: 13 }}>📶 {c.op || 'Local networks'} · 5G where available</Text>
+          <Pressable onPress={close}><Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>Cancel</Text></Pressable>
         </View>
-        <Text style={{ fontWeight: '800', fontSize: 16, color: T.ink, marginTop: 18, marginBottom: 6 }}>Choose your package</Text>
+        <ScrollView keyboardShouldPersistTaps="handled" style={{ marginTop: 12 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
+          {hits.map(c => <CountryRow key={c.iso} c={c} onPress={() => go(c)} />)}
+          {q.trim().length > 0 && hits.length === 0 &&
+            <Text style={{ color: T.soft, fontWeight: '600', padding: 18, textAlign: 'center' }}>No matches — try another spelling.</Text>}
+          {q.trim().length > 0 && also.length > 0 && <View>
+            <Text style={{ color: T.soft, fontWeight: '800', fontSize: 12, marginVertical: 10, textTransform: 'uppercase', letterSpacing: .5 }}>Also available in…</Text>
+            {also.map((r, i) => <CountryRow key={r.n + i} c={r} onPress={() => go(r)} />)}
+          </View>}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+/* ================= country detail ================= */
+function CountryScreen({ ctx, c }) {
+  const { pop, push, requireAuth, openCompat } = ctx;
+  const [seg, setSeg] = useState('std');
+  const [sel, setSel] = useState(null);
+  const [details, setDetails] = useState(false);
+  const groups = (c.packages && c.packages[seg]) || [];
+  const flat = groups.flatMap(g => g.list.map(p => ({ ...p, d: g.d })));
+  const active = sel || (flat[0] && { pkg: `${flat[0].label} · ${flat[0].d}`, price: flat[0].price, bundle: flat[0].bundle });
+  const hasUnl = c.packages?.unl?.length > 0;
+
+  const buy = () => requireAuth(() => push('checkout', { country: c.n, iso: c.iso || null, ...active }));
+
+  return (
+    <View style={{ flex: 1 }}>
+      <ScreenHead title={c.n} onBack={pop} />
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 130 }}>
+        {/* header card */}
+        <View style={[s.card, { flexDirection: 'row', alignItems: 'center' }]}>
+          {c.iso
+            ? <Image source={{ uri: flagUrl(c.iso) }} style={{ width: 52, height: 37, borderRadius: 7 }} />
+            : <Text style={{ fontSize: 34 }}>🌐</Text>}
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 18 }}>{c.n}</Text>
+            <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5, marginTop: 2 }}>📡 {c.op || 'Local networks'} · instant QR delivery</Text>
+          </View>
+        </View>
+        <Pressable onPress={openCompat} style={[s.card, { marginTop: 10, flexDirection: 'row', alignItems: 'center' }]}>
+          <Text style={{ fontSize: 16 }}>📱</Text>
+          <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 13.5, marginLeft: 10 }}>Is this phone eSIM-compatible?</Text>
+          <View style={{ backgroundColor: T.mint, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
+            <Text style={{ color: T.mintInk, fontWeight: '800', fontSize: 12.5 }}>Check ✓</Text>
+          </View>
+        </Pressable>
+
+        {/* segment */}
+        {hasUnl && (
+          <View style={{ flexDirection: 'row', backgroundColor: T.card, borderRadius: 999, padding: 4, marginTop: 16, alignSelf: 'flex-start' }}>
+            {[['std', 'Standard'], ['unl', 'Unlimited']].map(([k, label]) => (
+              <Pressable key={k} onPress={() => { setSeg(k); setSel(null); }} style={{
+                paddingVertical: 8, paddingHorizontal: 20, borderRadius: 999, backgroundColor: seg === k ? T.indigo : 'transparent',
+              }}>
+                <Text style={{ fontWeight: '800', fontSize: 13.5, color: seg === k ? '#fff' : T.ink }}>{label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {/* package groups */}
         {groups.map(g => (
-          <View key={g.d + (g.unl ? 'u' : '')}>
-            <Text style={{ fontWeight: '800', color: T.soft, fontSize: 13, marginTop: 10, marginBottom: 6 }}>{g.d}{g.unl ? ' · Unlimited' : ''}</Text>
+          <View key={g.d}>
+            <Text style={{ color: T.soft, fontWeight: '800', fontSize: 12, marginTop: 18, marginBottom: 8, textTransform: 'uppercase', letterSpacing: .5 }}>
+              📅 {g.d} validity
+            </Text>
             {g.list.map(p => {
-              const selp = pkg && pkg.bundle === p.bundle && pkg.days === g.d;
+              const key = `${p.label} · ${g.d}`;
+              const isSel = active && active.pkg === key;
               return (
-                <Pressable key={(p.bundle || p.label) + g.d} onPress={() => setPkg({ label: p.label, days: g.d, price: p.price, bundle: p.bundle })}
-                  style={[s.pkg, selp && { borderColor: T.coral }]}>
-                  <Text style={{ fontWeight: '800', fontSize: 15, color: T.ink }}>{p.label}</Text>
-                  <Text style={{ fontWeight: '800', fontSize: 15, color: T.ink }}>₹{p.price} <Text style={{ color: T.soft, fontSize: 11 }}>INR</Text></Text>
+                <Pressable key={key} onPress={() => setSel({ pkg: key, price: p.price, bundle: p.bundle })}
+                  style={[s.card, { marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: isSel ? T.indigo : 'transparent' }]}>
+                  <View style={{
+                    width: 20, height: 20, borderRadius: 10, borderWidth: isSel ? 6 : 2,
+                    borderColor: isSel ? T.indigo : '#C9C2B2', marginRight: 12,
+                  }} />
+                  <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 15.5 }}>{p.label}</Text>
+                  <Text style={{ color: T.ink, fontWeight: '800', fontSize: 16 }}>₹{p.price}</Text>
                 </Pressable>
               );
             })}
           </View>
         ))}
+
+        <Btn kind="white" label="📋 Package details" onPress={() => setDetails(true)} style={{ marginTop: 14 }} />
+        <Text style={{ color: T.soft, fontSize: 12, fontWeight: '500', marginTop: 12, lineHeight: 18 }}>
+          By completing an order you confirm this device is eSIM-compatible and network-unlocked.
+        </Text>
       </ScrollView>
-      <View style={s.buybar}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-          <Text style={{ color: T.soft, fontWeight: '700' }}>Total</Text>
-          <Text style={{ fontWeight: '800', fontSize: 19, color: T.ink }}>₹{pkg ? pkg.price : c.from}</Text>
+
+      {/* buy bar */}
+      {active && (
+        <View style={s.buyBar}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: T.soft, fontWeight: '700', fontSize: 12 }}>{active.pkg}</Text>
+            <Text style={{ color: T.coralDeep, fontWeight: '800', fontSize: 20 }}>₹{active.price}</Text>
+          </View>
+          <Btn label="Buy now" onPress={buy} style={{ paddingHorizontal: 34 }} />
         </View>
-        <Pressable style={s.btnPrimary} onPress={onBuy}><Text style={s.btnPrimaryTxt}>Buy now</Text></Pressable>
-      </View>
+      )}
+
+      {/* package policy sheet */}
+      <Modal visible={details} transparent animationType="slide" onRequestClose={() => setDetails(false)}>
+        <Pressable style={s.sheetBack} onPress={() => setDetails(false)} />
+        <View style={s.sheet}>
+          <Text style={s.sheetTitle}>Package details</Text>
+          <ScrollView style={{ maxHeight: 420 }}>
+            <Accordion icon="⏱️" title="When does validity start?">
+              Validity begins only when the eSIM first connects to a supported network at your destination — not at purchase or install. Install at home; it activates when you land.
+            </Accordion>
+            <Accordion icon="📥" title="Installation window">
+              Your activation code stays installable for the period stated at purchase. One code installs on one device, once.
+            </Accordion>
+            <Accordion icon="🌐" title="Data & speeds">
+              High-speed data on {'the local partner network'} — hotspot/tethering allowed. Speeds depend on local coverage and are not guaranteed.
+            </Accordion>
+            <Accordion icon="📵" title="No number included">
+              This is a data-only eSIM. Keep your Indian SIM in for calls, WhatsApp and OTP SMS — just keep its data roaming off.
+            </Accordion>
+            <Accordion icon="🔁" title="Top-ups">
+              Top-ups are coming soon. Until then, buying a fresh pack for the same destination works exactly the same way.
+            </Accordion>
+          </ScrollView>
+          <Btn label="Got it" onPress={() => setDetails(false)} style={{ marginTop: 12 }} />
+        </View>
+      </Modal>
     </View>
   );
 }
 
-function Checkout({ price, insQuote, insOn, setInsOn, onBack, onPay, paying }) {
-  const [pay, setPay] = useState('gpay');
-  const total = price + (insOn && insQuote ? insQuote.premiumINR : 0);
-  const opts = [['gpay', 'Google Pay', 'UPI · instant'], ['phonepe', 'PhonePe', 'UPI · instant'], ['paytm', 'Paytm UPI', 'UPI · instant'], ['card', 'Card', 'Visa · Mastercard · RuPay']];
+/* ================= checkout ================= */
+const PAY_METHODS = [
+  ['upi', '📲', 'UPI', 'GPay · PhonePe · Paytm · BHIM'],
+  ['card', '💳', 'Card', 'Credit · Debit · RuPay'],
+  ['net', '🏦', 'Netbanking', 'All major Indian banks'],
+];
+
+function CheckoutScreen({ ctx, order }) {
+  const { pop, push, loadAccount } = ctx;
+  const [pay, setPay] = useState('upi');
+  const [ins, setIns] = useState({ quote: null, on: false });
+  const [promo, setPromo] = useState('');
+  const [promoMsg, setPromoMsg] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    const days = parseInt((order.pkg.split('·')[1] || '7')) || 7;
+    fetch(API + '/api/insurance/quote', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ destination: order.country, iso: order.iso, days }),
+    }).then(r => r.json()).then(q => q?.premiumINR && setIns({ quote: q, on: false })).catch(() => {});
+  }, []);
+
+  const total = order.price + (ins.on && ins.quote ? ins.quote.premiumINR : 0);
+
+  const placeOrder = async () => {
+    setBusy(true);
+    try {
+      const headers = await authHeaders();
+      const o = await fetch(API + '/api/orders', {
+        method: 'POST', headers,
+        body: JSON.stringify({ bundle: order.bundle, country: order.country, package: order.pkg, price: order.price }),
+      }).then(r => r.json());
+      if (o.error) throw new Error(o.error);
+      if (ins.on && ins.quote) {
+        fetch(API + '/api/insurance/policy', {
+          method: 'POST', headers,
+          body: JSON.stringify({ quoteId: ins.quote.quoteId, destination: order.country, premium: ins.quote.premiumINR, days: ins.quote.days }),
+        }).catch(() => {});
+      }
+      loadAccount();
+      push('complete', { ...o, order });
+    } catch (e) {
+      pushToast(e.message || 'Order failed — please try again');
+    } finally { setBusy(false); }
+  };
+
   return (
-    <View style={s.fill}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 150 }}>
-        <Pressable onPress={onBack}><Text style={{ fontSize: 22, color: T.ink, fontWeight: '700' }}>‹ Back</Text></Pressable>
-        <Text style={{ fontSize: 20, fontWeight: '800', color: T.ink, textAlign: 'center', marginBottom: 14 }}>Secure checkout</Text>
-        {insQuote ? (
-          <Pressable style={[s.card, { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }]} onPress={() => setInsOn(!insOn)}>
-            <Text style={{ fontSize: 24 }}>🛡</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '800', color: T.ink, fontSize: 14 }}>Add trip protection  <Text style={{ fontSize: 10, color: T.soft }}>DEMO</Text></Text>
-              <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12 }}>₹{insQuote.premiumINR} · medical {insQuote.coverage.medical} + baggage + delays</Text>
+    <View style={{ flex: 1 }}>
+      <ScreenHead title="Checkout" onBack={pop} />
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text style={{ color: T.ink, fontWeight: '700', fontSize: 15, flex: 1 }}>{order.country} · {order.pkg}</Text>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>₹{order.price}</Text>
+          </View>
+          {ins.quote && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: T.line }}>
+              <Text style={{ fontSize: 20 }}>🛡️</Text>
+              <View style={{ flex: 1, marginHorizontal: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ color: T.ink, fontWeight: '700', fontSize: 13.5 }}>Add trip protection</Text>
+                  <Chip txt="Demo" />
+                </View>
+                <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5, marginTop: 2 }}>
+                  ₹{ins.quote.premiumINR} · medical {ins.quote.coverage?.medical} + baggage + delays · {ins.quote.days} days
+                </Text>
+              </View>
+              <Toggle on={ins.on} onChange={v => setIns(x => ({ ...x, on: v }))} />
             </View>
-            <View style={[s.toggle, insOn && { backgroundColor: T.coral }]}>
-              <View style={[s.knob, insOn && { alignSelf: 'flex-end' }]} />
+          )}
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: T.line }}>
+            <TextInput value={promo} onChangeText={t => { setPromo(t); setPromoMsg(null); }} placeholder="Referral / promo code"
+              placeholderTextColor="#8B8FA5" style={s.input} />
+            <Btn kind="white" small label="Apply" onPress={() => promo.trim() && setPromoMsg(`Code "${promo.trim()}" saved — rewards are credited when payments launch.`)} />
+          </View>
+          {promoMsg && <Text style={{ color: T.mintInk, fontWeight: '600', fontSize: 12, marginTop: 8 }}>{promoMsg}</Text>}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: T.line }}>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 17 }}>Total</Text>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 17 }}>₹{total}</Text>
+          </View>
+        </View>
+
+        <Text style={{ color: T.ink, fontWeight: '800', fontSize: 16, marginTop: 22, marginBottom: 10 }}>Pay with</Text>
+        {PAY_METHODS.map(([k, icon, label, sub]) => (
+          <Pressable key={k} onPress={() => setPay(k)}
+            style={[s.card, { marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderColor: pay === k ? T.indigo : 'transparent' }]}>
+            <Text style={{ fontSize: 22 }}>{icon}</Text>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={{ color: T.ink, fontWeight: '700', fontSize: 14.5 }}>{label}</Text>
+              <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5 }}>{sub}</Text>
             </View>
-          </Pressable>
-        ) : null}
-        <Text style={{ fontWeight: '800', color: T.ink, fontSize: 13, textAlign: 'center', marginVertical: 8 }}>— Pay with —</Text>
-        {opts.map(([k, name, sub]) => (
-          <Pressable key={k} style={[s.pkg, pay === k && { borderColor: T.coral }]} onPress={() => setPay(k)}>
-            <View>
-              <Text style={{ fontWeight: '700', color: T.ink, fontSize: 14.5 }}>{name}</Text>
-              <Text style={{ color: T.soft, fontSize: 11.5, fontWeight: '600' }}>{sub}</Text>
-            </View>
-            <View style={[s.radio, pay === k && { borderColor: T.coral }]}>{pay === k ? <View style={s.radioDot} /> : null}</View>
+            <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: pay === k ? 6 : 2, borderColor: pay === k ? T.indigo : '#C9C2B2' }} />
           </Pressable>
         ))}
-        <Text style={{ color: T.soft, fontSize: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 10 }}>
-          Demo checkout — Razorpay UPI goes live at launch.
+        <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12, marginTop: 8 }}>
+          🔒 Payments launch soon with Razorpay — during beta your order is placed without charge.
+        </Text>
+        <Btn label={busy ? 'Placing your order…' : `Pay ₹${total}`} onPress={placeOrder} disabled={busy}
+          style={{ marginTop: 18 }} left={busy ? <ActivityIndicator color="#fff" style={{ marginRight: 8 }} /> : null} />
+      </ScrollView>
+    </View>
+  );
+}
+
+/* ================= order complete ================= */
+function CompleteScreen({ ctx, result }) {
+  const { home, setTab, openInstall } = ctx;
+  const esim = result.esim ? { lpa_string: result.esim.lpa || result.esim.lpaString, iccid: result.esim.iccid, orders: { country_name: result.order.country } } : null;
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={{ padding: 24, paddingTop: TOPPAD + 16, paddingBottom: 60 }}>
+        <View style={{ alignItems: 'center' }}>
+          <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: T.mint, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 38 }}>✅</Text>
+          </View>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 26, marginTop: 14 }}>Shubh yatra! 🎉</Text>
+          <Text style={{ color: T.soft, fontWeight: '600', fontSize: 13.5, marginTop: 6, textAlign: 'center' }}>
+            Order {result.orderReference || 'confirmed'} · {result.order.country} · {result.order.pkg}
+            {result.emailSent ? '\nYour QR was also emailed to you.' : ''}
+          </Text>
+        </View>
+
+        <Text style={{ color: T.ink, fontWeight: '800', fontSize: 16, marginTop: 26, marginBottom: 10 }}>You've got your eSIM. What next?</Text>
+        <Accordion icon="📥" title="When should I install it?">
+          Install any time before you fly — at home on WiFi is easiest. Validity only starts when the eSIM first connects at your destination.
+        </Accordion>
+        <Accordion icon="✈️" title="How do I avoid roaming charges?">
+          Before takeoff, turn OFF data roaming on your Indian SIM and keep it on only for the MobiYatri eSIM once you land. Your Indian number keeps receiving OTP SMS for free in most cases.
+        </Accordion>
+        <Accordion icon="📶" title="Nothing works after landing?">
+          Toggle aeroplane mode, make sure data roaming is ON for the travel eSIM, and select the partner network manually if needed. Yatri Sahayak can walk you through it 24/7.
+        </Accordion>
+
+        {esim?.lpa_string && <Btn label="📲 Install or share" onPress={() => openInstall(esim)} style={{ marginTop: 20 }} />}
+        <Btn kind="white" label="Go to My eSIMs" onPress={() => { home(); setTab('esims'); }} style={{ marginTop: 10 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+/* ================= my esims ================= */
+function MyEsimsScreen({ ctx }) {
+  const { session, myEsims, push, openAuth, countries } = ctx;
+  return (
+    <View style={{ flex: 1, paddingTop: TOPPAD }}>
+      <View style={{ paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={{ flex: 1, fontSize: 26, fontWeight: '800', color: T.ink }}>My eSIMs</Text>
+        <YatriCashChip />
+      </View>
+      {!session ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 }}>
+          <Text style={{ fontSize: 44 }}>🧳</Text>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 19, marginTop: 10 }}>Sign in to see your eSIMs</Text>
+          <Text style={{ color: T.soft, fontWeight: '500', textAlign: 'center', marginTop: 6, marginBottom: 18 }}>
+            Your purchases are saved to your account and available on any device.
+          </Text>
+          <Btn label="Log in / Sign up" onPress={openAuth} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+          <Pressable onPress={() => push('refer')} style={[s.card, { flexDirection: 'row', alignItems: 'center', marginBottom: 14 }]}>
+            <Text style={{ fontSize: 20 }}>🪙</Text>
+            <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 13.5, marginHorizontal: 10 }}>
+              Get ₹150 YatriCash for each friend's first trip
+            </Text>
+            <Text style={{ color: T.ink, fontWeight: '800' }}>›</Text>
+          </Pressable>
+          {myEsims === null && <ActivityIndicator color={T.indigo} style={{ marginTop: 30 }} />}
+          {myEsims && myEsims.length === 0 && (
+            <View style={[s.card, { alignItems: 'center', paddingVertical: 34 }]}>
+              <Text style={{ fontSize: 36 }}>✈️</Text>
+              <Text style={{ color: T.ink, fontWeight: '800', fontSize: 17, marginTop: 8 }}>No eSIMs yet</Text>
+              <Text style={{ color: T.soft, fontWeight: '500', marginTop: 4, marginBottom: 14 }}>Your next trip starts here.</Text>
+              <Btn small label="Browse destinations" onPress={() => ctx.setTab('store')} />
+            </View>
+          )}
+          {(myEsims || []).map((e, i) => {
+            const o = e.orders || {};
+            const c = countries.find(x => x.n === o.country_name);
+            const parts = (o.package_label || '— · —').split(' · ');
+            return (
+              <View key={e.iccid + i} style={[s.card, { marginBottom: 14 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {c?.iso && <Image source={{ uri: flagUrl(c.iso) }} style={{ width: 40, height: 28, borderRadius: 5 }} />}
+                  <Text style={{ flex: 1, color: T.ink, fontWeight: '800', fontSize: 17, marginLeft: 10 }}>{o.country_name || 'eSIM'}</Text>
+                  <Chip txt={e.status || 'ready'} bg={e.status === 'active' ? T.mint : T.goldBg} fg={e.status === 'active' ? T.mintInk : T.goldInk} />
+                </View>
+                <Text style={{ color: T.soft, fontWeight: '700', fontSize: 11.5, marginTop: 10, marginBottom: 6 }}>PACKAGE</Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <StatTile k="⇅ Data" v={parts[0] || '—'} />
+                  <StatTile k="📅 Validity" v={parts[1] || '—'} />
+                  <StatTile k="₹ Paid" v={'₹' + (o.price_inr ?? '—')} />
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                  <Btn kind="white" small label="View details" onPress={() => push('esimdetail', e)} style={{ flex: 1 }} />
+                  {e.lpa_string && <Btn small label="Install or share" onPress={() => ctx.openInstall(e)} style={{ flex: 1 }} />}
+                </View>
+              </View>
+            );
+          })}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+/* ================= esim detail ================= */
+function EsimDetailScreen({ ctx, e }) {
+  const { pop, openInstall, openChat } = ctx;
+  const o = e.orders || {};
+  return (
+    <View style={{ flex: 1 }}>
+      <ScreenHead title={o.country_name || 'eSIM'} onBack={pop} />
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }}>
+        <View style={s.card}>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15, marginBottom: 8 }}>Ready to use your eSIM?</Text>
+          <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13, lineHeight: 19 }}>
+            📲 Installation takes a few minutes — you only need to do this once.
+          </Text>
+          {e.lpa_string && <Btn small label="Install or share" onPress={() => openInstall(e)} style={{ marginTop: 12 }} />}
+        </View>
+
+        <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15, marginTop: 20, marginBottom: 8 }}>Package info</Text>
+        <View style={s.card}>
+          {[['Package', o.package_label], ['Price', o.price_inr ? '₹' + o.price_inr : null], ['Purchased', e.created_at ? fmtDate(e.created_at) : null],
+            ['Status', e.status], ['ICCID', e.iccid], ['SM-DP+', e.smdp_address], ['Matching ID', e.matching_id]]
+            .filter(([, v]) => v)
+            .map(([k, v]) => (
+              <Pressable key={k} onLongPress={() => Share.share({ message: String(v) })} style={{ flexDirection: 'row', paddingVertical: 6 }}>
+                <Text style={{ width: 110, color: T.soft, fontWeight: '700', fontSize: 12.5 }}>{k}</Text>
+                <Text style={{ flex: 1, color: T.ink, fontWeight: '600', fontSize: 12.5 }} numberOfLines={1}>{String(v)}</Text>
+              </Pressable>
+            ))}
+          <Text style={{ color: T.soft, fontSize: 11, fontWeight: '500', marginTop: 6 }}>Long-press a row to share/copy its value.</Text>
+        </View>
+
+        <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15, marginTop: 20, marginBottom: 8 }}>Troubleshooting & FAQs</Text>
+        <Accordion icon="⏱️" title="When should I install my eSIM?">
+          Any time before you fly — WiFi at home is easiest. Validity starts only when it first connects at your destination.
+        </Accordion>
+        <Accordion icon="🔍" title="Where can I see that it's installed?">
+          iPhone: Settings → Mobile Data — you'll see a second plan listed. Android: Settings → Connections / Network → SIM manager.
+        </Accordion>
+        <Accordion icon="📶" title="Why is my eSIM not working?">
+          Check data roaming is ON for this eSIM (and OFF for your Indian SIM), toggle aeroplane mode, or select the partner network manually. Still stuck? Ask Yatri Sahayak below.
+        </Accordion>
+        <Btn kind="white" label="💬 Ask Yatri Sahayak" onPress={openChat} style={{ marginTop: 14 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+/* ================= install modal ================= */
+function InstallModal({ esim, close }) {
+  const [tab, setTab] = useState(Platform.OS === 'ios' ? 'ios' : 'android');
+  const [done, setDone] = useState(false);
+  if (!esim) return null;
+  const lpa = esim.lpa_string;
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={close}>
+      <Pressable style={s.sheetBack} onPress={close} />
+      <View style={s.sheet}>
+        {done ? (
+          <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+            <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: T.mint, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 34 }}>✓</Text>
+            </View>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 20, marginTop: 12 }}>Your eSIM is on its way in</Text>
+            <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
+              💡 You can connect once you're in the eSIM's coverage area — switch on its data roaming when you land.
+            </Text>
+            <Btn label="OK, got it" onPress={close} style={{ marginTop: 18, alignSelf: 'stretch' }} />
+          </View>
+        ) : (
+          <>
+            <Text style={s.sheetTitle}>Install {esim.orders?.country_name} eSIM</Text>
+            <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5, textAlign: 'center', marginBottom: 12 }}>
+              One code installs on one device, once.
+            </Text>
+            <Image source={{ uri: qrUrl(lpa, 190) }} style={{ width: 170, height: 170, alignSelf: 'center', borderRadius: 12, backgroundColor: '#fff' }} />
+            <View style={{ flexDirection: 'row', backgroundColor: T.bgDeep, borderRadius: 999, padding: 4, marginVertical: 14 }}>
+              {[['ios', ' iPhone'], ['android', '🤖 Android']].map(([k, label]) => (
+                <Pressable key={k} onPress={() => setTab(k)} style={{ flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 999, backgroundColor: tab === k ? T.indigo : 'transparent' }}>
+                  <Text style={{ fontWeight: '800', fontSize: 13, color: tab === k ? '#fff' : T.ink }}>{label}</Text>
+                </Pressable>
+              ))}
+            </View>
+            {tab === 'ios' ? (
+              <>
+                <Btn label="📱 One-tap install (iOS 17.4+)" onPress={() => { Linking.openURL(ONE_TAP(lpa)); setDone(true); }} />
+                <Text style={s.installNote}>Older iOS: Settings → Mobile Data → Add eSIM → scan the QR from another screen.</Text>
+              </>
+            ) : (
+              <>
+                <Btn label="Share / copy activation code" onPress={() => { Share.share({ message: lpa }); setDone(true); }} />
+                <Text style={s.installNote}>Settings → Connections / Network → SIM manager → Add eSIM → scan the QR or paste the code.</Text>
+              </>
+            )}
+            <Btn kind="white" label="Close" onPress={close} style={{ marginTop: 8 }} />
+          </>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
+/* ================= profile ================= */
+function ProfileScreen({ ctx }) {
+  const { session, push, openAuth, openChat, logout, orders } = ctx;
+  if (!session) return (
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 }}>
+      <Text style={{ fontSize: 44 }}>👤</Text>
+      <Text style={{ color: T.ink, fontWeight: '800', fontSize: 19, marginTop: 10 }}>Your MobiYatri account</Text>
+      <Text style={{ color: T.soft, fontWeight: '500', textAlign: 'center', marginTop: 6, marginBottom: 18 }}>
+        Log in to see your orders, eSIMs and referral rewards.
+      </Text>
+      <Btn label="Log in / Sign up" onPress={openAuth} />
+    </View>
+  );
+  const name = session.user.user_metadata?.full_name || firstName(session);
+  const MENU = [
+    ['👤', 'Account information', () => push('account')],
+    ['🧾', `Orders${orders ? ` (${orders.length})` : ''}`, () => push('orders')],
+    ['🎁', 'Refer and earn ₹150', () => push('refer')],
+    ['🔔', 'Notification preferences', () => push('notify')],
+    ['💳', 'Saved cards', () => pushToast('Card saving arrives with the payments launch')],
+    ['🛡️', 'Travel insurance', () => pushToast('Add insurance during checkout — IRDAI-licensed partners')],
+    ['📱', 'Check phone compatibility', ctx.openCompat],
+    ['💬', 'Help — Yatri Sahayak', openChat],
+  ];
+  return (
+    <View style={{ flex: 1, paddingTop: TOPPAD }}>
+      <View style={{ paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={{ flex: 1, fontSize: 26, fontWeight: '800', color: T.ink }}>Profile</Text>
+        <YatriCashChip />
+      </View>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
+        <View style={[s.card, { flexDirection: 'row', alignItems: 'center', marginBottom: 14 }]}>
+          <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: T.coral, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 22 }}>{(name[0] || 'Y').toUpperCase()}</Text>
+          </View>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 17 }}>{name}</Text>
+            <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5 }}>Yatri · member since {new Date(session.user.created_at).getFullYear()}</Text>
+          </View>
+        </View>
+        <View style={s.card}>
+          {MENU.map(([icon, label, fn], i) => (
+            <Pressable key={label} onPress={fn} style={{
+              flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
+              borderBottomWidth: i < MENU.length - 1 ? 1 : 0, borderBottomColor: T.line,
+            }}>
+              <Text style={{ fontSize: 17, width: 30 }}>{icon}</Text>
+              <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 14.5 }}>{label}</Text>
+              <Text style={{ color: T.soft, fontWeight: '800' }}>›</Text>
+            </Pressable>
+          ))}
+        </View>
+        <Btn kind="white" label="Log out" onPress={logout} style={{ marginTop: 16 }} />
+        <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5, textAlign: 'center', marginTop: 14 }}>
+          MobiYatri v1.1 · made in India with ❤️ · शुभ यात्रा
         </Text>
       </ScrollView>
-      <View style={s.buybar}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-          <Text style={{ color: T.soft, fontWeight: '700' }}>Total</Text>
-          <Text style={{ fontWeight: '800', fontSize: 19, color: T.ink }}>₹{total}</Text>
-        </View>
-        <Pressable style={[s.btnPrimary, paying && { opacity: 0.6 }]} onPress={onPay} disabled={paying}>
-          {paying ? <ActivityIndicator color="#fff" /> : <Text style={s.btnPrimaryTxt}>Pay now</Text>}
-        </Pressable>
-      </View>
     </View>
   );
 }
 
-function OrderComplete({ order, policy, country, onDone, onInstall }) {
+function AccountScreen({ ctx }) {
+  const { pop, session } = ctx;
+  const [name, setName] = useState(session?.user?.user_metadata?.full_name || '');
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [busy, setBusy] = useState(false);
+  const saveName = async () => {
+    setBusy(true);
+    const { error } = await sb.auth.updateUser({ data: { full_name: name.trim() } });
+    setBusy(false);
+    pushToast(error ? 'Could not save — try again' : 'Name updated');
+  };
+  const savePw = async () => {
+    if (pw.length < 8) return pushToast('Password must be 8+ characters');
+    if (pw !== pw2) return pushToast('Passwords do not match');
+    setBusy(true);
+    const { error } = await sb.auth.updateUser({ password: pw });
+    setBusy(false);
+    if (error) pushToast(error.message); else { setPw(''); setPw2(''); pushToast('Password changed'); }
+  };
   return (
-    <View style={[s.fill, { padding: 20, paddingTop: TOPPAD + 30 }]}>
-      <Text style={{ fontSize: 56, textAlign: 'center' }}>🎉</Text>
-      <Text style={{ color: T.coral, fontWeight: '800', fontSize: 17, textAlign: 'center', marginTop: 8 }}>शुभ यात्रा!</Text>
-      <Text style={{ fontWeight: '800', fontSize: 22, color: T.ink, textAlign: 'center', marginTop: 4 }}>Your {country} eSIM is ready</Text>
-      {order && order.orderReference ? (
-        <Text style={{ color: T.soft, fontWeight: '600', textAlign: 'center', marginTop: 8 }}>
-          Order {order.orderReference}{order.persisted ? ' · saved to your account' : ''}{order.emailSent ? ' · QR emailed' : ''}
+    <View style={{ flex: 1 }}>
+      <ScreenHead title="Account information" onBack={pop} />
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <Text style={s.label}>Full name</Text>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TextInput value={name} onChangeText={setName} style={[s.input, { flex: 1 }]} />
+          <Btn small label="Save" onPress={saveName} disabled={busy} />
+        </View>
+        <Text style={s.label}>Email</Text>
+        <TextInput value={session?.user?.email || ''} editable={false} style={[s.input, { opacity: .6 }]} />
+        <Text style={{ color: T.soft, fontWeight: '500', fontSize: 12, marginTop: 6 }}>
+          Email changes need re-verification — contact hello@mobiyatri.in.
         </Text>
-      ) : null}
-      {policy ? (
-        <View style={[s.card, { marginTop: 18, flexDirection: 'row', gap: 12, alignItems: 'center' }]}>
-          <Text style={{ fontSize: 24 }}>🛡</Text>
-          <View>
-            <Text style={{ fontWeight: '800', color: T.ink }}>Trip protection active <Text style={{ fontSize: 10, color: T.soft }}>DEMO</Text></Text>
-            <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5 }}>Policy {policy.policyNumber}</Text>
+        <Text style={s.label}>Change password</Text>
+        <TextInput value={pw} onChangeText={setPw} secureTextEntry placeholder="New password (8+ characters)"
+          placeholderTextColor="#8B8FA5" style={s.input} />
+        <TextInput value={pw2} onChangeText={setPw2} secureTextEntry placeholder="Repeat new password"
+          placeholderTextColor="#8B8FA5" style={[s.input, { marginTop: 8 }]} />
+        <Btn kind="white" small label="Update password" onPress={savePw} disabled={busy} style={{ marginTop: 10, alignSelf: 'flex-start' }} />
+      </ScrollView>
+    </View>
+  );
+}
+
+function OrdersScreen({ ctx }) {
+  const { pop, orders } = ctx;
+  return (
+    <View style={{ flex: 1 }}>
+      <ScreenHead title="Orders" onBack={pop} />
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        {orders === null && <ActivityIndicator color={T.indigo} />}
+        {orders && orders.length === 0 && <Text style={{ color: T.soft, fontWeight: '600' }}>No orders yet.</Text>}
+        {(orders || []).map((o, i) => (
+          <View key={i} style={[s.card, { marginBottom: 10, flexDirection: 'row', alignItems: 'center' }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: T.ink, fontWeight: '700', fontSize: 14.5 }}>{o.country_name} <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5 }}>· {o.package_label}</Text></Text>
+              <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5, marginTop: 3 }}>{o.order_reference || ''} · {fmtDate(o.created_at)}</Text>
+            </View>
+            <Chip txt="Delivered" bg={T.mint} fg={T.mintInk} />
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15, marginLeft: 10 }}>₹{o.price_inr}</Text>
           </View>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}
+
+function ReferScreen({ ctx }) {
+  const { pop, refCode } = ctx;
+  const msg = `Use my code ${refCode} for a discount on your first MobiYatri travel eSIM — mobiyatri.in`;
+  return (
+    <View style={{ flex: 1 }}>
+      <ScreenHead title="Refer and earn" onBack={pop} />
+      <ScrollView contentContainerStyle={{ padding: 20 }}>
+        <View style={[s.card, { alignItems: 'center', paddingVertical: 26 }]}>
+          <Text style={{ fontSize: 40 }}>🎁</Text>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 20, marginTop: 8, textAlign: 'center' }}>Refer friends. Earn ₹150.</Text>
+          <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>
+            ₹150 YatriCash for every friend who takes their first trip — they get a discount too.
+          </Text>
+          <View style={{ borderWidth: 1.5, borderStyle: 'dashed', borderColor: T.indigo, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 26, marginTop: 16 }}>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 18, letterSpacing: 2 }}>{refCode || '· · · · · ·'}</Text>
+          </View>
+          {refCode && <Btn label="Share invite" onPress={() => Share.share({ message: msg })} style={{ marginTop: 14, alignSelf: 'stretch' }} />}
         </View>
-      ) : null}
-      <View style={{ marginTop: 'auto', paddingBottom: 30 }}>
-        <Pressable style={s.btnPrimary} onPress={onInstall}><Text style={s.btnPrimaryTxt}>Install or share</Text></Pressable>
-        <Pressable style={[s.btnOutline, { marginTop: 12 }]} onPress={onDone}><Text style={s.btnOutlineTxt}>Go to My eSIMs</Text></Pressable>
+        {[['1', 'Share your code', 'Send it to friends planning a trip.'],
+          ['2', 'They buy their first eSIM', 'They get a first-trip discount.'],
+          ['3', 'You earn ₹150', 'Credited as YatriCash after their order.']].map(([n, t, d]) => (
+            <View key={n} style={[s.card, { marginTop: 10, flexDirection: 'row', alignItems: 'center' }]}>
+              <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: T.indigo, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: '#fff', fontWeight: '800' }}>{n}</Text>
+              </View>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={{ color: T.ink, fontWeight: '700', fontSize: 14 }}>{t}</Text>
+                <Text style={{ color: T.soft, fontWeight: '500', fontSize: 12.5 }}>{d}</Text>
+              </View>
+            </View>
+          ))}
+        <Text style={{ color: T.soft, fontWeight: '500', fontSize: 11.5, marginTop: 12, textAlign: 'center' }}>
+          Rewards are credited as YatriCash after your friend's first completed order.
+        </Text>
+      </ScrollView>
+    </View>
+  );
+}
+
+function NotifyScreen({ ctx }) {
+  const { pop, session } = ctx;
+  const [prefs, setPrefs] = useState({ trips: true, offers: true, ...(session?.user?.user_metadata?.notify_prefs || {}) });
+  const save = async next => {
+    setPrefs(next);
+    await sb.auth.updateUser({ data: { notify_prefs: next } });
+    pushToast('Preferences saved');
+  };
+  const ROWS = [
+    ['orders', 'Order & delivery updates', 'QR delivery, install reminders. Always on.', true, true],
+    ['trips', 'Trip reminders', 'A nudge to install before your flight.', prefs.trips, false],
+    ['offers', 'Offers & new destinations', 'Fare-drop alerts and launches. No spam.', prefs.offers, false],
+  ];
+  return (
+    <View style={{ flex: 1 }}>
+      <ScreenHead title="Notification preferences" onBack={pop} />
+      <View style={{ padding: 20 }}>
+        {ROWS.map(([k, t, d, on, locked]) => (
+          <View key={k} style={[s.card, { marginBottom: 10, flexDirection: 'row', alignItems: 'center' }]}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <Text style={{ color: T.ink, fontWeight: '700', fontSize: 14 }}>{t}</Text>
+              <Text style={{ color: T.soft, fontWeight: '500', fontSize: 12 }}>{d}</Text>
+            </View>
+            <Toggle on={on} onChange={v => !locked && save({ ...prefs, [k]: v })} />
+          </View>
+        ))}
       </View>
     </View>
   );
 }
 
-function MyEsims({ esims, session, countries, onAuth, onInstall, onBrowse }) {
-  return (
-    <ScrollView style={s.fill} contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 110 }}>
-      <Text style={{ fontSize: 24, fontWeight: '800', color: T.ink, marginBottom: 14 }}>My eSIMs</Text>
-      {!session ? (
-        <View style={[s.card, { alignItems: 'center', padding: 30 }]}>
-          <Text style={{ fontWeight: '800', fontSize: 16, color: T.ink }}>Sign in to see your eSIMs</Text>
-          <Text style={{ color: T.soft, fontWeight: '600', textAlign: 'center', marginVertical: 10 }}>Purchases are saved to your account across devices.</Text>
-          <Pressable style={[s.btnPrimary, { alignSelf: 'stretch' }]} onPress={onAuth}><Text style={s.btnPrimaryTxt}>Sign up / Log in</Text></Pressable>
-        </View>
-      ) : null}
-      {session && esims.length === 0 ? (
-        <View style={[s.card, { alignItems: 'center', padding: 30 }]}>
-          <Text style={{ fontSize: 40 }}>🛒</Text>
-          <Text style={{ fontWeight: '800', fontSize: 16, color: T.ink, marginTop: 8 }}>No eSIMs yet</Text>
-          <Pressable style={[s.btnPrimary, { alignSelf: 'stretch', marginTop: 14 }]} onPress={onBrowse}><Text style={s.btnPrimaryTxt}>Browse eSIMs</Text></Pressable>
-        </View>
-      ) : null}
-      {esims.map((e, i) => {
-        const o = e.orders || {};
-        const c = countries.find(x => x.n === o.country_name);
-        const parts = (o.package_label || '— · —').split(' · ');
-        return (
-          <View key={(e.iccid || '') + i} style={[s.card, { marginBottom: 12 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderColor: T.line, paddingBottom: 10 }}>
-              {c && c.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <Text style={{ fontSize: 20 }}>🌏</Text>}
-              <Text style={{ fontWeight: '800', fontSize: 16, color: T.ink }}>{o.country_name || 'eSIM'}</Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-              <View style={s.stat}><Text style={s.statK}>Data</Text><Text style={s.statV}>{parts[0]}</Text></View>
-              <View style={s.stat}><Text style={s.statK}>Validity</Text><Text style={s.statV}>{parts[1]}</Text></View>
-            </View>
-            <Pressable style={[s.btnPrimary, { marginTop: 12 }]} onPress={() => onInstall(e)}>
-              <Text style={s.btnPrimaryTxt}>Install or share</Text>
-            </Pressable>
-          </View>
-        );
-      })}
-    </ScrollView>
-  );
-}
-
-function Profile({ session, onAuth, onLogout, onChat }) {
-  const name = session ? ((session.user.user_metadata && session.user.user_metadata.full_name) || session.user.email) : 'Guest';
-  return (
-    <ScrollView style={s.fill} contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 110 }}>
-      <Text style={{ fontSize: 24, fontWeight: '800', color: T.ink }}>Profile</Text>
-      <View style={{ alignItems: 'center', marginVertical: 16 }}>
-        <View style={s.avatar}><Text style={{ color: '#fff', fontWeight: '800', fontSize: 24 }}>{(name[0] || 'G').toUpperCase()}</Text></View>
-        <Text style={{ fontWeight: '800', fontSize: 18, color: T.ink, marginTop: 8 }}>{name}</Text>
-        {!session ? <Pressable onPress={onAuth}><Text style={{ color: T.coral, fontWeight: '700', marginTop: 4 }}>Sign in / create account</Text></Pressable> : null}
-      </View>
-      {[['💬', 'Ask Yatri Sahayak (AI support)', onChat],
-        ['📱', 'Check device compatibility', () => Alert.alert('Compatibility check', 'Dial *#06# — if you see an EID number, your phone supports eSIM.\n\niPhone XS/XR+, Pixel 3+, Samsung S20+ and most flagships after 2020. Phone must be network-unlocked.')],
-        ['🛡', 'Travel insurance', () => Linking.openURL('https://www.policybazaar.com/travel-insurance/')],
-        ['💱', 'Currency · INR ₹', null],
-      ].map(([ic, lb, fn]) => (
-        <Pressable key={lb} style={s.mitem} onPress={fn || undefined}>
-          <Text style={{ fontSize: 18, width: 30 }}>{ic}</Text>
-          <Text style={{ fontWeight: '700', fontSize: 14.5, color: T.ink, flex: 1 }}>{lb}</Text>
-          <Text style={{ color: '#B2BFD4', fontSize: 18 }}>›</Text>
-        </Pressable>
-      ))}
-      {session ? (
-        <Pressable style={s.mitem} onPress={onLogout}>
-          <Text style={{ fontSize: 18, width: 30 }}>🚪</Text>
-          <Text style={{ fontWeight: '700', fontSize: 14.5, color: T.ink, flex: 1 }}>Log out</Text>
-        </Pressable>
-      ) : null}
-      <Text style={{ textAlign: 'center', color: T.soft, fontSize: 11.5, fontWeight: '600', marginTop: 20 }}>
-        MobiYatri v1.0 · Made in India with ❤️ · शुभ यात्रा
-      </Text>
-    </ScrollView>
-  );
-}
-
-/* ================= modals ================= */
-function AuthModal({ open, onClose, onDone }) {
-  const [mode, setMode] = useState('signup');
+/* ================= auth modal ================= */
+function AuthModal({ open, close }) {
+  const [tab, setTab] = useState('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
   const [busy, setBusy] = useState(false);
-  const go = async () => {
-    if (!email || !pass) return;
-    setBusy(true);
+  const [err, setErr] = useState('');
+  const submit = async () => {
+    setErr(''); setBusy(true);
     try {
-      if (mode === 'signup') {
+      if (tab === 'signup') {
         const { error } = await sb.auth.signUp({ email, password: pass, options: { data: { full_name: name } } });
         if (error) throw error;
       } else {
         const { error } = await sb.auth.signInWithPassword({ email, password: pass });
         if (error) throw error;
       }
-      onDone();
-    } catch (e) { Alert.alert('Account', e.message || 'Something went wrong'); }
-    setBusy(false);
+      close(); pushToast('नमस्ते! You are signed in');
+    } catch (e) { setErr(e.message || 'Something went wrong'); }
+    finally { setBusy(false); }
   };
   return (
-    <Modal visible={open} animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[s.fill, { padding: 22, paddingTop: TOPPAD }]}>
-        <Pressable onPress={onClose} style={{ alignSelf: 'flex-end' }}><Text style={{ fontSize: 22, color: T.ink }}>✕</Text></Pressable>
-        <View style={{ flexDirection: 'row', gap: 26, borderBottomWidth: 1.5, borderColor: T.line, marginBottom: 20 }}>
-          {[['login', 'Log in'], ['signup', 'Sign up']].map(([k, lb]) => (
-            <Pressable key={k} onPress={() => setMode(k)} style={{ paddingVertical: 10, borderBottomWidth: 2.5, borderColor: mode === k ? T.ink : 'transparent' }}>
-              <Text style={{ fontWeight: '700', fontSize: 15, color: mode === k ? T.ink : T.soft }}>{lb}</Text>
-            </Pressable>
-          ))}
+    <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
+      <Pressable style={s.sheetBack} onPress={close} />
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={s.sheet}>
+          <View style={{ flexDirection: 'row', borderBottomWidth: 1.5, borderBottomColor: 'rgba(22,24,42,.15)', marginBottom: 18 }}>
+            {[['login', 'Log in'], ['signup', 'Sign up']].map(([k, label]) => (
+              <Pressable key={k} onPress={() => { setTab(k); setErr(''); }} style={{ flex: 1, alignItems: 'center', paddingBottom: 12 }}>
+                <Text style={{ fontWeight: '800', fontSize: 17, color: T.ink, opacity: tab === k ? 1 : .5 }}>{label}</Text>
+                {tab === k && <View style={{ position: 'absolute', bottom: -1.5, left: 30, right: 30, height: 3, backgroundColor: T.ink, borderRadius: 2 }} />}
+              </Pressable>
+            ))}
+          </View>
+          {tab === 'signup' && <TextInput value={name} onChangeText={setName} placeholder="Full name"
+            placeholderTextColor="#8B8FA5" style={[s.input, { marginBottom: 10 }]} />}
+          <TextInput value={email} onChangeText={setEmail} placeholder="Email" autoCapitalize="none" keyboardType="email-address"
+            placeholderTextColor="#8B8FA5" style={[s.input, { marginBottom: 10 }]} />
+          <TextInput value={pass} onChangeText={setPass} placeholder="Password" secureTextEntry
+            placeholderTextColor="#8B8FA5" style={s.input} />
+          {err ? <Text style={{ color: T.coralDeep, fontWeight: '600', fontSize: 12.5, marginTop: 10 }}>{err}</Text> : null}
+          <Btn label={busy ? 'Please wait…' : tab === 'login' ? 'Log in' : 'Create account'} onPress={submit} disabled={busy} style={{ marginTop: 16 }} />
+          <Text style={{ color: T.soft, fontWeight: '500', fontSize: 11.5, textAlign: 'center', marginTop: 12 }}>
+            By continuing you agree to our Terms and Privacy Policy (mobiyatri.in).
+          </Text>
         </View>
-        {mode === 'signup' ? <TextInput style={s.field} placeholder="Full name" placeholderTextColor={T.soft} value={name} onChangeText={setName} /> : null}
-        <TextInput style={s.field} placeholder="Email" placeholderTextColor={T.soft} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
-        <TextInput style={s.field} placeholder="Password" placeholderTextColor={T.soft} secureTextEntry value={pass} onChangeText={setPass} />
-        <Pressable style={[s.btnPrimary, { marginTop: 8 }]} onPress={go} disabled={busy}>
-          {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.btnPrimaryTxt}>{mode === 'signup' ? 'Agree and sign up' : 'Log in'}</Text>}
-        </Pressable>
-        <Text style={{ color: T.soft, fontSize: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 14 }}>
-          By continuing you agree to the Terms and Privacy Policy.
-        </Text>
       </KeyboardAvoidingView>
     </Modal>
   );
 }
 
-function InstallModal({ open, esim, onClose }) {
-  const lpa = esim && (esim.lpa_string || esim.lpa);
-  const qr = lpa ? 'https://api.qrserver.com/v1/create-qr-code/?size=520x520&data=' + encodeURIComponent(lpa) : null;
-  const oneTap = lpa ? 'https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=' + encodeURIComponent(lpa) : null;
+/* ================= compatibility modal ================= */
+function CompatModal({ open, close }) {
   return (
-    <Modal visible={open} animationType="slide" onRequestClose={onClose}>
-      <ScrollView style={s.fill} contentContainerStyle={{ padding: 22, paddingTop: TOPPAD }}>
-        <Pressable onPress={onClose} style={{ alignSelf: 'flex-end' }}><Text style={{ fontSize: 22, color: T.ink }}>✕</Text></Pressable>
-        <Text style={{ fontSize: 20, fontWeight: '800', color: T.ink, marginBottom: 14 }}>Install your eSIM</Text>
-        {qr ? <Image source={{ uri: qr }} style={{ width: 210, height: 210, alignSelf: 'center', borderRadius: 12, backgroundColor: '#fff' }} /> : null}
-        {esim && esim.iccid ? <Text style={{ textAlign: 'center', color: T.soft, fontWeight: '600', fontSize: 12, marginTop: 10 }}>ICCID {esim.iccid}</Text> : null}
-        {Platform.OS === 'ios' && oneTap ? (
-          <Pressable style={[s.btnPrimary, { marginTop: 18 }]} onPress={() => Linking.openURL(oneTap)}>
-            <Text style={s.btnPrimaryTxt}>⚡ Install in one tap</Text>
-          </Pressable>
-        ) : null}
-        {Platform.OS === 'android' && lpa ? (
-          <View style={[s.card, { marginTop: 18 }]}>
-            <Text style={{ fontWeight: '700', color: T.ink, fontSize: 13.5 }}>Android: Settings → Connections → SIM manager → Add eSIM → enter this code:</Text>
-            <Text selectable style={{ fontFamily: 'monospace', fontSize: 12, color: T.ink, marginTop: 8 }}>{lpa}</Text>
-          </View>
-        ) : null}
-        <View style={{ marginTop: 20 }}>
-          {['1. Stay on Wi-Fi while installing', '2. Install BEFORE you fly — validity starts when you connect abroad',
-            '3. On landing: data roaming ON for the MobiYatri line only', '4. Keep roaming OFF on your Jio/Airtel/Vi SIM'].map(t => (
-              <Text key={t} style={{ color: T.soft, fontWeight: '600', fontSize: 13.5, marginVertical: 5 }}>{t}</Text>
-            ))}
+    <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
+      <Pressable style={s.sheetBack} onPress={close} />
+      <View style={s.sheet}>
+        <Text style={s.sheetTitle}>Is my phone eSIM-ready?</Text>
+        <View style={[s.card, { backgroundColor: T.bg, marginTop: 4 }]}>
+          <Text style={{ color: T.ink, fontWeight: '700', fontSize: 14.5 }}>The 10-second check</Text>
+          <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, lineHeight: 20, marginTop: 6 }}>
+            Open your dialler and dial <Text style={{ color: T.coralDeep, fontWeight: '800' }}>*#06#</Text>{'\n'}
+            → If you see an EID number, your phone supports eSIM.{'\n'}
+            → Also make sure the phone is network-unlocked.
+          </Text>
         </View>
-      </ScrollView>
+        <Accordion icon="🍎" title="iPhone">
+          iPhone XS and newer support eSIM. iOS 17.4+ can install straight from our one-tap link.
+        </Accordion>
+        <Accordion icon="🤖" title="Android">
+          Most Samsung Galaxy S20+, Pixel 3+ and recent OnePlus/Nothing flagships support eSIM. Indian variants sometimes differ — the *#06# check is the truth.
+        </Accordion>
+        <Btn label="Got it" onPress={close} style={{ marginTop: 12 }} />
+      </View>
     </Modal>
   );
 }
 
-function ChatModal({ open, session, onClose }) {
-  const [msgs, setMsgs] = useState([{ role: 'assistant', content: "Namaste! 🙏 I'm Yatri Sahayak — ask me about choosing, installing, or fixing your eSIM. English या हिंदी!" }]);
-  const [input, setInput] = useState('');
+/* ================= chat (Yatri Sahayak) ================= */
+const GREETING = { role: 'assistant', content: 'नमस्ते! I\'m Yatri Sahayak — ask me anything about eSIMs, installation, or your orders. English या हिन्दी!' };
+
+function ChatModal({ open, close, session }) {
+  const [msgs, setMsgs] = useState([GREETING]);
+  const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const listRef = useRef(null);
-  const send = async preset => {
-    const text = (preset || input).trim();
-    if (!text || busy) return;
-    setInput('');
-    const next = [...msgs, { role: 'user', content: text }];
-    setMsgs(next); setBusy(true);
+  const send = async () => {
+    const t = text.trim();
+    if (!t || busy) return;
+    const next = [...msgs, { role: 'user', content: t }];
+    setMsgs(next); setText(''); setBusy(true);
     try {
-      const headers = { 'Content-Type': 'application/json' };
-      if (session) headers.Authorization = 'Bearer ' + session.access_token;
-      const apiMsgs = next.slice(1).slice(-12); // drop the greeting; API needs user-first
+      const headers = await authHeaders();
       const d = await fetch(API + '/api/assistant', {
         method: 'POST', headers,
-        body: JSON.stringify({ messages: apiMsgs, context: { device: 'MobiYatri native app · ' + Platform.OS + ' ' + Platform.Version } }),
+        body: JSON.stringify({ messages: next.filter(m => m !== GREETING).slice(-12), context: { app: 'native', platform: Platform.OS } }),
       }).then(r => r.json());
-      setMsgs(m => [...m, { role: 'assistant', content: d.reply || 'Sorry — try again.' }]);
-    } catch (e) {
-      setMsgs(m => [...m, { role: 'assistant', content: 'Could not reach support — check your connection.' }]);
-    }
-    setBusy(false);
+      setMsgs(m => [...m, { role: 'assistant', content: d.reply || d.error || 'Sorry — try again in a moment.' }]);
+    } catch { setMsgs(m => [...m, { role: 'assistant', content: 'I seem to be offline — please try again.' }]); }
+    finally { setBusy(false); }
   };
+  useEffect(() => { setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80); }, [msgs, open]);
   return (
-    <Modal visible={open} animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={s.fill}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingTop: TOPPAD, borderBottomWidth: 1, borderColor: T.line, gap: 12 }}>
-          <View style={[s.avatar, { width: 40, height: 40, borderRadius: 20 }]}><Text style={{ fontSize: 18 }}>🛫</Text></View>
+    <Modal visible={open} animationType="slide" onRequestClose={close}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1, backgroundColor: T.bg }}>
+        <View style={{ backgroundColor: T.indigo, paddingTop: TOPPAD, paddingBottom: 14, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: '800', fontSize: 15, color: T.ink }}>Yatri Sahayak</Text>
-            <Text style={{ color: T.soft, fontSize: 11.5, fontWeight: '600' }}>AI support · English + हिन्दी · 24/7</Text>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16.5 }}>Yatri Sahayak</Text>
+            <Text style={{ color: '#B9BDDD', fontWeight: '600', fontSize: 11.5 }}>AI travel-data expert · 24/7 · English + हिन्दी</Text>
           </View>
-          <Pressable onPress={onClose}><Text style={{ fontSize: 22, color: T.ink }}>✕</Text></Pressable>
+          <Pressable onPress={close}><Text style={{ color: '#fff', fontSize: 20 }}>✕</Text></Pressable>
         </View>
-        <FlatList
-          ref={listRef} data={busy ? [...msgs, { role: 'typing', content: '' }] : msgs} keyExtractor={(_, i) => String(i)}
-          contentContainerStyle={{ padding: 16 }}
-          onContentSizeChange={() => listRef.current && listRef.current.scrollToEnd({ animated: true })}
-          renderItem={({ item }) => item.role === 'typing'
-            ? <View style={[s.bub, s.bubBot]}><ActivityIndicator size="small" color={T.soft} /></View>
-            : <View style={[s.bub, item.role === 'user' ? s.bubUser : s.bubBot]}>
-                <Text style={{ color: item.role === 'user' ? '#fff' : T.ink, fontWeight: '600', fontSize: 14, lineHeight: 20 }}>{item.content}</Text>
-              </View>}
-        />
-        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingBottom: 6, flexWrap: 'wrap' }}>
-          {['How do I install?', 'eSIM not working', 'हिंदी में पूछें'].map(q => (
-            <Pressable key={q} style={s.chip} onPress={() => send(q)}><Text style={{ fontWeight: '700', fontSize: 12, color: T.ink }}>{q}</Text></Pressable>
+        <ScrollView ref={listRef} style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+          {msgs.map((m, i) => (
+            <View key={i} style={{
+              alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '86%',
+              backgroundColor: m.role === 'user' ? T.indigo : '#fff', borderRadius: 16,
+              paddingVertical: 10, paddingHorizontal: 14, marginBottom: 8,
+            }}>
+              <Text style={{ color: m.role === 'user' ? '#fff' : T.ink, fontSize: 14, lineHeight: 20, fontWeight: '500' }}>{m.content}</Text>
+            </View>
           ))}
-        </View>
-        <View style={{ flexDirection: 'row', gap: 10, padding: 14, paddingBottom: 28, borderTopWidth: 1, borderColor: T.line }}>
-          <TextInput style={[s.field, { flex: 1, marginBottom: 0, borderRadius: 999 }]} placeholder="Ask anything about your eSIM…"
-            placeholderTextColor={T.soft} value={input} onChangeText={setInput} onSubmitEditing={() => send()} />
-          <Pressable style={s.sendBtn} onPress={() => send()}><Text style={{ color: '#fff', fontSize: 17 }}>➤</Text></Pressable>
+          {busy && <Text style={{ color: T.soft, fontWeight: '700', fontSize: 12.5, padding: 6 }}>typing…</Text>}
+        </ScrollView>
+        <View style={{ flexDirection: 'row', gap: 8, padding: 12, backgroundColor: '#fff' }}>
+          <TextInput value={text} onChangeText={setText} placeholder="Ask about eSIMs, plans, installation…"
+            placeholderTextColor="#8B8FA5" onSubmitEditing={send}
+            style={{ flex: 1, borderWidth: 1.5, borderColor: T.line, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: T.ink }} />
+          <Btn small label="Send" onPress={send} />
         </View>
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+/* ================= chrome ================= */
+function ScreenHead({ title, onBack }) {
+  return (
+    <View style={{ paddingTop: TOPPAD, paddingHorizontal: 16, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: T.bg }}>
+      <Pressable onPress={onBack} style={{ padding: 6, marginRight: 6 }}>
+        <Text style={{ color: T.ink, fontSize: 20, fontWeight: '800' }}>‹</Text>
+      </Pressable>
+      <Text style={{ color: T.ink, fontWeight: '800', fontSize: 18, flex: 1 }} numberOfLines={1}>{title}</Text>
+    </View>
+  );
+}
+
+function YatriCashChip() {
+  return (
+    <View style={{ alignItems: 'flex-end' }}>
+      <Text style={{ color: T.soft, fontSize: 11, fontWeight: '700' }}>YatriCash</Text>
+      <View style={{ backgroundColor: T.mint, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4, marginTop: 2 }}>
+        <Text style={{ color: T.mintInk, fontWeight: '800', fontSize: 13 }}>₹0</Text>
+      </View>
+    </View>
+  );
+}
+
+function TabBar({ tab, setTab }) {
+  const TABS = [['store', '🛍️', 'Store'], ['esims', '📶', 'My eSIMs'], ['profile', '👤', 'Profile']];
+  return (
+    <View style={s.tabBar}>
+      {TABS.map(([k, icon, label]) => (
+        <Pressable key={k} onPress={() => setTab(k)} style={{ flex: 1, alignItems: 'center', paddingVertical: 10 }}>
+          <Text style={{ fontSize: 20, opacity: tab === k ? 1 : .45 }}>{icon}</Text>
+          <Text style={{ fontSize: 11, fontWeight: '800', color: T.ink, opacity: tab === k ? 1 : .45, marginTop: 2 }}>{label}</Text>
+          {tab === k && <View style={{ width: 22, height: 3, borderRadius: 2, backgroundColor: T.coral, marginTop: 3 }} />}
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+function ChatFab({ onPress }) {
+  return (
+    <Pressable onPress={onPress} style={s.fab}>
+      <Text style={{ fontSize: 22 }}>💬</Text>
+    </Pressable>
   );
 }
 
 /* ================= styles ================= */
 const s = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: T.bg },
-  card: { backgroundColor: T.card, borderRadius: 18, padding: 16, shadowColor: '#2A2C4A', shadowOpacity: 0.07, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  search: { backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15, fontWeight: '600', color: T.ink, marginBottom: 14, elevation: 2, shadowColor: '#2A2C4A', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  promo: { backgroundColor: T.indigoDark, borderRadius: 20, padding: 18, marginBottom: 14 },
-  svcgrid: { backgroundColor: '#fff', borderRadius: 20, flexDirection: 'row', paddingVertical: 14, marginBottom: 14, elevation: 2, shadowColor: '#2A2C4A', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  svc: { flex: 1, alignItems: 'center', gap: 6 },
-  svcIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: T.tint, alignItems: 'center', justifyContent: 'center' },
-  svcLbl: { fontSize: 11.5, fontWeight: '700', color: T.ink },
-  crow: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 10, borderRadius: 16, padding: 15, elevation: 2, shadowColor: '#2A2C4A', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  flag: { width: 38, height: 28, borderRadius: 6, backgroundColor: '#E8E7EF' },
-  fab: { position: 'absolute', right: 16, bottom: 100, width: 54, height: 54, borderRadius: 27, backgroundColor: T.coral, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: T.coral, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
-  tabbar: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.97)', borderTopWidth: 1, borderColor: T.line, paddingTop: 8, paddingBottom: 24 },
-  tabbtn: { flex: 1, alignItems: 'center', gap: 2 },
-  tablbl: { fontSize: 11, fontWeight: '700', color: '#94A1B8' },
-  tabdot: { width: 20, height: 3, borderRadius: 2, backgroundColor: T.coral, marginTop: 2 },
-  pkg: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', borderWidth: 2, borderColor: 'transparent', borderRadius: 16, padding: 16, marginBottom: 10, elevation: 2, shadowColor: '#2A2C4A', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  buybar: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(246,250,254,0.97)', borderTopWidth: 1, borderColor: '#DDE4F0', padding: 16, paddingBottom: 30 },
-  btnPrimary: { backgroundColor: T.coral, borderRadius: 999, paddingVertical: 15, alignItems: 'center', shadowColor: T.coral, shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 },
-  btnPrimaryTxt: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  btnOutline: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#D8E1EF', borderRadius: 999, paddingVertical: 15, alignItems: 'center' },
-  btnOutlineTxt: { color: T.ink, fontWeight: '700', fontSize: 16 },
-  btnOutlineDark: { backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.26)', borderRadius: 999, paddingVertical: 15, alignItems: 'center' },
-  field: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#D8E1EF', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15, color: T.ink, marginBottom: 12 },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: T.coralDeep, alignItems: 'center', justifyContent: 'center' },
-  mitem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 15, borderRadius: 14, marginBottom: 8 },
-  stat: { flex: 1, backgroundColor: '#EAF0F9', borderRadius: 12, padding: 10 },
-  statK: { fontSize: 11.5, color: T.soft, fontWeight: '700' },
-  statV: { fontSize: 15, fontWeight: '800', color: T.ink, marginTop: 2 },
-  toggle: { width: 46, height: 28, borderRadius: 999, backgroundColor: '#DDE4F0', padding: 3, justifyContent: 'center' },
-  knob: { width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff', alignSelf: 'flex-start', elevation: 2 },
-  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#C6D2E4', alignItems: 'center', justifyContent: 'center' },
-  radioDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: T.coral },
-  bub: { maxWidth: '82%', padding: 12, borderRadius: 16, marginBottom: 10 },
-  bubUser: { alignSelf: 'flex-end', backgroundColor: T.coral, borderBottomRightRadius: 6 },
-  bubBot: { alignSelf: 'flex-start', backgroundColor: '#fff', borderBottomLeftRadius: 6, elevation: 1 },
-  chip: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#D8E1EF', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
-  sendBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: T.coral, alignItems: 'center', justifyContent: 'center' },
+  btn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    borderRadius: 999, paddingVertical: 15, paddingHorizontal: 26,
+  },
+  btnCoral: { backgroundColor: T.coral },
+  btnWhite: { backgroundColor: '#fff' },
+  btnOutline: { borderWidth: 2, borderColor: T.ink },
+  btnTxt: { color: '#fff', fontWeight: '800', fontSize: 15.5 },
+  card: { backgroundColor: T.card, borderRadius: 16, padding: 16 },
+  row: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    borderRadius: 14, paddingVertical: 13, paddingHorizontal: 14, marginBottom: 9,
+  },
+  flag: { width: 42, height: 30, borderRadius: 6 },
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    borderRadius: 999, paddingVertical: 14, paddingHorizontal: 18,
+  },
+  input: {
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#DDD5C6', borderRadius: 13,
+    paddingHorizontal: 14, paddingVertical: 11, fontSize: 14.5, color: T.ink, fontWeight: '500',
+  },
+  label: { color: T.soft, fontWeight: '700', fontSize: 12.5, marginTop: 16, marginBottom: 6 },
+  buyBar: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#fff',
+    flexDirection: 'row', alignItems: 'center', padding: 16, paddingBottom: Platform.OS === 'ios' ? 30 : 16,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20, elevation: 12,
+    shadowColor: '#000', shadowOpacity: .12, shadowRadius: 14, shadowOffset: { width: 0, height: -4 },
+  },
+  tabBar: {
+    position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#fff',
+    flexDirection: 'row', paddingBottom: Platform.OS === 'ios' ? 20 : 6,
+    borderTopWidth: 1, borderTopColor: T.line,
+  },
+  fab: {
+    position: 'absolute', right: 18, bottom: 96, width: 54, height: 54, borderRadius: 27,
+    backgroundColor: T.coral, alignItems: 'center', justifyContent: 'center', elevation: 8,
+    shadowColor: T.coralDeep, shadowOpacity: .4, shadowRadius: 10, shadowOffset: { width: 0, height: 6 },
+  },
+  sheetBack: { flex: 1, backgroundColor: 'rgba(22,24,42,.45)' },
+  sheet: {
+    backgroundColor: T.bg, borderTopLeftRadius: 26, borderTopRightRadius: 26,
+    padding: 22, paddingBottom: Platform.OS === 'ios' ? 34 : 22,
+  },
+  sheetTitle: { color: T.ink, fontWeight: '800', fontSize: 19, textAlign: 'center', marginBottom: 10 },
+  accWrap: { backgroundColor: '#fff', borderRadius: 14, marginBottom: 8, overflow: 'hidden' },
+  accHead: { flexDirection: 'row', alignItems: 'center', padding: 15 },
+  installNote: { color: T.soft, fontWeight: '500', fontSize: 12.5, lineHeight: 18, marginTop: 10, marginBottom: 4 },
 });
