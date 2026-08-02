@@ -134,8 +134,8 @@ export default function Header() {
       <div style={{ background: 'var(--cream)' }}>
         <nav>
           <div className="container secnav" style={{
-            display: 'flex', gap: 30, justifyContent: 'center', padding: '4px 24px 16px',
-            fontWeight: 700, fontSize: 15, overflowX: 'auto', whiteSpace: 'nowrap'
+            display: 'flex', gap: 40, justifyContent: 'center', padding: '4px 24px 18px',
+            fontWeight: 700, fontSize: 15.5, overflowX: 'auto', whiteSpace: 'nowrap'
           }}>
             {NAV.map(n => (
               <a key={n.href} href={n.href} onClick={() => setMenu(false)}
@@ -147,8 +147,12 @@ export default function Header() {
             ))}
           </div>
         </nav>
-        <div className="container" style={{ paddingBottom: 18 }}>
-          <SearchBox placeholder="Where do you need an eSIM?" />
+        <div className="container" style={{ paddingBottom: 20, display: 'flex', alignItems: 'center', gap: 28 }}>
+          <span className="hrule" style={{ flex: '0 0 clamp(40px,6vw,120px)', height: 2, background: '#D9D2C2', borderRadius: 2 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <SearchBox placeholder="Where do you need an eSIM?" />
+          </div>
+          <span className="hrule" style={{ flex: '0 0 clamp(40px,6vw,120px)', height: 2, background: '#D9D2C2', borderRadius: 2 }} />
         </div>
       </div>
 
