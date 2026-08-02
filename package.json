@@ -4,7 +4,8 @@
   "private": true,
   "description": "MobiYatri — travel eSIMs for Indian travellers. Zero-dependency Node server + single-file app.",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "cd site && npm install --no-audit --no-fund && npm run build"
   },
   "engines": {
     "node": ">=18"

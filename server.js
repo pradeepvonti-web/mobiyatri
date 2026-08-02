@@ -514,10 +514,19 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'OPTIONS') { res.end(); return; }
   const send = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)); };
   // static files — lets the app run at http://localhost:4000 (required for OAuth login redirects)
-  const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.sql': 'text/plain' };
+  const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.webp': 'image/webp', '.png': 'image/png', '.svg': 'image/svg+xml', '.json': 'application/json', '.sql': 'text/plain', '.woff2': 'font/woff2', '.woff': 'font/woff', '.map': 'application/json' };
+  const SITE_DIST = path.join(__dirname, 'site', 'dist');
   if (req.method === 'GET' && !req.url.startsWith('/api/')) {
     let urlPath = decodeURIComponent(req.url.split('?')[0]);
-    if (urlPath === '/') urlPath = 'site.html';        // marketing site at root
+    // marketing site: built React bundle in site/dist (fallback to site.html if not built)
+    if (urlPath === '/' || urlPath.startsWith('/assets/')) {
+      const distFp = path.join(SITE_DIST, urlPath === '/' ? 'index.html' : urlPath);
+      if (distFp.startsWith(SITE_DIST) && fs.existsSync(distFp) && fs.statSync(distFp).isFile()) {
+        res.writeHead(200, { 'Content-Type': MIME[path.extname(distFp).toLowerCase()] || 'application/octet-stream' });
+        res.end(fs.readFileSync(distFp)); return;
+      }
+    }
+    if (urlPath === '/') urlPath = 'site.html';        // fallback if dist not built
     else if (urlPath === '/app') urlPath = 'index.html'; // the store app
     else if (urlPath === '/privacy') urlPath = 'privacy.html';
     else if (urlPath === '/terms') urlPath = 'terms.html';

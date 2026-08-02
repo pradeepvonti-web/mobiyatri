@@ -7,3 +7,7 @@ mobbin-reference/
 # OS noise
 Thumbs.db
 desktop.ini
+
+# Build output & deps (site is built on deploy)
+site/node_modules/
+site/dist/
