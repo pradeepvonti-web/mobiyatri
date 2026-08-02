@@ -87,65 +87,70 @@ export function Logo({ light = false }) {
 
 export default function Header() {
   const y = useScrollY();
-  const scrolled = y > 560;
+  const scrolled = y > 110;
   const [menu, setMenu] = useState(false);
+
+  const Burger = (
+    <button aria-label="Menu" onClick={() => setMenu(m => !m)}
+      style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 5, flex: 'none' }}>
+      <span style={{ width: 24, height: 2.6, background: 'var(--ink)', borderRadius: 2, transition: 'transform .2s', transform: menu ? 'translateY(7.6px) rotate(45deg)' : 'none' }} />
+      <span style={{ width: 24, height: 2.6, background: 'var(--ink)', borderRadius: 2, opacity: menu ? 0 : 1, transition: 'opacity .15s' }} />
+      <span style={{ width: 24, height: 2.6, background: 'var(--ink)', borderRadius: 2, transition: 'transform .2s', transform: menu ? 'translateY(-7.6px) rotate(-45deg)' : 'none' }} />
+    </button>
+  );
 
   return (
     <>
+      {/* row 1 — the only sticky bar: logo | (inline search when scrolled) | account | menu */}
       <header style={{
         position: 'sticky', top: 0, zIndex: 50, background: 'var(--cream)',
-        boxShadow: y > 8 ? '0 2px 20px rgba(22,24,42,.08)' : 'none',
+        boxShadow: scrolled ? '0 2px 20px rgba(22,24,42,.08)' : 'none',
         transition: 'box-shadow .2s'
       }}>
-        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: 20, height: 76 }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: 14, height: 76 }}>
           <Logo />
           <div style={{ flex: 1, minWidth: 0 }}>
             <AnimatePresence>
               {scrolled && (
-                <motion.div
+                <motion.div className="hsearch-inline"
                   initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }}
                   transition={{ duration: .22 }}
-                  style={{ maxWidth: 560, margin: '0 auto' }}>
+                  style={{ maxWidth: 620, margin: '0 auto' }}>
                   <SearchBox compact placeholder="Where do you need data?" />
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
-          <nav className="topnav" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <nav className="topnav" style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
             <span className="acctarea" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <AccountArea />
             </span>
-            <button aria-label="Menu" onClick={() => setMenu(m => !m)}
-              style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={{ width: 24, height: 2.6, background: 'var(--ink)', borderRadius: 2, transition: 'transform .2s', transform: menu ? 'translateY(7.6px) rotate(45deg)' : 'none' }} />
-              <span style={{ width: 24, height: 2.6, background: 'var(--ink)', borderRadius: 2, opacity: menu ? 0 : 1, transition: 'opacity .15s' }} />
-              <span style={{ width: 24, height: 2.6, background: 'var(--ink)', borderRadius: 2, transition: 'transform .2s', transform: menu ? 'translateY(-7.6px) rotate(-45deg)' : 'none' }} />
-            </button>
+            {Burger}
           </nav>
         </div>
-        {/* secondary nav — hides once scrolled */}
-        <AnimatePresence>
-          {!scrolled && (
-            <motion.nav
-              initial={false} exit={{ height: 0, opacity: 0 }} transition={{ duration: .2 }}
-              style={{ overflow: 'hidden' }}>
-              <div className="container secnav" style={{
-                display: 'flex', gap: 28, paddingBottom: 14, fontWeight: 700, fontSize: 15,
-                overflowX: 'auto', whiteSpace: 'nowrap'
-              }}>
-                {NAV.map(n => (
-                  <a key={n.href} href={n.href} onClick={() => setMenu(false)}
-                    style={{ opacity: .85, paddingBottom: 4, borderBottom: '2.5px solid transparent' }}
-                    onMouseEnter={e => e.currentTarget.style.borderBottomColor = 'var(--coral)'}
-                    onMouseLeave={e => e.currentTarget.style.borderBottomColor = 'transparent'}>
-                    {n.label}
-                  </a>
-                ))}
-              </div>
-            </motion.nav>
-          )}
-        </AnimatePresence>
       </header>
+
+      {/* rows 2+3 — centered nav + full search bar; NOT sticky, they scroll away like Airalo's */}
+      <div style={{ background: 'var(--cream)' }}>
+        <nav>
+          <div className="container secnav" style={{
+            display: 'flex', gap: 30, justifyContent: 'center', padding: '4px 24px 16px',
+            fontWeight: 700, fontSize: 15, overflowX: 'auto', whiteSpace: 'nowrap'
+          }}>
+            {NAV.map(n => (
+              <a key={n.href} href={n.href} onClick={() => setMenu(false)}
+                style={{ opacity: .85, paddingBottom: 4, borderBottom: '2.5px solid transparent' }}
+                onMouseEnter={e => e.currentTarget.style.borderBottomColor = 'var(--coral)'}
+                onMouseLeave={e => e.currentTarget.style.borderBottomColor = 'transparent'}>
+                {n.label}
+              </a>
+            ))}
+          </div>
+        </nav>
+        <div className="container" style={{ paddingBottom: 18 }}>
+          <SearchBox placeholder="Where do you need an eSIM?" />
+        </div>
+      </div>
 
       {/* full menu sheet */}
       <AnimatePresence>

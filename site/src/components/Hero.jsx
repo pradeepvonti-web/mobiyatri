@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import SearchBox from './SearchBox.jsx';
 import { HeroScene } from './Illustrations.jsx';
 
 const TICKS = ['190+ destinations', 'UPI · RuPay · Cards', 'Instant QR delivery', '24/7 English + हिन्दी support'];
@@ -9,15 +8,9 @@ export default function Hero() {
   return (
     <section style={{ padding: '26px 0 10px' }}>
       <div className="container">
-        <motion.div initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: .7, ease: [0.22, 1, 0.36, 1] }}
-          style={{ maxWidth: 720, margin: '0 auto' }}>
-          <SearchBox />
-        </motion.div>
-
         <motion.div initial={{ opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: .8, delay: .15, ease: [0.22, 1, 0.36, 1] }}
-          style={{ marginTop: 34 }}>
+          style={{ marginTop: 10 }}>
           <HeroScene />
         </motion.div>
 

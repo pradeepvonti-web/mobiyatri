@@ -97,6 +97,10 @@ h1,h2,h3{font-family:var(--head);letter-spacing:-0.01em}
 
 .acctlink{border-radius:10px;transition:background .12s}
 .acctlink:hover{background:rgba(22,24,42,.06)}
+@media(max-width:720px){
+  .hsearch-inline .pill{display:none}
+  .secnav{justify-content:flex-start !important}
+}
 @media(max-width:860px){
   .acctarea{display:none !important}
   .profilegrid{grid-template-columns:1fr !important}
