@@ -119,6 +119,64 @@ export function PhoneMock() {
   );
 }
 
+/* Insurance slide: shield over a route */
+export function ShieldScene() {
+  return (
+    <div style={{ position: 'relative', maxWidth: 420, margin: '0 auto' }}>
+      <svg viewBox="0 0 420 300" style={{ width: '100%', display: 'block' }}>
+        <ellipse cx="210" cy="272" rx="180" ry="18" fill="#E7DECD" />
+        <path d="M40 250 Q210 140 380 250" stroke="#fff" strokeWidth="4" strokeDasharray="12 12" fill="none" opacity=".9" />
+        <g transform="translate(210 120)">
+          <path d="M0-78 62-52v44C62 30 34 62 0 74-34 62-62 30-62-8v-44z" fill="#33386E" />
+          <path d="M0-64 48-44v36C48 20 26 46 0 56-26 46-48 20-48-8v-36z" fill="#4A50A0" />
+          <path d="M-22-4l14 16 30-34" stroke="#fff" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </g>
+        <g fill="#4E8D62">
+          <path d="M60 250l12-28 12 28z" /><path d="M336 252l12-26 12 26z" />
+        </g>
+      </svg>
+      <motion.svg {...float(4.5, 12)} viewBox="0 0 60 60" width="58" style={{ position: 'absolute', top: 0, right: '10%' }}>
+        <path d="M55 8L6 27l15.4 6.4L49 14l-22 23 1.8 15.4 8-10.5 11.3 4.9z" fill="#FF6B57" />
+      </motion.svg>
+      <motion.svg {...float(6, 8)} viewBox="0 0 120 44" width="92" style={{ position: 'absolute', top: 24, left: '4%' }}>
+        <ellipse cx="36" cy="30" rx="30" ry="14" fill="#fff" /><ellipse cx="74" cy="24" rx="34" ry="17" fill="#fff" />
+      </motion.svg>
+    </div>
+  );
+}
+
+/* Referral slide: gift + shared coin */
+export function ReferScene() {
+  return (
+    <div style={{ position: 'relative', maxWidth: 420, margin: '0 auto' }}>
+      <svg viewBox="0 0 420 300" style={{ width: '100%', display: 'block' }}>
+        <ellipse cx="210" cy="272" rx="180" ry="18" fill="#E7DECD" />
+        {/* gift box */}
+        <g transform="translate(120 150)">
+          <rect x="-58" y="-10" width="116" height="96" rx="10" fill="#FF6B57" />
+          <rect x="-66" y="-38" width="132" height="34" rx="9" fill="#E85340" />
+          <rect x="-10" y="-38" width="20" height="124" fill="#FFD166" />
+          <path d="M0-38C-26-64-52-52-44-40c6 10 28 8 44 2 16 6 38 8 44-2 8-12-18-24-44 2z" fill="#FFD166" />
+        </g>
+        {/* two phones sharing */}
+        <g transform="translate(300 160)">
+          <rect x="-64" y="-46" width="52" height="92" rx="12" fill="#16182A" />
+          <rect x="-58" y="-38" width="40" height="76" rx="8" fill="#BFE3F2" />
+          <rect x="12" y="-46" width="52" height="92" rx="12" fill="#16182A" />
+          <rect x="18" y="-38" width="40" height="76" rx="8" fill="#D6EBDB" />
+          <path d="M-12 0h24" stroke="#E85340" strokeWidth="5" strokeLinecap="round" strokeDasharray="2 8" />
+        </g>
+        <g fill="#4E8D62"><path d="M44 252l12-26 12 26z" /><path d="M356 252l12-26 12 26z" /></g>
+      </svg>
+      <motion.div {...float(3.8, 10)} style={{
+        position: 'absolute', top: 6, left: '38%', width: 74, height: 74, borderRadius: '50%',
+        background: '#FFD166', border: '5px solid #E8B04B', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', fontFamily: 'Alexandria,sans-serif', fontWeight: 800, fontSize: 19, color: '#7A4B00'
+      }}>₹150</motion.div>
+    </div>
+  );
+}
+
 /* Small animated eSIM chip */
 export function ChipViz() {
   return (

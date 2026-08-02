@@ -94,6 +94,8 @@ h1,h2,h3{font-family:var(--head);letter-spacing:-0.01em}
 
 @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
 @keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fillbar{from{width:0}to{width:100%}}
+@media(max-width:700px){.heroslide{text-align:center}.heroslide h1{font-size:34px}.heroslide>div>div:last-child,.heroslide .pill{justify-content:center}}
 
 .acctlink{border-radius:10px;transition:background .12s}
 .acctlink:hover{background:rgba(22,24,42,.06)}
