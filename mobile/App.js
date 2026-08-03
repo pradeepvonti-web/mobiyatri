@@ -633,7 +633,10 @@ function PromoCarousel() {
   const art = [<BookingPhoneScene key="a" />, <PlaneTossScene key="b" />, <PassportScene key="c" />][i];
   return (
     <View>
-      <View style={{ backgroundColor: T.bgDeep, borderRadius: 24, padding: 20, paddingTop: 18, minHeight: 300 }}>
+      <View style={{
+        backgroundColor: '#fff', borderRadius: 24, padding: 20, paddingTop: 18, minHeight: 300,
+        shadowColor: '#2A2C4A', shadowOpacity: .09, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3,
+      }}>
         <Pressable onPress={() => Alert.alert(p.t, p.d)} style={{
           position: 'absolute', top: 14, right: 14, width: 34, height: 34, borderRadius: 17,
           backgroundColor: T.mint, alignItems: 'center', justifyContent: 'center', zIndex: 2,
@@ -644,7 +647,10 @@ function PromoCarousel() {
           <Text style={{ color: T.soft, fontWeight: '600', fontSize: 13.5, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>{p.d}</Text>
         </Pressable>
       </View>
-      <View style={{ backgroundColor: '#fff', borderRadius: 999, padding: 8, flexDirection: 'row', gap: 8, marginTop: 12 }}>
+      <View style={{
+        backgroundColor: '#fff', borderRadius: 999, padding: 8, flexDirection: 'row', gap: 8, marginTop: 12,
+        shadowColor: '#2A2C4A', shadowOpacity: .08, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2,
+      }}>
         {PROMO_SLIDES.map((_, x) => (
           <Pressable key={x} onPress={() => setI(x)}
             style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: x === i ? T.ink : '#D8DEE9' }} />
@@ -679,7 +685,12 @@ function Store({ userName, query, setQuery, cat, setCat, list, mode, onCountry, 
         scrollEventThrottle={32}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListHeaderComponent={
-          <View style={{ paddingHorizontal: 16, paddingTop: TOPPAD }}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <View style={{
+              marginHorizontal: -16, backgroundColor: T.bgDeep, paddingTop: TOPPAD, paddingHorizontal: 16,
+              paddingBottom: 18, borderBottomLeftRadius: 26, borderBottomRightRadius: 26, marginBottom: 18,
+              shadowColor: '#2A2C4A', shadowOpacity: .09, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3,
+            }}>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={{ fontSize: 11, color: T.soft, fontWeight: '700' }}>Cashback</Text>
               <View style={{ backgroundColor: T.mint, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
@@ -689,6 +700,7 @@ function Store({ userName, query, setQuery, cat, setCat, list, mode, onCountry, 
             <Text style={{ fontSize: 24, fontWeight: '800', color: T.ink, marginBottom: 12 }}>नमस्ते, {userName}</Text>
             <TextInput style={s.search} placeholder="Where are you travelling to?" placeholderTextColor={T.soft}
               value={query} onChangeText={setQuery} />
+            </View>
             <PromoCarousel />
             <View style={{ flexDirection: 'row', gap: 22, borderBottomWidth: 1.5, borderColor: '#DDE4F0', marginBottom: 10 }}>
               {[['popular', 'Popular'], ['countries', 'Countries'], ['regional', 'Regional'], ['global', 'Global']].map(([k, lb]) => (
