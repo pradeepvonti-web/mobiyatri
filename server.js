@@ -554,6 +554,26 @@ const server = http.createServer(async (req, res) => {
       }
       return send(200, { providers: out, supabasePersistence: !!(SB_URL && SB_SERVICE) });
     }
+    if (req.method === 'GET' && req.url.startsWith('/api/esim-status')) {
+      // live per-eSIM state from eSIM Access: install status + data usage + expiry
+      const iccid = new URL(req.url, 'http://x').searchParams.get('iccid');
+      if (!iccid) return send(400, { error: 'iccid required' });
+      if (!esimaccessProvider.enabled()) return send(200, { live: false });
+      try {
+        const q = await esimaccessProvider.api('/esim/query', { iccid, pager: { pageNum: 1, pageSize: 5 } });
+        const e = (q.esimList || []).find(x => x.iccid === iccid) || (q.esimList || [])[0];
+        if (!e) return send(200, { live: false });
+        return send(200, {
+          live: true,
+          esimStatus: e.esimStatus || null,     // e.g. GOT_RESOURCE / IN_USE / USED_UP
+          smdpStatus: e.smdpStatus || null,     // e.g. RELEASED / ENABLED / DISABLED
+          totalBytes: e.totalVolume ?? null,
+          usedBytes: e.orderUsage ?? null,
+          expiredTime: e.expiredTime || null,
+          totalDuration: e.totalDuration ?? null,
+        });
+      } catch (err) { return send(200, { live: false }); }
+    }
     if (req.method === 'GET' && req.url.startsWith('/api/catalogue')) return send(200, await buildCatalogue());
     if (req.method === 'POST' && req.url === '/api/insurance/quote') {
       let b = ''; for await (const ch of req) b += ch;

@@ -1040,8 +1040,18 @@ function DetailAcc({ icon, title, children }) {
 }
 
 /* full eSIM detail screen (modal) — ICCID copy, package, renewals, install, history, troubleshooting */
+const gb = b => (b / 1073741824).toFixed(2).replace(/\.00$/, '') + ' GB';
+const STATUS_LABEL = { GOT_RESOURCE: 'Ready to install', RELEASED: 'Ready to install', ENABLED: 'Installed', IN_USE: 'Active', USED_UP: 'Used up', UNAVAILABLE: 'Expired' };
+
 function EsimDetailModal({ esim, countries, onClose, onInstall }) {
   const [banner, setBanner] = useState(null);
+  const [live, setLive] = useState(null);
+  useEffect(() => {
+    setLive(null);
+    if (!esim?.iccid) return;
+    fetch(API + '/api/esim-status?iccid=' + esim.iccid)
+      .then(r => r.json()).then(setLive).catch(() => setLive({ live: false }));
+  }, [esim && esim.iccid]);
   if (!esim) return null;
   const o = esim.orders || {};
   const c = countries.find(x => x.n === o.country_name);
@@ -1079,6 +1089,45 @@ function EsimDetailModal({ esim, countries, onClose, onInstall }) {
               </View>
               <Text style={{ fontSize: 17 }}>📋</Text>
             </Pressable>
+          </View>
+
+          {/* live status + usage from eSIM Access */}
+          <View style={[s.card, { marginTop: 12 }]}>
+            {live === null && <Text style={{ color: T.soft, fontWeight: '600', fontSize: 13 }}>Checking live status…</Text>}
+            {live && !live.live && <Text style={{ color: T.soft, fontWeight: '600', fontSize: 13 }}>Live status unavailable right now.</Text>}
+            {live && live.live && (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ flex: 1, color: T.ink, fontWeight: '800', fontSize: 15 }}>Live status</Text>
+                  <View style={{ backgroundColor: live.esimStatus === 'IN_USE' ? T.mint : T.bgDeep, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
+                    <Text style={{ color: live.esimStatus === 'IN_USE' ? T.mintInk : T.soft, fontWeight: '800', fontSize: 12.5 }}>
+                      {STATUS_LABEL[live.esimStatus] || STATUS_LABEL[live.smdpStatus] || live.esimStatus || '—'}
+                    </Text>
+                  </View>
+                </View>
+                {live.totalBytes ? (
+                  <View style={{ marginTop: 12 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ color: T.soft, fontWeight: '700', fontSize: 12.5 }}>
+                        {gb(live.usedBytes || 0)} used of {gb(live.totalBytes)}
+                      </Text>
+                      <Text style={{ color: T.ink, fontWeight: '800', fontSize: 12.5 }}>
+                        {gb(Math.max(0, live.totalBytes - (live.usedBytes || 0)))} left
+                      </Text>
+                    </View>
+                    <View style={{ height: 9, backgroundColor: T.bgDeep, borderRadius: 5, marginTop: 7, overflow: 'hidden' }}>
+                      <View style={{
+                        height: '100%', borderRadius: 5, backgroundColor: T.coral,
+                        width: Math.min(100, Math.round(((live.usedBytes || 0) / live.totalBytes) * 100)) + '%',
+                      }} />
+                    </View>
+                  </View>
+                ) : null}
+                {live.expiredTime ? (
+                  <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5, marginTop: 10 }}>📅 Expires {live.expiredTime}</Text>
+                ) : null}
+              </>
+            )}
           </View>
 
           <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15, marginTop: 18, marginBottom: 8 }}>Package</Text>
