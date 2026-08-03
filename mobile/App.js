@@ -10,6 +10,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
+import { useVideoPlayer, VideoView } from 'expo-video';
 
 /* soft pastel confetti backdrop shared by splash + welcome */
 const CONFETTI_SHAPES = [
@@ -465,12 +466,16 @@ function Splash() {
 }
 
 function Welcome({ onExplore, onAuth, authModal }) {
+  const player = useVideoPlayer(require('./assets/welcome.mp4'), p => {
+    p.loop = true; p.muted = true; p.play();
+  });
   return (
     <View style={[s.fill, { backgroundColor: T.bg }]}>
       <StatusBar barStyle="dark-content" />
       <ConfettiBG />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 }}>
-        <SearchGlobeScene width={250} />
+        <VideoView player={player} nativeControls={false} contentFit="cover"
+          style={{ width: 260, height: 214, borderRadius: 22 }} />
         <Text style={{ fontSize: 25, fontWeight: '800', color: T.ink, marginTop: 18 }}>Welcome to MobiYatri</Text>
         <View style={{ marginTop: 18, alignSelf: 'stretch', paddingHorizontal: 10 }}>
           {WELCOME_BULLETS.map(([d, dot, label]) => (
