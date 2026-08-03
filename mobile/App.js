@@ -467,8 +467,13 @@ function Splash() {
 
 function Welcome({ onExplore, onAuth, authModal }) {
   const player = useVideoPlayer(require('./assets/welcome.mp4'), p => {
-    p.loop = true; p.muted = true; p.play();
+    p.loop = true; p.muted = true;
   });
+  useEffect(() => {
+    player.play();
+    const t = setInterval(() => { if (!player.playing) player.play(); }, 1200); // nudge until it actually starts
+    return () => clearInterval(t);
+  }, [player]);
   return (
     <View style={[s.fill, { backgroundColor: T.bg }]}>
       <StatusBar barStyle="dark-content" />
