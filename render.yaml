@@ -1,0 +1,30 @@
+# Render blueprint — deploy with "New + > Blueprint" and this repo
+services:
+  - type: web
+    name: mobiyatri
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: ESIMACCESS_ACCESS_CODE
+        sync: false
+      - key: ESIMGO_API_KEY
+        sync: false
+      - key: VENDOR_DISABLE
+        value: esimgo
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: USD_INR
+        value: "88"
+      - key: MARGIN
+        value: "1.35"

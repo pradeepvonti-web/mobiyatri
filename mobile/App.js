@@ -242,7 +242,8 @@ const TravelScene = ({ width = 230 }) => (
 );
 
 /* ---------------- config ---------------- */
-const API = 'http://192.168.1.122:4000'; // dev: desktop server on LAN. Prod: deployed URL.
+// Dev (Expo Go): desktop server on LAN. Production builds automatically use the live URL.
+const API = __DEV__ ? 'http://192.168.1.122:4000' : 'https://mobiyatri.onrender.com';
 const SUPABASE_URL = 'https://acvjjepiyoxzwleggqvs.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjdmpqZXBpeW94endsZWdncXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MjE3NDIsImV4cCI6MjEwMTE5Nzc0Mn0.wBsCo6aX1arPpKR8Z9Qqj4Ful_VAsKex1903qmz1xcg';
 
