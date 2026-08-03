@@ -311,8 +311,7 @@ function Splash() {
         <View style={{ width: 22, height: 4, backgroundColor: '#fff', borderRadius: 2, marginHorizontal: 2 }} />
         <View style={{ width: 22, height: 4, backgroundColor: '#2E7D4F', borderRadius: 2 }} />
       </View>
-      <Text style={{ color: T.soft, marginTop: 12, fontWeight: '600' }}>Travel data for Indian tourists</Text>
-      <Text style={{ color: T.coral, marginTop: 4, fontWeight: '700' }}>नमस्ते · शुभ यात्रा</Text>
+      <Text style={{ color: T.coral, marginTop: 12, fontWeight: '700' }}>नमस्ते · शुभ यात्रा</Text>
     </View>
   );
 }
