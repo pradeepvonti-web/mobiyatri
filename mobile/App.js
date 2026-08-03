@@ -865,23 +865,49 @@ function AuthModal({ open, onClose, onDone }) {
   const rulesOk = PASS_RULES.every(([, fn]) => fn(pass));
   const canGo = mode === 'login' ? (email && pass) : (first && email && rulesOk);
 
+  const [stage, setStage] = useState('form');   // form | verify
+  const [code, setCode] = useState('');
+  const codeRef = useRef(null);
+
   const go = async () => {
     if (!canGo) return;
     setBusy(true);
     try {
       if (mode === 'signup') {
-        const { error } = await sb.auth.signUp({
+        const { data, error } = await sb.auth.signUp({
           email, password: pass,
           options: { data: { full_name: (first + ' ' + last).trim(), referred_by: refCode || null, notify_prefs: { offers: promos } } },
         });
         if (error) throw error;
+        if (!data.session) { setCode(''); setStage('verify'); setBusy(false); return; } // confirm-email ON → code sent
       } else {
         const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-        if (error) throw error;
+        if (error) {
+          if (/confirm/i.test(error.message)) {
+            sb.auth.resend({ type: 'signup', email }).catch(() => {});
+            setCode(''); setStage('verify'); setBusy(false); return;
+          }
+          throw error;
+        }
       }
       onDone();
     } catch (e) { Alert.alert('Account', e.message || 'Something went wrong'); }
     setBusy(false);
+  };
+
+  const verifyCode = async () => {
+    setBusy(true);
+    try {
+      const { error } = await sb.auth.verifyOtp({ email, token: code.trim(), type: 'signup' });
+      if (error) throw error;
+      onDone();
+    } catch (e) { Alert.alert('Verification', e.message || 'Wrong or expired code'); }
+    setBusy(false);
+  };
+
+  const resendCode = async () => {
+    const { error } = await sb.auth.resend({ type: 'signup', email });
+    Alert.alert('Verification', error ? error.message : 'Code re-sent — check your email.');
   };
 
   const forgot = async () => {
@@ -905,6 +931,38 @@ function AuthModal({ open, onClose, onDone }) {
             alignItems: 'center', justifyContent: 'center', elevation: 2,
           }}><Text style={{ fontSize: 16, color: T.ink }}>✕</Text></Pressable>
 
+          {stage === 'verify' ? (
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ alignSelf: 'flex-start', fontSize: 19, fontWeight: '800', color: T.ink, marginBottom: 16 }}>Enter verification code</Text>
+              <PhoneTravellerScene width={150} />
+              <Text style={{ color: T.soft, fontWeight: '600', fontSize: 13.5, textAlign: 'center', marginTop: 16, lineHeight: 20 }}>
+                Your verification code was sent to <Text style={{ color: T.ink, fontWeight: '800' }}>{email}</Text> — enter the 6-digit code to complete verification.
+              </Text>
+              <Pressable onPress={() => codeRef.current && codeRef.current.focus()} style={{ flexDirection: 'row', gap: 8, marginTop: 18 }}>
+                {[0, 1, 2, 3, 4, 5].map(i => (
+                  <View key={i} style={{
+                    width: 44, height: 52, borderRadius: 10, borderWidth: 1.5, backgroundColor: '#fff',
+                    borderColor: code.length === i ? T.coral : '#D6DDEB', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Text style={{ fontSize: 20, fontWeight: '800', color: T.ink }}>{code[i] || ''}</Text>
+                  </View>
+                ))}
+              </Pressable>
+              <TextInput ref={codeRef} value={code} autoFocus keyboardType="number-pad"
+                onChangeText={t => setCode(t.replace(/\D/g, '').slice(0, 6))}
+                style={{ position: 'absolute', opacity: 0, height: 1, width: 1 }} />
+              <Pressable onPress={resendCode} style={{ borderWidth: 1.5, borderColor: '#D6DDEB', backgroundColor: '#fff', borderRadius: 999, paddingVertical: 10, paddingHorizontal: 26, marginTop: 18 }}>
+                <Text style={{ fontWeight: '800', fontSize: 13.5, color: T.ink }}>Resend code</Text>
+              </Pressable>
+              <Pressable style={[s.btnPrimary, { alignSelf: 'stretch', marginTop: 22, opacity: code.length === 6 ? 1 : .5 }]}
+                disabled={busy || code.length !== 6} onPress={verifyCode}>
+                {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.btnPrimaryTxt}>Enter code</Text>}
+              </Pressable>
+              <Pressable onPress={() => setStage('form')} style={{ marginTop: 14 }}>
+                <Text style={{ color: T.soft, fontWeight: '700', fontSize: 13 }}>← Back</Text>
+              </Pressable>
+            </View>
+          ) : (<>
           {/* tabs */}
           <View style={{ flexDirection: 'row', borderBottomWidth: 1.5, borderColor: T.line, marginBottom: 18 }}>
             {[['login', 'Log in'], ['signup', 'Sign up']].map(([k, lb]) => (
@@ -993,6 +1051,7 @@ function AuthModal({ open, onClose, onDone }) {
           <Text style={{ color: T.soft, fontSize: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 14 }}>
             By continuing you agree to the Terms and Privacy Policy (mobiyatri.in).
           </Text>
+          </>)}
         </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
