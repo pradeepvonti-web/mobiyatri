@@ -4,7 +4,7 @@
 import 'react-native-url-polyfill/auto';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Linking, Modal,
+  ActivityIndicator, Alert, Animated, FlatList, Image, KeyboardAvoidingView, Linking, Modal,
   Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -218,21 +218,43 @@ function firstPkg(c) {
 
 /* ================= screens ================= */
 function Splash() {
+  const spin = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(Animated.timing(spin, { toValue: 1, duration: 6000, useNativeDriver: true })).start();
+  }, []);
+  const CONFETTI = [
+    ['6%', '78%', '#F6DBA6', 56, 28, '30deg', 14],   // gold capsule top-right
+    ['10%', '4%', '#CFE6D6', 42, 42, '0deg', 21],    // mint circle
+    ['26%', '58%', '#CBE2EE', 52, 52, '18deg', 10],  // powder diamond
+    ['46%', '-4%', '#DDE6DA', 46, 46, '14deg', 10],
+    ['52%', '86%', '#F3C08F', 40, 40, '0deg', 20],   // peach circle
+    ['70%', '76%', '#CBE2EE', 50, 26, '-18deg', 13],
+    ['80%', '6%', '#F6DBA6', 34, 30, '-12deg', 12],
+    ['88%', '46%', '#DDE6DA', 44, 44, '0deg', 22],
+  ];
   return (
-    <View style={[s.fill, { backgroundColor: T.night, alignItems: 'center', justifyContent: 'center' }]}>
-      <StatusBar barStyle="light-content" />
-      <Text style={{ fontSize: 64 }}>🛫</Text>
-      <Text style={{ fontSize: 34, fontWeight: '800', marginTop: 10 }}>
-        <Text style={{ color: T.coral }}>mobi</Text><Text style={{ color: '#F5F6FC' }}>yatri</Text>
+    <View style={[s.fill, { backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' }]}>
+      <StatusBar barStyle="dark-content" />
+      {CONFETTI.map(([top, left, bg, w, h, rot, r], i) => (
+        <View key={i} pointerEvents="none" style={{
+          position: 'absolute', top, left, width: w, height: h, backgroundColor: bg,
+          opacity: .75, borderRadius: r, transform: [{ rotate: rot }],
+        }} />
+      ))}
+      <Animated.Text style={{
+        fontSize: 74,
+        transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }],
+      }}>🌐</Animated.Text>
+      <Text style={{ fontSize: 36, fontWeight: '800', marginTop: 14 }}>
+        <Text style={{ color: T.coral }}>mobi</Text><Text style={{ color: T.ink }}>yatri</Text>
       </Text>
       <View style={{ flexDirection: 'row', marginTop: 10 }}>
         <View style={{ width: 22, height: 4, backgroundColor: '#FF9933', borderRadius: 2 }} />
-        <View style={{ width: 22, height: 4, backgroundColor: '#F3ECDF', borderRadius: 2, marginHorizontal: 2 }} />
+        <View style={{ width: 22, height: 4, backgroundColor: '#fff', borderRadius: 2, marginHorizontal: 2 }} />
         <View style={{ width: 22, height: 4, backgroundColor: '#2E7D4F', borderRadius: 2 }} />
       </View>
-      <Text style={{ color: '#A9ACC9', marginTop: 12, fontWeight: '600' }}>Travel data for Indian tourists</Text>
-      <Text style={{ color: T.coral, marginTop: 4, fontWeight: '700' }}>शुभ यात्रा!</Text>
-      <ActivityIndicator color={T.coral} style={{ marginTop: 26 }} />
+      <Text style={{ color: T.soft, marginTop: 12, fontWeight: '600' }}>Travel data for Indian tourists</Text>
+      <Text style={{ color: T.coral, marginTop: 4, fontWeight: '700' }}>नमस्ते · शुभ यात्रा</Text>
     </View>
   );
 }
