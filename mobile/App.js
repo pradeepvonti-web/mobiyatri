@@ -1503,9 +1503,24 @@ function InstallModal({ open, esim, onClose }) {
   const lpa = esim && (esim.lpa_string || esim.lpa);
   const qr = lpa ? 'https://api.qrserver.com/v1/create-qr-code/?size=520x520&data=' + encodeURIComponent(lpa) : null;
   const oneTap = lpa ? 'https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=' + encodeURIComponent(lpa) : null;
-  const start = () => {
-    if (Platform.OS === 'ios' && oneTap) Linking.openURL(oneTap);
-    else if (lpa) Share.share({ message: lpa });
+  const start = async () => {
+    if (Platform.OS === 'ios' && oneTap) {
+      // iOS 17.4+: opens the native eSIM install sheet directly
+      Linking.openURL(oneTap); setDone(true); return;
+    }
+    if (Platform.OS === 'android' && lpa) {
+      // Android 9+: launch the system eSIM installer with the activation code pre-filled
+      try {
+        await Linking.sendIntent('android.telephony.euicc.action.START_EUICC_ACTIVATION', [
+          { key: 'android.telephony.euicc.extra.ACTIVATION_CODE', value: lpa },
+        ]);
+        setDone(true); return;
+      } catch (e) {
+        try { await Share.share({ message: lpa }); } catch (_) {}
+        setDone(true); return;
+      }
+    }
+    if (lpa) Share.share({ message: lpa });
     setDone(true);
   };
   return (
@@ -1557,12 +1572,14 @@ function InstallModal({ open, esim, onClose }) {
               ))}
             {Platform.OS === 'android' && lpa ? (
               <View style={[s.card, { marginTop: 12 }]}>
-                <Text style={{ fontWeight: '700', color: T.ink, fontSize: 13 }}>Android: Settings → Connections → SIM manager → Add eSIM → scan the QR or enter this code:</Text>
+                <Text style={{ fontWeight: '700', color: T.ink, fontSize: 13 }}>
+                  Tapping Start opens your phone's own eSIM installer with the code pre-filled. Fallback: scan the QR or paste this code in Settings → SIM manager:
+                </Text>
                 <Text selectable style={{ fontFamily: 'monospace', fontSize: 11.5, color: T.ink, marginTop: 8 }}>{lpa}</Text>
               </View>
             ) : null}
             <Pressable style={[s.btnPrimary, { marginTop: 18 }]} onPress={start}>
-              <Text style={s.btnPrimaryTxt}>{Platform.OS === 'ios' ? 'Start installation' : 'Start installation (copy code)'}</Text>
+              <Text style={s.btnPrimaryTxt}>Start installation</Text>
             </Pressable>
             <Pressable style={[s.btnOutlineLight, { marginTop: 10 }]} onPress={() => lpa && Share.share({ message: lpa })}>
               <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>Share and more</Text>
