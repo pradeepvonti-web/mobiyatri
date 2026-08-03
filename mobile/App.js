@@ -828,7 +828,7 @@ function Country({ c, pkg, setPkg, onBack, onBuy }) {
   const groups = (c.packages && [...(c.packages.std || []), ...((c.packages.unl || []).map(g => ({ ...g, unl: true })))]) || [];
   return (
     <View style={s.fill}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 140 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 140 }}>
         <Pressable onPress={onBack}><Text style={{ fontSize: 22, color: T.ink, fontWeight: '700' }}>‹ Back</Text></Pressable>
         <Text style={{ fontSize: 26, fontWeight: '800', color: T.ink, marginVertical: 10 }}>{c.n}</Text>
         <View style={s.card}>
@@ -873,7 +873,7 @@ function Checkout({ price, insQuote, insOn, setInsOn, onBack, onPay, paying }) {
   const opts = [['gpay', 'Google Pay', 'UPI · instant'], ['phonepe', 'PhonePe', 'UPI · instant'], ['paytm', 'Paytm UPI', 'UPI · instant'], ['card', 'Card', 'Visa · Mastercard · RuPay']];
   return (
     <View style={s.fill}>
-      <ScrollView contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 150 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 150 }}>
         <Pressable onPress={onBack}><Text style={{ fontSize: 22, color: T.ink, fontWeight: '700' }}>‹ Back</Text></Pressable>
         <Text style={{ fontSize: 20, fontWeight: '800', color: T.ink, textAlign: 'center', marginBottom: 14 }}>Secure checkout</Text>
         {insQuote ? (
@@ -1418,7 +1418,7 @@ function DeleteAccountSheet({ session, onClose, onDone }) {
             <Pressable onPress={onClose}><Text style={{ fontSize: 18, color: T.ink }}>✕</Text></Pressable>
           </View>
           {step === 1 ? (
-            <ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, marginBottom: 12 }}>
                 You can delete your account permanently — the process is not immediate and can't be undone after completion.
               </Text>
@@ -1435,7 +1435,7 @@ function DeleteAccountSheet({ session, onClose, onDone }) {
               </Pressable>
             </ScrollView>
           ) : (
-            <ScrollView>
+            <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={{ color: T.ink, fontWeight: '600', fontSize: 14, lineHeight: 22 }}>
                 Before starting, please make sure you understand:{'\n\n'}
                 · Your deletion request takes up to 7 days to process{'\n'}
@@ -1759,7 +1759,7 @@ function OrderDetailsModal({ order, countries, onClose }) {
                   </Pressable>
                 </View>
               ) : (
-                <ScrollView>
+                <ScrollView showsVerticalScrollIndicator={false}>
                   <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, marginBottom: 10 }}>
                     Choose a reason — we may be able to refund your order or offer a replacement.
                   </Text>
@@ -1963,7 +1963,7 @@ function AuthModal({ open, onClose, onDone }) {
   return (
     <Modal visible={open} animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[s.fill, { paddingTop: TOPPAD }]}>
-        <ScrollView contentContainerStyle={{ padding: 22, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 22, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
           <Pressable onPress={onClose} style={{
             alignSelf: 'flex-end', width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff',
             alignItems: 'center', justifyContent: 'center', elevation: 2,
@@ -2244,6 +2244,7 @@ function ChatModal({ open, session, onClose }) {
           <Pressable onPress={onClose}><Text style={{ fontSize: 22, color: T.ink }}>✕</Text></Pressable>
         </View>
         <FlatList
+          showsVerticalScrollIndicator={false}
           ref={listRef} data={busy ? [...msgs, { role: 'typing', content: '' }] : msgs} keyExtractor={(_, i) => String(i)}
           contentContainerStyle={{ padding: 16 }}
           onContentSizeChange={() => listRef.current && listRef.current.scrollToEnd({ animated: true })}
