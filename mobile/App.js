@@ -960,8 +960,10 @@ function OrderComplete({ order, policy, country, onDone, onInstall }) {
 }
 
 function MyEsims({ esims, session, countries, onAuth, onInstall, onBrowse }) {
+  const [detail, setDetail] = useState(null);
   return (
-    <ScrollView style={s.fill} contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 110 }}>
+    <View style={s.fill}>
+    <ScrollView style={s.fill} contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
       <Text style={{ fontSize: 24, fontWeight: '800', color: T.ink, marginBottom: 14 }}>My eSIMs</Text>
       {!session ? (
         <View style={[s.card, { alignItems: 'center', padding: 30 }]}>
@@ -977,27 +979,164 @@ function MyEsims({ esims, session, countries, onAuth, onInstall, onBrowse }) {
           <Pressable style={[s.btnPrimary, { alignSelf: 'stretch', marginTop: 14 }]} onPress={onBrowse}><Text style={s.btnPrimaryTxt}>Browse eSIMs</Text></Pressable>
         </View>
       ) : null}
+      {session && esims.length > 0 && (
+        <View style={[s.card, { marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+          <Text style={{ fontSize: 22 }}>🪙</Text>
+          <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 14 }}>Get ₹150 cashback for each friend's first trip</Text>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 16 }}>›</Text>
+        </View>
+      )}
       {esims.map((e, i) => {
         const o = e.orders || {};
         const c = countries.find(x => x.n === o.country_name);
         const parts = (o.package_label || '— · —').split(' · ');
         return (
-          <View key={(e.iccid || '') + i} style={[s.card, { marginBottom: 12 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderColor: T.line, paddingBottom: 10 }}>
+          <View key={(e.iccid || '') + i} style={[s.card, { marginBottom: 14, padding: 18 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderColor: T.line, paddingBottom: 12 }}>
               {c && c.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <Text style={{ fontSize: 20 }}>🌏</Text>}
-              <Text style={{ fontWeight: '800', fontSize: 16, color: T.ink }}>{o.country_name || 'eSIM'}</Text>
+              <Text style={{ fontWeight: '800', fontSize: 18, color: T.ink }}>{o.country_name || 'eSIM'}</Text>
             </View>
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-              <View style={s.stat}><Text style={s.statK}>Data</Text><Text style={s.statV}>{parts[0]}</Text></View>
-              <View style={s.stat}><Text style={s.statK}>Validity</Text><Text style={s.statV}>{parts[1]}</Text></View>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14.5, marginTop: 12, marginBottom: 8 }}>Package</Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={s.stat}><Text style={s.statK}>⇅ Data</Text><Text style={s.statV}>{parts[0]}</Text></View>
+              <View style={s.stat}><Text style={s.statK}>📅 Validity</Text><Text style={s.statV}>{parts[1]}</Text></View>
             </View>
-            <Pressable style={[s.btnPrimary, { marginTop: 12 }]} onPress={() => onInstall(e)}>
+            <View style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: T.line, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 14, marginTop: 10, flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 14 }}>🔁 Renewals</Text>
+              <View style={{ backgroundColor: T.bgDeep, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
+                <Text style={{ color: T.soft, fontWeight: '800', fontSize: 12.5 }}>● Off</Text>
+              </View>
+            </View>
+            <Pressable style={[s.btnOutlineLight, { marginTop: 12 }]} onPress={() => setDetail(e)}>
+              <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15.5 }}>View details</Text>
+            </Pressable>
+            <Pressable style={[s.btnPrimary, { marginTop: 10 }]} onPress={() => onInstall(e)}>
               <Text style={s.btnPrimaryTxt}>Install or share</Text>
             </Pressable>
           </View>
         );
       })}
     </ScrollView>
+    <EsimDetailModal esim={detail} countries={countries} onClose={() => setDetail(null)} onInstall={e => { setDetail(null); onInstall(e); }} />
+    </View>
+  );
+}
+
+/* accordion row used by the detail screen */
+function DetailAcc({ icon, title, children }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={{ backgroundColor: '#fff', borderRadius: 14, marginBottom: 10, overflow: 'hidden' }}>
+      <Pressable onPress={() => setOpen(o => !o)} style={{ flexDirection: 'row', alignItems: 'center', padding: 15 }}>
+        {icon ? <Text style={{ fontSize: 15, marginRight: 9 }}>{icon}</Text> : null}
+        <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 14.5 }}>{title}</Text>
+        <Text style={{ color: T.ink, transform: [{ rotate: open ? '180deg' : '0deg' }] }}>⌄</Text>
+      </Pressable>
+      {open && <View style={{ paddingHorizontal: 15, paddingBottom: 13 }}>
+        <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13, lineHeight: 19 }}>{children}</Text>
+      </View>}
+    </View>
+  );
+}
+
+/* full eSIM detail screen (modal) — ICCID copy, package, renewals, install, history, troubleshooting */
+function EsimDetailModal({ esim, countries, onClose, onInstall }) {
+  const [banner, setBanner] = useState(null);
+  if (!esim) return null;
+  const o = esim.orders || {};
+  const c = countries.find(x => x.n === o.country_name);
+  const parts = (o.package_label || '— · —').split(' · ');
+  const copyIccid = () => {
+    Share.share({ message: esim.iccid || '' });
+    setBanner('ICCID copied — you can now paste it where it\'s needed.');
+    setTimeout(() => setBanner(null), 3200);
+  };
+  return (
+    <Modal visible animationType="slide" onRequestClose={onClose}>
+      <View style={[s.fill]}>
+        <View style={{ paddingTop: TOPPAD, paddingHorizontal: 16, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: T.bgDeep }}>
+          <Pressable onPress={onClose} style={{ padding: 6 }}><Text style={{ fontSize: 20, fontWeight: '800', color: T.ink }}>‹</Text></Pressable>
+          <Text style={{ flex: 1, textAlign: 'center', fontWeight: '800', fontSize: 17, color: T.ink }}>{o.country_name || 'eSIM'}</Text>
+          <View style={{ width: 30 }} />
+        </View>
+        {banner && (
+          <View style={{ backgroundColor: '#5FB98A', padding: 14 }}>
+            <Text style={{ color: '#0F3D26', fontWeight: '800', fontSize: 14 }}>ⓘ ICCID copied</Text>
+            <Text style={{ color: '#0F3D26', fontWeight: '600', fontSize: 12.5, marginTop: 2 }}>{banner}</Text>
+          </View>
+        )}
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+          <View style={[s.card, { padding: 18 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderColor: T.line, paddingBottom: 12, marginBottom: 12 }}>
+              {c && c.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <Text style={{ fontSize: 22 }}>🌏</Text>}
+              <Text style={{ fontWeight: '800', fontSize: 19, color: T.ink }}>{o.country_name || 'eSIM'}</Text>
+            </View>
+            <Text style={{ color: T.ink, fontWeight: '700', fontSize: 13.5, marginBottom: 8 }}>📡 {(c && c.op) || 'Partner network'}  <Text style={{ color: T.soft, fontSize: 11.5 }}>5G</Text></Text>
+            <Pressable onPress={copyIccid} style={{ backgroundColor: '#fff', borderWidth: 1, borderColor: T.line, borderRadius: 14, padding: 14, flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14 }}>ICCID</Text>
+                <Text style={{ color: T.soft, fontWeight: '600', fontSize: 13 }}>{esim.iccid}</Text>
+              </View>
+              <Text style={{ fontSize: 17 }}>📋</Text>
+            </Pressable>
+          </View>
+
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15, marginTop: 18, marginBottom: 8 }}>Package</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={s.stat}><Text style={s.statK}>⇅ Data</Text><Text style={s.statV}>{parts[0]}</Text></View>
+            <View style={s.stat}><Text style={s.statK}>📅 Validity</Text><Text style={s.statV}>{parts[1]}</Text></View>
+          </View>
+          {o.price_inr ? <View style={[s.stat, { marginTop: 10 }]}><Text style={s.statK}>₹ Paid</Text><Text style={s.statV}>₹{o.price_inr}</Text></View> : null}
+
+          <View style={[s.card, { marginTop: 18 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ flex: 1, color: T.ink, fontWeight: '800', fontSize: 15.5 }}>Renewals</Text>
+              <Pressable onPress={() => { setBanner('Auto-renewals arrive with the payments launch.'); setTimeout(() => setBanner(null), 3200); }}
+                style={{ width: 48, height: 28, borderRadius: 999, backgroundColor: '#CBD2E4', padding: 3 }}>
+                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' }} />
+              </Pressable>
+            </View>
+            <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13, marginTop: 6, lineHeight: 19 }}>
+              Turn on to automatically renew your package when your eSIM runs low — launching with payments.
+            </Text>
+          </View>
+
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15, marginTop: 18, marginBottom: 8 }}>Ready to use your eSIM?</Text>
+          <View style={s.card}>
+            <Text style={{ color: T.ink, fontWeight: '700', fontSize: 14.5 }}>📲 Install your eSIM</Text>
+            <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13, marginTop: 4 }}>Installation takes a few minutes — you only need to do this once.</Text>
+            <Pressable style={[s.btnOutlineLight, { marginTop: 12 }]} onPress={() => onInstall(esim)}>
+              <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>Install or share</Text>
+            </Pressable>
+          </View>
+
+          <View style={{ marginTop: 18 }}>
+            <DetailAcc icon="🧾" title="Package history">
+              {`${o.package_label || ''} · ₹${o.price_inr || '—'}\nPurchased ${esim.created_at ? new Date(esim.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'} · status ${esim.status || 'assigned'}`}
+            </DetailAcc>
+            <DetailAcc icon="📋" title="Package details">
+              Validity starts when the eSIM first connects at your destination. Data-only — keep your Indian SIM in for OTPs and WhatsApp. Hotspot allowed. One code installs on one device, once.
+            </DetailAcc>
+          </View>
+
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15, marginTop: 10, marginBottom: 8 }}>Troubleshooting and FAQs</Text>
+          <DetailAcc title="When should I install my eSIM?">
+            Any time before you fly — home WiFi is easiest. It activates only when it first connects at your destination.
+          </DetailAcc>
+          <DetailAcc title="Where can I see that my eSIM is installed?">
+            iPhone: Settings → Mobile Data — a second plan appears. Android: Settings → Connections / Network → SIM manager.
+          </DetailAcc>
+          <DetailAcc title="Why is my eSIM not working?">
+            Turn data roaming ON for this eSIM (OFF for your Indian SIM), toggle aeroplane mode, or pick the partner network manually. Yatri Sahayak can walk you through it 24/7.
+          </DetailAcc>
+        </ScrollView>
+        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 16, paddingBottom: Platform.OS === 'ios' ? 30 : 16, backgroundColor: T.bg }}>
+          <Pressable style={s.btnPrimary} onPress={() => onInstall(esim)}>
+            <Text style={s.btnPrimaryTxt}>Install or share</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -1251,33 +1390,77 @@ function AuthModal({ open, onClose, onDone }) {
 }
 
 function InstallModal({ open, esim, onClose }) {
+  const [done, setDone] = useState(false);
+  useEffect(() => { if (open) setDone(false); }, [open]);
   const lpa = esim && (esim.lpa_string || esim.lpa);
   const qr = lpa ? 'https://api.qrserver.com/v1/create-qr-code/?size=520x520&data=' + encodeURIComponent(lpa) : null;
   const oneTap = lpa ? 'https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=' + encodeURIComponent(lpa) : null;
+  const start = () => {
+    if (Platform.OS === 'ios' && oneTap) Linking.openURL(oneTap);
+    else if (lpa) Share.share({ message: lpa });
+    setDone(true);
+  };
   return (
     <Modal visible={open} animationType="slide" onRequestClose={onClose}>
-      <ScrollView style={s.fill} contentContainerStyle={{ padding: 22, paddingTop: TOPPAD }}>
-        <Pressable onPress={onClose} style={{ alignSelf: 'flex-end' }}><Text style={{ fontSize: 22, color: T.ink }}>✕</Text></Pressable>
-        <Text style={{ fontSize: 20, fontWeight: '800', color: T.ink, marginBottom: 14 }}>Install your eSIM</Text>
-        {qr ? <Image source={{ uri: qr }} style={{ width: 210, height: 210, alignSelf: 'center', borderRadius: 12, backgroundColor: '#fff' }} /> : null}
-        {esim && esim.iccid ? <Text style={{ textAlign: 'center', color: T.soft, fontWeight: '600', fontSize: 12, marginTop: 10 }}>ICCID {esim.iccid}</Text> : null}
-        {Platform.OS === 'ios' && oneTap ? (
-          <Pressable style={[s.btnPrimary, { marginTop: 18 }]} onPress={() => Linking.openURL(oneTap)}>
-            <Text style={s.btnPrimaryTxt}>⚡ Install in one tap</Text>
+      <ScrollView style={s.fill} contentContainerStyle={{ padding: 22, paddingTop: TOPPAD, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+          <Text style={{ flex: 1, fontSize: 21, fontWeight: '800', color: T.ink }}>Install your eSIM</Text>
+          <Pressable onPress={onClose} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ fontSize: 15, color: T.ink }}>✕</Text>
           </Pressable>
-        ) : null}
-        {Platform.OS === 'android' && lpa ? (
-          <View style={[s.card, { marginTop: 18 }]}>
-            <Text style={{ fontWeight: '700', color: T.ink, fontSize: 13.5 }}>Android: Settings → Connections → SIM manager → Add eSIM → enter this code:</Text>
-            <Text selectable style={{ fontFamily: 'monospace', fontSize: 12, color: T.ink, marginTop: 8 }}>{lpa}</Text>
-          </View>
-        ) : null}
-        <View style={{ marginTop: 20 }}>
-          {['1. Stay on Wi-Fi while installing', '2. Install BEFORE you fly — validity starts when you connect abroad',
-            '3. On landing: data roaming ON for the MobiYatri line only', '4. Keep roaming OFF on your Jio/Airtel/Vi SIM'].map(t => (
-              <Text key={t} style={{ color: T.soft, fontWeight: '600', fontSize: 13.5, marginVertical: 5 }}>{t}</Text>
-            ))}
         </View>
+
+        {done ? (
+          <View style={[s.card, { alignItems: 'center', padding: 26 }]}>
+            <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: T.mint, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 36 }}>✓</Text>
+            </View>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 20, marginTop: 14 }}>Your eSIM is on its way in</Text>
+            <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
+              Need help using your eSIM? Follow the instructions to connect.
+            </Text>
+            <View style={{ backgroundColor: T.bg, borderWidth: 1, borderColor: T.line, borderRadius: 14, padding: 13, marginTop: 14 }}>
+              <Text style={{ color: T.ink, fontWeight: '600', fontSize: 13, lineHeight: 19 }}>
+                💡 You can connect once you're in the eSIM's coverage area — switch on its data roaming when you land.
+              </Text>
+            </View>
+            <Pressable style={[s.btnPrimary, { alignSelf: 'stretch', marginTop: 16 }]} onPress={onClose}>
+              <Text style={s.btnPrimaryTxt}>OK, I got it</Text>
+            </Pressable>
+            <Pressable style={[s.btnOutlineLight, { alignSelf: 'stretch', marginTop: 10 }]} onPress={() => setDone(false)}>
+              <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>How to connect</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            {qr ? <Image source={{ uri: qr }} style={{ width: 200, height: 200, alignSelf: 'center', borderRadius: 14, backgroundColor: '#fff' }} /> : null}
+            {esim && esim.iccid ? <Text style={{ textAlign: 'center', color: T.soft, fontWeight: '600', fontSize: 12, marginTop: 10 }}>ICCID {esim.iccid}</Text> : null}
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15.5, marginTop: 18 }}>
+              You can install the eSIM directly on this device — it usually takes a few minutes.
+            </Text>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14.5, marginTop: 14, marginBottom: 6 }}>To avoid installation and setup issues…</Text>
+            {[['📶', 'Stay connected to the internet'], ['🚫', "Don't exit or interrupt the installation"],
+              ['✏️', 'Give your new eSIM a unique label'], ['⇅', 'Choose the new eSIM for mobile data'],
+              ['🇮🇳', 'Keep data roaming OFF on your Indian SIM']].map(([ic, t]) => (
+                <View key={t} style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 6 }}>
+                  <Text style={{ width: 30, fontSize: 15 }}>{ic}</Text>
+                  <Text style={{ flex: 1, color: T.ink, fontWeight: '600', fontSize: 14.5 }}>{t}</Text>
+                </View>
+              ))}
+            {Platform.OS === 'android' && lpa ? (
+              <View style={[s.card, { marginTop: 12 }]}>
+                <Text style={{ fontWeight: '700', color: T.ink, fontSize: 13 }}>Android: Settings → Connections → SIM manager → Add eSIM → scan the QR or enter this code:</Text>
+                <Text selectable style={{ fontFamily: 'monospace', fontSize: 11.5, color: T.ink, marginTop: 8 }}>{lpa}</Text>
+              </View>
+            ) : null}
+            <Pressable style={[s.btnPrimary, { marginTop: 18 }]} onPress={start}>
+              <Text style={s.btnPrimaryTxt}>{Platform.OS === 'ios' ? 'Start installation' : 'Start installation (copy code)'}</Text>
+            </Pressable>
+            <Pressable style={[s.btnOutlineLight, { marginTop: 10 }]} onPress={() => lpa && Share.share({ message: lpa })}>
+              <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>Share and more</Text>
+            </Pressable>
+          </>
+        )}
       </ScrollView>
     </Modal>
   );
