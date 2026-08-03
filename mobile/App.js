@@ -796,6 +796,34 @@ function Store({ userName, query, setQuery, cat, setCat, list, mode, onCountry, 
   );
 }
 
+/* Travel toolkit — referral slots; wire partner URLs into TOOLKIT as deals land */
+const TOOLKIT = [
+  ['💱', 'Forex card', 'Zero-markup spending abroad', null],
+  ['🛂', 'Visa help', 'Fast tourist-visa assistance', null],
+  ['🛋️', 'Lounge access', 'Airport lounges before you fly', null],
+  ['🛡️', 'Insurance', 'IRDAI-licensed trip cover — add it during checkout', 'insurance'],
+];
+function TravelToolkit() {
+  return (
+    <View style={{ marginTop: 18 }}>
+      <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15.5, marginBottom: 8 }}>Travel toolkit</Text>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {TOOLKIT.map(([ic, t, d, kind, url]) => (
+          <Pressable key={t}
+            onPress={() => url ? Linking.openURL(url)
+              : kind === 'insurance' ? Alert.alert('Travel insurance', d + '.')
+                : Alert.alert(t, d + ' — partner launching soon. Watch your app inbox.')}
+            style={{ width: '48%', backgroundColor: '#fff', borderRadius: 14, padding: 13, borderWidth: 1, borderColor: T.line }}>
+            <Text style={{ fontSize: 20 }}>{ic}</Text>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 13.5, marginTop: 6 }}>{t}</Text>
+            <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5, marginTop: 2 }} numberOfLines={2}>{d}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function Country({ c, pkg, setPkg, onBack, onBuy }) {
   const groups = (c.packages && [...(c.packages.std || []), ...((c.packages.unl || []).map(g => ({ ...g, unl: true })))]) || [];
   return (
@@ -826,6 +854,7 @@ function Country({ c, pkg, setPkg, onBack, onBuy }) {
             })}
           </View>
         ))}
+        <TravelToolkit />
       </ScrollView>
       <View style={s.buybar}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -943,6 +972,7 @@ function OrderComplete({ order, policy, country, onDone, onInstall }) {
           Order {order.orderReference}{order.persisted ? ' · saved to your account' : ''}{order.emailSent ? ' · QR emailed' : ''}
         </Text>
       ) : null}
+      <TravelToolkit />
       {policy ? (
         <View style={[s.card, { marginTop: 18, flexDirection: 'row', gap: 12, alignItems: 'center' }]}>
           <Text style={{ fontSize: 24 }}>🛡</Text>
