@@ -9,12 +9,58 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 
 /* MobiYatri paper-plane logo mark (same path as the website wordmark) */
 const LogoMark = ({ size = 90, color = '#FF6B57' }) => (
   <Svg width={size} height={size} viewBox="0 0 32 32">
     <Path d="M29 4L3 14.5l8.2 3.4L26 7.5 14.2 19.8l1 8.2 4.3-5.6 6 2.6z" fill={color} />
+  </Svg>
+);
+
+/* travel flat-lay scene for the splash: folded map + pin, camera, binoculars, backpack, van, phone */
+const TravelScene = ({ width = 230 }) => (
+  <Svg width={width} height={width * 0.8} viewBox="0 0 230 184">
+    {/* folded map */}
+    <Path d="M45 60 L95 48 L95 150 L45 162 Z" fill="#E3E9F2" />
+    <Path d="M95 48 L145 60 L145 162 L95 150 Z" fill="#EDF1F7" />
+    <Path d="M145 60 L195 48 L195 150 L145 162 Z" fill="#E3E9F2" />
+    <Path d="M55 82q18-10 30 4-4 16-22 14-14-4-8-18z" fill="#C7D3E4" />
+    <Path d="M150 102q16-8 28 2-2 14-18 14-14-2-10-16z" fill="#C7D3E4" />
+    <Path d="M100 122q12-6 20 2-2 10-14 10-10-2-6-12z" fill="#C7D3E4" />
+    {/* location pin */}
+    <Path d="M120 72c-10 0-17 7-17 16 0 12 17 30 17 30s17-18 17-30c0-9-7-16-17-16z" fill="#5C9CDF" />
+    <Circle cx="120" cy="88" r="6.5" fill="#fff" />
+    {/* camera */}
+    <Rect x="92" y="10" width="56" height="38" rx="9" fill="#F08A76" />
+    <Rect x="92" y="30" width="56" height="18" rx="9" fill="#F6B3A6" />
+    <Rect x="106" y="4" width="16" height="10" rx="4" fill="#E85340" />
+    <Circle cx="120" cy="29" r="12" fill="#F9D5CD" /><Circle cx="120" cy="29" r="8.5" fill="#16182A" />
+    <Rect x="134" y="16" width="10" height="5" rx="2.5" fill="#fff" opacity=".8" />
+    {/* binoculars */}
+    <G transform="rotate(-24 30 60)">
+      <Rect x="14" y="40" width="13" height="34" rx="6" fill="#5C9CDF" />
+      <Rect x="33" y="40" width="13" height="34" rx="6" fill="#5C9CDF" />
+      <Rect x="14" y="52" width="32" height="5" fill="#3D7CC0" />
+      <Path d="M12 74l4 12h9l3-12z" fill="#3D7CC0" /><Path d="M31 74l4 12h9l3-12z" fill="#3D7CC0" />
+    </G>
+    {/* backpack */}
+    <Rect x="18" y="112" width="52" height="58" rx="16" fill="#5C9CDF" />
+    <Path d="M22 118q22-16 44 0l-4 22q-18 8-36 0z" fill="#F08A76" />
+    <Rect x="26" y="148" width="36" height="20" rx="8" fill="#F08A76" />
+    <Rect x="40" y="128" width="8" height="14" rx="3" fill="#16182A" />
+    {/* camper van */}
+    <Path d="M150 140q2-14 16-14h32q14 0 16 14l2 12q0 6-6 6h-56q-6 0-6-6z" fill="#3FA08C" />
+    <Rect x="150" y="148" width="66" height="12" rx="5" fill="#2E8674" />
+    <Rect x="158" y="132" width="20" height="9" rx="3" fill="#D7E5EC" />
+    <Rect x="182" y="132" width="24" height="9" rx="3" fill="#D7E5EC" />
+    <Circle cx="164" cy="162" r="7" fill="#16182A" /><Circle cx="164" cy="162" r="2.6" fill="#fff" />
+    <Circle cx="202" cy="162" r="7" fill="#16182A" /><Circle cx="202" cy="162" r="2.6" fill="#fff" />
+    {/* phone */}
+    <G transform="rotate(14 205 96)">
+      <Rect x="196" y="70" width="26" height="48" rx="6" fill="#5C9CDF" />
+      <Rect x="199" y="74" width="20" height="40" rx="4" fill="#EDF3F8" />
+    </G>
   </Svg>
 );
 
@@ -250,13 +296,16 @@ function Splash() {
         }} />
       ))}
       <Animated.View style={{
-        transform: [{ scale: spin.interpolate({ inputRange: [0, .5, 1], outputRange: [1, 1.12, 1] }) }],
+        transform: [{ scale: spin.interpolate({ inputRange: [0, .5, 1], outputRange: [1, 1.06, 1] }) }],
       }}>
-        <LogoMark size={96} />
+        <TravelScene width={240} />
       </Animated.View>
-      <Text style={{ fontSize: 36, fontWeight: '800', marginTop: 14 }}>
-        <Text style={{ color: T.coral }}>mobi</Text><Text style={{ color: T.ink }}>yatri</Text>
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20 }}>
+        <LogoMark size={38} />
+        <Text style={{ fontSize: 36, fontWeight: '800', marginLeft: 8 }}>
+          <Text style={{ color: T.coral }}>mobi</Text><Text style={{ color: T.ink }}>yatri</Text>
+        </Text>
+      </View>
       <View style={{ flexDirection: 'row', marginTop: 10 }}>
         <View style={{ width: 22, height: 4, backgroundColor: '#FF9933', borderRadius: 2 }} />
         <View style={{ width: 22, height: 4, backgroundColor: '#fff', borderRadius: 2, marginHorizontal: 2 }} />
