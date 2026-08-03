@@ -894,11 +894,33 @@ function AuthModal({ open, onClose, onDone }) {
             ))}
           </View>
 
-          {/* social row — Google (email works today; Google arrives with the store build) */}
-          <Pressable onPress={() => Alert.alert('Google sign-in', 'Coming with the app-store build — please use email for now.')}
-            style={{ borderWidth: 1.5, borderColor: '#D6DDEB', backgroundColor: '#fff', borderRadius: 999, paddingVertical: 12, alignItems: 'center', marginBottom: 16 }}>
-            <Text style={{ fontWeight: '800', fontSize: 14.5, color: T.ink }}>Continue with Google</Text>
-          </Pressable>
+          {/* social row — Apple / Google / Facebook (wired with the store build; email works today) */}
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+            {[
+              ['Apple', <Svg key="a" width={22} height={22} viewBox="0 0 24 24">
+                <Path d="M16.7 12.9c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.85-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.4 1.2 9.8.8 1.2 1.8 2.5 3.1 2.4 1.2-.05 1.7-.8 3.2-.8 1.5 0 1.9.8 3.2.77 1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8-.03-.01-2.5-1-2.5-3.9zM14.4 5.6c.7-.8 1.1-1.9 1-3-1 .04-2.1.65-2.8 1.4-.6.7-1.2 1.9-1 3 1.1.1 2.2-.55 2.8-1.4z" fill="#111" />
+              </Svg>],
+              ['Google', <Svg key="g" width={22} height={22} viewBox="0 0 48 48">
+                <Path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z" />
+                <Path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+                <Path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+                <Path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.7l6.2 5.2C36.9 42.6 44 38 44 24c0-1.3-.1-2.6-.4-3.9z" />
+              </Svg>],
+              ['Facebook', <Svg key="f" width={22} height={22} viewBox="0 0 24 24">
+                <Circle cx="12" cy="12" r="10" fill="#1877F2" />
+                <Path d="M13.3 21v-8h2.6l.4-3h-3V8.1c0-.9.3-1.5 1.6-1.5H16V3.9c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.2v3h2.6v8z" fill="#fff" />
+              </Svg>],
+            ].map(([name, icon]) => (
+              <Pressable key={name}
+                onPress={() => Alert.alert(name + ' sign-in', 'Coming with the app-store build — please use email for now.')}
+                style={{
+                  flex: 1, borderWidth: 1.5, borderColor: '#D6DDEB', backgroundColor: '#fff',
+                  borderRadius: 999, paddingVertical: 13, alignItems: 'center',
+                }}>
+                {icon}
+              </Pressable>
+            ))}
+          </View>
 
           {mode === 'signup' && (
             <>
