@@ -11,6 +11,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import * as WebBrowser from 'expo-web-browser';
+import * as ExpoLinking from 'expo-linking';
+
+WebBrowser.maybeCompleteAuthSession();
 
 /* soft pastel confetti backdrop shared by splash + welcome */
 const CONFETTI_SHAPES = [
@@ -222,8 +226,24 @@ const SUPABASE_URL = 'https://acvjjepiyoxzwleggqvs.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjdmpqZXBpeW94endsZWdncXZzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU2MjE3NDIsImV4cCI6MjEwMTE5Nzc0Mn0.wBsCo6aX1arPpKR8Z9Qqj4Ful_VAsKex1903qmz1xcg';
 
 const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
+  auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false, flowType: 'pkce' },
 });
+
+/* native Google sign-in via Supabase OAuth + in-app browser (PKCE) */
+async function googleSignIn() {
+  const redirectTo = ExpoLinking.createURL('');
+  const { data, error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo, skipBrowserRedirect: true },
+  });
+  if (error) throw error;
+  const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+  if (res.type !== 'success' || !res.url) throw new Error('Sign-in was cancelled');
+  const code = new URL(res.url).searchParams.get('code');
+  if (!code) throw new Error('No auth code returned — check Supabase redirect URLs');
+  const { error: exErr } = await sb.auth.exchangeCodeForSession(code);
+  if (exErr) throw exErr;
+}
 
 /* ---------------- theme ---------------- */
 const T = {
@@ -912,7 +932,14 @@ function AuthModal({ open, onClose, onDone }) {
               </Svg>],
             ].map(([name, icon]) => (
               <Pressable key={name}
-                onPress={() => Alert.alert(name + ' sign-in', 'Coming with the app-store build — please use email for now.')}
+                onPress={async () => {
+                  if (name !== 'Google') {
+                    return Alert.alert(name + ' sign-in', 'Coming with the app-store build — please use email for now.');
+                  }
+                  try { setBusy(true); await googleSignIn(); onDone(); }
+                  catch (e) { Alert.alert('Google sign-in', e.message || 'Could not sign in'); }
+                  finally { setBusy(false); }
+                }}
                 style={{
                   flex: 1, borderWidth: 1.5, borderColor: '#D6DDEB', backgroundColor: '#fff',
                   borderRadius: 999, paddingVertical: 13, alignItems: 'center',
