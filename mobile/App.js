@@ -527,19 +527,110 @@ const PROMO_SLIDES = [
   { icon: '🌐', t: '190+ countries. One app.', d: 'Land, switch on, connect — trusted local networks across the world, paid in ₹.' },
 ];
 
+/* slide 1: booking phone with route, ticket lines, barcode; plane flies the arc */
+function BookingPhoneScene({ width = 165 }) {
+  const fly = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(Animated.timing(fly, { toValue: 1, duration: 3200, useNativeDriver: true })).start();
+  }, []);
+  const h = width * 1.02;
+  return (
+    <View style={{ width, height: h }}>
+      <Svg width={width} height={h} viewBox="0 0 170 174">
+        <Rect x="35" y="4" width="100" height="166" rx="16" fill="#fff" stroke="#23253A" strokeWidth="4" />
+        <Rect x="70" y="10" width="30" height="7" rx="3.5" fill="#23253A" />
+        <Rect x="48" y="30" width="12" height="26" rx="2" fill="#8A93B8" />
+        <Rect x="110" y="28" width="12" height="28" rx="2" fill="#8A93B8" transform="rotate(6 116 42)" />
+        <Path d="M60 46q25-18 50 0" stroke="#23253A" strokeWidth="1.6" strokeDasharray="3 4" fill="none" />
+        <Circle cx="60" cy="46" r="4" fill="#5C9CDF" /><Circle cx="110" cy="46" r="4" fill="#5C9CDF" />
+        <Rect x="46" y="64" width="78" height="34" rx="5" fill="none" stroke="#23253A" strokeWidth="2" />
+        <Rect x="52" y="70" width="28" height="7" rx="3.5" fill="none" stroke="#23253A" strokeWidth="1.6" />
+        <Rect x="88" y="70" width="30" height="7" rx="3.5" fill="#5C9CDF" />
+        <Path d="M52 84h30M52 90h26M88 84h30M88 90h24" stroke="#9AA3BF" strokeWidth="1.6" />
+        <Rect x="46" y="104" width="40" height="7" rx="3.5" fill="#5C9CDF" />
+        <Path d="M46 118h16M66 118h16M86 118h16M106 118h16" stroke="#23253A" strokeWidth="5" strokeLinecap="round" opacity=".8" />
+        <Rect x="46" y="128" width="78" height="22" rx="3" fill="none" stroke="#23253A" strokeWidth="2" />
+        {[50, 54, 57, 62, 66, 69, 74, 78, 81, 86, 90, 93, 98, 102, 105, 110, 114, 118].map(x => (
+          <Rect key={x} x={x} y="132" width={x % 3 === 0 ? 2.5 : 1.4} height="14" fill="#23253A" />
+        ))}
+        <Rect x="52" y="156" width="66" height="10" rx="5" fill="#FF6B57" />
+      </Svg>
+      <Animated.View style={{
+        position: 'absolute', left: 0, top: width * 0.14, opacity: fly.interpolate({ inputRange: [0, .08, .9, 1], outputRange: [0, 1, 1, 0] }),
+        transform: [{ translateX: fly.interpolate({ inputRange: [0, 1], outputRange: [width * .32, width * .6] }) }],
+      }}><Text style={{ fontSize: 14 }}>✈️</Text></Animated.View>
+    </View>
+  );
+}
+
+/* slide 2: person tossing a paper plane (referral) */
+function PlaneTossScene({ width = 150 }) {
+  const toss = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(toss, { toValue: 1, duration: 1600, useNativeDriver: true }),
+      Animated.timing(toss, { toValue: 0, duration: 1600, useNativeDriver: true }),
+    ])).start();
+  }, []);
+  return (
+    <View style={{ width, height: width }}>
+      <Svg width={width} height={width} viewBox="0 0 150 150">
+        <Rect x="18" y="34" width="114" height="96" rx="16" fill="#5C9CDF" />
+        <Path d="M45 130q4-44 30-44 26 0 30 44z" fill="#F5F0E7" />
+        <Path d="M92 84q16-18 18-34" stroke="#B4744C" strokeWidth="9" strokeLinecap="round" fill="none" />
+        <Circle cx="75" cy="66" r="19" fill="#2E1F14" />
+        <Circle cx="75" cy="46" r="8" fill="#2E1F14" />
+        <Circle cx="60" cy="70" r="2.5" fill="#F5C043" />
+      </Svg>
+      <Animated.View style={{
+        position: 'absolute', right: 6, top: 0,
+        transform: [
+          { translateY: toss.interpolate({ inputRange: [0, 1], outputRange: [0, -9] }) },
+          { rotate: toss.interpolate({ inputRange: [0, 1], outputRange: ['-12deg', '8deg'] }) },
+        ],
+      }}>
+        <Svg width={44} height={44} viewBox="0 0 32 32">
+          <Path d="M29 4L3 14.5l8.2 3.4L26 7.5 14.2 19.8l1 8.2 4.3-5.6 6 2.6z" fill="#5C9CDF" />
+        </Svg>
+      </Animated.View>
+    </View>
+  );
+}
+
+/* slide 3: suitcase + passport + tickets, floating */
+function PassportScene({ width = 158 }) {
+  const bob = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(bob, { toValue: 1, duration: 2600, useNativeDriver: true }),
+      Animated.timing(bob, { toValue: 0, duration: 2600, useNativeDriver: true }),
+    ])).start();
+  }, []);
+  return (
+    <Animated.View style={{ transform: [{ translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, -6] }) }] }}>
+      <Svg width={width} height={width} viewBox="0 0 160 160">
+        <Circle cx="95" cy="85" r="60" fill="#FBEEDB" />
+        <Path d="M95 30q28 6 38 30-20 8-38 0-10-18 0-30z" fill="#A9D5EA" />
+        <Rect x="98" y="72" width="52" height="22" rx="6" fill="#fff" stroke="#3A2A55" strokeWidth="3" transform="rotate(24 124 83)" />
+        <Rect x="104" y="94" width="52" height="22" rx="6" fill="#F08A5C" stroke="#3A2A55" strokeWidth="3" transform="rotate(24 130 105)" />
+        <Rect x="46" y="26" width="16" height="14" rx="3" fill="none" stroke="#3A2A55" strokeWidth="4" />
+        <Rect x="26" y="38" width="56" height="96" rx="14" fill="#F5C043" stroke="#3A2A55" strokeWidth="3.5" />
+        <Path d="M40 50v72M54 50v72M68 50v72" stroke="#F9DFA0" strokeWidth="6" strokeLinecap="round" />
+        <Circle cx="40" cy="138" r="5" fill="#3A2A55" />
+        <Rect x="62" y="70" width="66" height="84" rx="10" fill="#5F55C9" stroke="#3A2A55" strokeWidth="3.5" />
+        <Circle cx="95" cy="102" r="16" fill="none" stroke="#fff" strokeWidth="2.5" />
+        <Path d="M79 102h32M95 86c5 5 5 27 0 32-5-5-5-27 0-32zM82 94q13 6 26 0M82 110q13-6 26 0" stroke="#fff" strokeWidth="2" fill="none" />
+        <Rect x="80" y="132" width="30" height="8" rx="3" fill="#F5F0E7" />
+      </Svg>
+    </Animated.View>
+  );
+}
+
 function PromoCarousel() {
   const [i, setI] = useState(0);
   useEffect(() => { const t = setInterval(() => setI(x => (x + 1) % PROMO_SLIDES.length), 6000); return () => clearInterval(t); }, []);
   const p = PROMO_SLIDES[i];
-  const art = i === 0 ? <PhoneTravellerScene width={150} />
-    : i === 1 ? (
-      <Svg width={110} height={110} viewBox="0 0 110 110">
-        <Circle cx="55" cy="55" r="44" fill="#F5C043" />
-        <Circle cx="55" cy="55" r="44" fill="none" stroke="#D99A22" strokeWidth="5" />
-        <Circle cx="55" cy="55" r="32" fill="none" stroke="#D99A22" strokeWidth="2" opacity=".6" />
-        <Path d="M40 36h30M40 47h30M40 36c9 0 16 3 16 12s-7 12-16 12l19 18" stroke="#8A5A00" strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      </Svg>
-    ) : <SearchGlobeScene width={175} />;
+  const art = [<BookingPhoneScene key="a" />, <PlaneTossScene key="b" />, <PassportScene key="c" />][i];
   return (
     <View>
       <View style={{ backgroundColor: T.bgDeep, borderRadius: 24, padding: 20, paddingTop: 18, minHeight: 300 }}>
