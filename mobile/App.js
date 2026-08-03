@@ -1499,7 +1499,19 @@ function AuthModal({ open, onClose, onDone }) {
 
 function InstallModal({ open, esim, onClose }) {
   const [done, setDone] = useState(false);
-  useEffect(() => { if (open) setDone(false); }, [open]);
+  const [verified, setVerified] = useState(false);
+  useEffect(() => { if (open) { setDone(false); setVerified(false); } }, [open]);
+  // after handoff to the system installer, poll the SM-DP+ status until the
+  // network confirms the profile is actually on the phone
+  useEffect(() => {
+    if (!open || !done || verified || !esim?.iccid) return;
+    const t = setInterval(() => {
+      fetch(API + '/api/esim-status?iccid=' + esim.iccid).then(r => r.json()).then(d => {
+        if (d.live && (d.smdpStatus === 'ENABLED' || d.esimStatus === 'IN_USE')) setVerified(true);
+      }).catch(() => {});
+    }, 5000);
+    return () => clearInterval(t);
+  }, [open, done, verified, esim && esim.iccid]);
   const lpa = esim && (esim.lpa_string || esim.lpa);
   const qr = lpa ? 'https://api.qrserver.com/v1/create-qr-code/?size=520x520&data=' + encodeURIComponent(lpa) : null;
   const oneTap = lpa ? 'https://esimsetup.apple.com/esim_qrcode_provisioning?carddata=' + encodeURIComponent(lpa) : null;
@@ -1538,10 +1550,15 @@ function InstallModal({ open, esim, onClose }) {
             <View style={{ width: 84, height: 84, borderRadius: 42, backgroundColor: T.mint, alignItems: 'center', justifyContent: 'center' }}>
               <Text style={{ fontSize: 36 }}>✓</Text>
             </View>
-            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 20, marginTop: 14 }}>Your eSIM is on its way in</Text>
-            <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
-              Need help using your eSIM? Follow the instructions to connect.
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 20, marginTop: 14 }}>
+              {verified ? 'Your eSIM is installed' : 'Finishing installation…'}
             </Text>
+            <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
+              {verified
+                ? 'The network confirmed your eSIM is on this phone. Follow the tip below to connect.'
+                : 'Complete the steps in your phone\'s installer — this card updates the moment the network confirms the install.'}
+            </Text>
+            {!verified && <ActivityIndicator color={T.coral} style={{ marginTop: 10 }} />}
             <View style={{ backgroundColor: T.bg, borderWidth: 1, borderColor: T.line, borderRadius: 14, padding: 13, marginTop: 14 }}>
               <Text style={{ color: T.ink, fontWeight: '600', fontSize: 13, lineHeight: 19 }}>
                 💡 You can connect once you're in the eSIM's coverage area — switch on its data roaming when you land.
