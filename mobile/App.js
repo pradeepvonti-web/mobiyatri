@@ -441,7 +441,7 @@ export default function App() {
           onBack={() => setScreen('country')} onPay={payNow} paying={paying} />
       )}
       {screen === 'ordercomplete' && (
-        <OrderComplete order={order} policy={policy} country={sel ? sel.n : ''}
+        <OrderComplete order={order} policy={policy} country={sel ? sel.n : ''} iso={sel ? sel.iso : null}
           onDone={() => { setScreen('main'); setTab('esims'); }}
           onInstall={() => { setInstallEsim({ lpa_string: order && order.esim && order.esim.lpa, iccid: order && order.esim && order.esim.iccid }); setInstallOpen(true); }} />
       )}
@@ -796,23 +796,54 @@ function Store({ userName, query, setQuery, cat, setCat, list, mode, onCountry, 
   );
 }
 
-/* Travel toolkit — referral slots; wire partner URLs into TOOLKIT as deals land */
-const TOOLKIT = [
-  ['💱', 'Forex card', 'Zero-markup spending abroad', null],
-  ['🛂', 'Visa help', 'Fast tourist-visa assistance', null],
-  ['🛋️', 'Lounge access', 'Airport lounges before you fly', null],
-  ['🛡️', 'Insurance', 'IRDAI-licensed trip cover — add it during checkout', 'insurance'],
-];
-function TravelToolkit() {
+/* Travel toolkit — real tools: live FX, visa info, live weather, trip essentials */
+const CCY = { th: 'THB', ae: 'AED', sg: 'SGD', id: 'IDR', my: 'MYR', vn: 'VND', us: 'USD', gb: 'GBP', lk: 'LKR', np: 'NPR', jp: 'JPY', kr: 'KRW', cn: 'CNY', hk: 'HKD', tw: 'TWD', ph: 'PHP', kh: 'KHR', au: 'AUD', nz: 'NZD', ca: 'CAD', ch: 'CHF', tr: 'TRY', eg: 'EGP', za: 'ZAR', ke: 'KES', mv: 'MVR', bh: 'BHD', qa: 'QAR', sa: 'SAR', om: 'OMR', kw: 'KWD', fr: 'EUR', de: 'EUR', it: 'EUR', es: 'EUR', nl: 'EUR', pt: 'EUR', gr: 'EUR', at: 'EUR', be: 'EUR', ie: 'EUR', fi: 'EUR' };
+const VISA_DB = {
+  th: 'Visa-free for Indian passports (tourism, up to 60 days).', id: 'Visa on arrival for Indians (~IDR 500k, 30 days, extendable).',
+  my: 'Visa-free entry for Indians (30 days) under current scheme.', lk: 'Free ETA online before travel for Indians.',
+  np: 'No visa needed for Indian citizens.', mv: 'Free visa on arrival (30 days) for Indians.',
+  ae: 'eVisa required for most Indians; pre-approved visa-on-arrival if you hold a valid US visa/green card.',
+  sg: 'Visa required for Indian passports — apply via authorised agents.', vn: 'eVisa required (~USD 25, apply online).',
+  kh: 'Visa on arrival or eVisa for Indians.', qa: 'Visa on arrival for Indians (conditions apply).',
+  us: 'B1/B2 visa required — interview at US consulate.', gb: 'UK visitor visa required.',
+  jp: 'eVisa available for Indian tourists.', kr: 'K-ETA / visa required for Indians.',
+  fr: 'Schengen visa required.', de: 'Schengen visa required.', it: 'Schengen visa required.', es: 'Schengen visa required.',
+  au: 'Visitor visa (subclass 600) required — apply online.', nz: 'Visitor visa required.',
+};
+const PLUG_DB = { th: 'A/B/C · 230V', ae: 'G · 230V', sg: 'G · 230V', id: 'C/F · 230V', my: 'G · 240V', vn: 'A/C · 220V', us: 'A/B · 120V', gb: 'G · 230V', jp: 'A/B · 100V', fr: 'C/E · 230V', de: 'C/F · 230V', au: 'I · 230V', lk: 'D/G · 230V', np: 'C/D · 230V', mv: 'D/G · 230V', kr: 'C/F · 220V' };
+
+function TravelToolkit({ name, iso }) {
+  const [tool, setTool] = useState(null);
+  const [data, setData] = useState(null);
+  const place = /\(([^)]+)\)/.exec(name || '')?.[1] || (name || '').split(' (')[0];
+  const openTool = async t => {
+    setTool(t); setData(null);
+    try {
+      if (t === 'money') {
+        const r = await fetch('https://open.er-api.com/v6/latest/INR').then(x => x.json());
+        const code = CCY[iso] || 'USD';
+        setData({ code, rate: r.rates?.[code] });
+      } else if (t === 'weather' || t === 'basics') {
+        const g = (await fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(place) + '&count=1').then(x => x.json())).results?.[0];
+        if (!g) return setData({ err: true });
+        if (t === 'basics') return setData({ tz: g.timezone, city: g.name });
+        const w = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${g.latitude}&longitude=${g.longitude}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=3`).then(x => x.json());
+        setData({ city: g.name, days: w.daily });
+      } else setData({});
+    } catch (e) { setData({ err: true }); }
+  };
+  const CARDS = [
+    ['💱', 'Money', 'Live ₹ exchange rate', 'money'],
+    ['🛂', 'Visa info', 'Rules for Indian passports', 'visa'],
+    ['🌦️', 'Weather', '3-day forecast there', 'weather'],
+    ['🔌', 'Trip basics', 'Local time · plugs · emergency', 'basics'],
+  ];
   return (
     <View style={{ marginTop: 18 }}>
       <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15.5, marginBottom: 8 }}>Travel toolkit</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {TOOLKIT.map(([ic, t, d, kind, url]) => (
-          <Pressable key={t}
-            onPress={() => url ? Linking.openURL(url)
-              : kind === 'insurance' ? Alert.alert('Travel insurance', d + '.')
-                : Alert.alert(t, d + ' — partner launching soon. Watch your app inbox.')}
+        {CARDS.map(([ic, t, d, k]) => (
+          <Pressable key={t} onPress={() => openTool(k)}
             style={{ width: '48%', backgroundColor: '#fff', borderRadius: 14, padding: 13, borderWidth: 1, borderColor: T.line }}>
             <Text style={{ fontSize: 20 }}>{ic}</Text>
             <Text style={{ color: T.ink, fontWeight: '800', fontSize: 13.5, marginTop: 6 }}>{t}</Text>
@@ -820,6 +851,69 @@ function TravelToolkit() {
           </Pressable>
         ))}
       </View>
+      {tool && (
+        <Modal visible transparent animationType="slide" onRequestClose={() => setTool(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(20,22,40,.45)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: T.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={{ flex: 1, fontSize: 19, fontWeight: '800', color: T.ink }}>
+                  {tool === 'money' ? `₹ to ${name}` : tool === 'visa' ? `Visa: ${name}` : tool === 'weather' ? `Weather in ${place}` : `${name} basics`}
+                </Text>
+                <Pressable onPress={() => setTool(null)}><Text style={{ fontSize: 18, color: T.ink }}>✕</Text></Pressable>
+              </View>
+              {!data && <ActivityIndicator color={T.indigo} style={{ marginVertical: 20 }} />}
+              {data?.err && <Text style={{ color: T.soft, fontWeight: '600' }}>Couldn't fetch live data right now — try again in a moment.</Text>}
+              {tool === 'money' && data?.rate && (
+                <View>
+                  <Text style={{ color: T.ink, fontWeight: '800', fontSize: 22 }}>₹1 = {data.rate.toFixed(data.rate < 1 ? 4 : 2)} {data.code}</Text>
+                  {[1000, 5000, 10000].map(a => (
+                    <View key={a} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderColor: T.line }}>
+                      <Text style={{ color: T.soft, fontWeight: '700' }}>₹{a.toLocaleString('en-IN')}</Text>
+                      <Text style={{ color: T.ink, fontWeight: '800' }}>{(a * data.rate).toLocaleString('en-US', { maximumFractionDigits: 0 })} {data.code}</Text>
+                    </View>
+                  ))}
+                  <Text style={{ color: T.soft, fontWeight: '500', fontSize: 11.5, marginTop: 10 }}>Live mid-market rate — cards and counters add a margin.</Text>
+                </View>
+              )}
+              {tool === 'visa' && data && (
+                <View>
+                  <Text style={{ color: T.ink, fontWeight: '600', fontSize: 15, lineHeight: 23 }}>
+                    {VISA_DB[iso] || 'Rules vary — check the official embassy or government eVisa portal for Indian passport holders.'}
+                  </Text>
+                  <Text style={{ color: T.soft, fontWeight: '500', fontSize: 11.5, marginTop: 12 }}>
+                    Visa rules change often — always confirm on the official government portal before booking.
+                  </Text>
+                </View>
+              )}
+              {tool === 'weather' && data?.days && (
+                <View>
+                  {data.days.time.map((d, i) => (
+                    <View key={d} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 9, borderBottomWidth: 1, borderColor: T.line }}>
+                      <Text style={{ color: T.ink, fontWeight: '700' }}>{new Date(d).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</Text>
+                      <Text style={{ color: T.soft, fontWeight: '700' }}>☔ {data.days.precipitation_probability_max[i]}%</Text>
+                      <Text style={{ color: T.ink, fontWeight: '800' }}>{Math.round(data.days.temperature_2m_min[i])}–{Math.round(data.days.temperature_2m_max[i])}°C</Text>
+                    </View>
+                  ))}
+                  <Text style={{ color: T.soft, fontWeight: '500', fontSize: 11.5, marginTop: 10 }}>Live forecast for {data.city} · Open-Meteo</Text>
+                </View>
+              )}
+              {tool === 'basics' && data?.tz && (
+                <View>
+                  {[['🕐 Local time now', new Date().toLocaleTimeString('en-IN', { timeZone: data.tz, hour: '2-digit', minute: '2-digit' }) + ` (${data.tz})`],
+                    ['🔌 Plugs', PLUG_DB[iso] || 'Carry a universal adapter'],
+                    ['🚨 Emergency', '112 works in most countries'],
+                    ['📶 Your data', 'MobiYatri eSIM — roaming ON for it, OFF for your Indian SIM']].map(([k, v]) => (
+                      <View key={k} style={{ paddingVertical: 8, borderBottomWidth: 1, borderColor: T.line }}>
+                        <Text style={{ color: T.soft, fontWeight: '700', fontSize: 12.5 }}>{k}</Text>
+                        <Text style={{ color: T.ink, fontWeight: '700', fontSize: 14.5, marginTop: 2 }}>{v}</Text>
+                      </View>
+                    ))}
+                </View>
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -854,7 +948,7 @@ function Country({ c, pkg, setPkg, onBack, onBuy }) {
             })}
           </View>
         ))}
-        <TravelToolkit />
+        <TravelToolkit name={c.n} iso={c.iso} />
       </ScrollView>
       <View style={s.buybar}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -961,7 +1055,7 @@ function ConnectedScene({ width = 170 }) {
   );
 }
 
-function OrderComplete({ order, policy, country, onDone, onInstall }) {
+function OrderComplete({ order, policy, country, iso, onDone, onInstall }) {
   return (
     <View style={[s.fill, { padding: 20, paddingTop: TOPPAD + 30 }]}>
       <ConnectedScene width={170} />
@@ -972,7 +1066,7 @@ function OrderComplete({ order, policy, country, onDone, onInstall }) {
           Order {order.orderReference}{order.persisted ? ' · saved to your account' : ''}{order.emailSent ? ' · QR emailed' : ''}
         </Text>
       ) : null}
-      <TravelToolkit />
+      <TravelToolkit name={country} iso={iso} />
       {policy ? (
         <View style={[s.card, { marginTop: 18, flexDirection: 'row', gap: 12, alignItems: 'center' }]}>
           <Text style={{ fontSize: 24 }}>🛡</Text>
