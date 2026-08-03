@@ -9,6 +9,14 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import Svg, { Path } from 'react-native-svg';
+
+/* MobiYatri paper-plane logo mark (same path as the website wordmark) */
+const LogoMark = ({ size = 90, color = '#FF6B57' }) => (
+  <Svg width={size} height={size} viewBox="0 0 32 32">
+    <Path d="M29 4L3 14.5l8.2 3.4L26 7.5 14.2 19.8l1 8.2 4.3-5.6 6 2.6z" fill={color} />
+  </Svg>
+);
 
 /* ---------------- config ---------------- */
 const API = 'http://192.168.1.122:4000'; // dev: desktop server on LAN. Prod: deployed URL.
@@ -241,10 +249,11 @@ function Splash() {
           opacity: .75, borderRadius: r, transform: [{ rotate: rot }],
         }} />
       ))}
-      <Animated.Text style={{
-        fontSize: 74,
-        transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }],
-      }}>🌐</Animated.Text>
+      <Animated.View style={{
+        transform: [{ scale: spin.interpolate({ inputRange: [0, .5, 1], outputRange: [1, 1.12, 1] }) }],
+      }}>
+        <LogoMark size={96} />
+      </Animated.View>
       <Text style={{ fontSize: 36, fontWeight: '800', marginTop: 14 }}>
         <Text style={{ color: T.coral }}>mobi</Text><Text style={{ color: T.ink }}>yatri</Text>
       </Text>
@@ -286,7 +295,7 @@ function Welcome({ onExplore, onAuth, authModal }) {
       <StatusBar barStyle="light-content" />
       <NightScenery />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 }}>
-        <Text style={{ fontSize: 66 }}>📲</Text>
+        <LogoMark size={74} />
         <Text style={{ fontSize: 26, fontWeight: '800', color: '#F5F6FC', marginTop: 14 }}>Welcome to MobiYatri</Text>
         <View style={{ flexDirection: 'row', marginTop: 10 }}>
           <View style={{ width: 22, height: 4, backgroundColor: '#FF9933', borderRadius: 2 }} />
