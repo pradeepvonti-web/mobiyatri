@@ -27,16 +27,37 @@ const CONFETTI_SHAPES = [
   ['80%', '6%', '#F6DBA6', 34, 30, '-12deg', 12],
   ['88%', '46%', '#DDE6DA', 44, 44, '0deg', 22],
 ];
-const ConfettiBG = () => (
-  <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-    {CONFETTI_SHAPES.map(([top, left, bg, w, h, rot, r], i) => (
-      <View key={i} style={{
-        position: 'absolute', top, left, width: w, height: h, backgroundColor: bg,
-        opacity: .75, borderRadius: r, transform: [{ rotate: rot }],
-      }} />
-    ))}
-  </View>
-);
+const ConfettiBG = () => {
+  const dots = [];
+  for (let r = 0; r < 5; r++) for (let c = 0; c < 5; c++) {
+    dots.push([308 + c * 14, 500 + r * 14], [22 + c * 14, 96 + r * 14]);
+  }
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <Svg width="100%" height="100%" viewBox="0 0 375 812" preserveAspectRatio="xMidYMid slice">
+        {/* concentric outline rings, top-right */}
+        <Circle cx="342" cy="76" r="96" stroke="#C9D4E8" strokeWidth="1.5" fill="none" />
+        <Circle cx="342" cy="76" r="64" stroke="#C9D4E8" strokeWidth="1.5" fill="none" opacity=".7" />
+        <Circle cx="342" cy="76" r="34" stroke="#F3B9AE" strokeWidth="1.5" fill="none" opacity=".8" />
+        {/* ring cluster, bottom-left */}
+        <Circle cx="18" cy="726" r="104" stroke="#C9D4E8" strokeWidth="1.5" fill="none" />
+        <Circle cx="18" cy="726" r="70" stroke="#F3B9AE" strokeWidth="1.5" fill="none" opacity=".7" />
+        {/* thin arcs */}
+        <Path d="M-20 330q90-30 96-140" stroke="#D5DEED" strokeWidth="1.6" fill="none" />
+        <Path d="M395 470q-100 24-110 150" stroke="#E8D9C4" strokeWidth="1.6" fill="none" />
+        {/* diagonal rounded dashes, mid-right and mid-left */}
+        <G stroke="#C9D4E8" strokeWidth="5" strokeLinecap="round" opacity=".65">
+          <Path d="M336 300l22-22M352 316l22-22" />
+          <Path d="M10 470l20-20M-4 452l20-20" />
+        </G>
+        {/* fine dot grids */}
+        {dots.map(([x, y], i) => <Circle key={i} cx={x} cy={y} r="1.7" fill="#AEBBD4" opacity=".55" />)}
+        {/* single coral accent ring */}
+        <Circle cx="196" cy="788" r="8" stroke="#FF6B57" strokeWidth="2" fill="none" opacity=".55" />
+      </Svg>
+    </View>
+  );
+};
 
 /* welcome illustration: traveller searching the globe — animated (original art) */
 function SearchGlobeScene({ width = 250 }) {
