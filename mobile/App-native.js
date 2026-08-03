@@ -237,32 +237,10 @@ function Splash() {
   );
 }
 
-/* night-sky scenery matching the web app's welcome screen (stars, glows, confetti, flight path) */
-function NightScenery() {
-  const stars = [[58, 64], [142, 36], [332, 58], [262, 26], [372, 128], [28, 152], [205, 80], [92, 112], [360, 300], [40, 520], [150, 560], [330, 480]];
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <View style={{ position: 'absolute', top: -90, right: -70, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(123,108,255,.16)' }} />
-      <View style={{ position: 'absolute', top: 260, left: -90, width: 260, height: 260, borderRadius: 130, backgroundColor: 'rgba(62,214,192,.10)' }} />
-      <View style={{ position: 'absolute', bottom: 40, right: -60, width: 280, height: 280, borderRadius: 140, backgroundColor: 'rgba(255,107,87,.16)' }} />
-      {stars.map(([x, y], i) => (
-        <View key={i} style={{ position: 'absolute', left: x, top: y, width: i % 3 ? 2.5 : 3.5, height: i % 3 ? 2.5 : 3.5, borderRadius: 2, backgroundColor: '#C9CEF5', opacity: .5 }} />
-      ))}
-      {[['8%', '10%', '#F6DBA6', 34, 15, '22deg'], ['13%', '78%', '#CFE6D6', 24, 24, '0deg'], ['40%', '4%', '#F3C98F', 16, 16, '0deg'],
-        ['78%', '8%', '#F6C185', 20, 20, '-15deg'], ['86%', '80%', '#CBE2DE', 34, 13, '30deg'], ['26%', '88%', '#F9E3BC', 14, 30, '-25deg']]
-        .map(([top, left, bg, w, h, rot], i) => (
-          <View key={'c' + i} style={{ position: 'absolute', top, left, width: w, height: h, backgroundColor: bg, opacity: .5, borderRadius: w === h ? w / 2 : 4, transform: [{ rotate: rot }] }} />
-        ))}
-      <Text style={{ position: 'absolute', top: '30%', right: '14%', fontSize: 26, transform: [{ rotate: '12deg' }] }}>🛩️</Text>
-    </View>
-  );
-}
-
 function Welcome({ onExplore, onAuth, authModal }) {
   return (
-    <View style={[s.fill, { backgroundColor: T.night }]}>
+    <View style={[s.fill, { backgroundColor: T.indigoDark }]}>
       <StatusBar barStyle="light-content" />
-      <NightScenery />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 }}>
         <Text style={{ fontSize: 66 }}>📲</Text>
         <Text style={{ fontSize: 26, fontWeight: '800', color: '#F5F6FC', marginTop: 14 }}>Welcome to MobiYatri</Text>
@@ -290,32 +268,6 @@ function Welcome({ onExplore, onAuth, authModal }) {
   );
 }
 
-/* dark promo card — same 3 rotating slides as the web app */
-const PROMO_SLIDES = [
-  { icon: '🧳', t: 'New to MobiYatri?', d: "Let's pick the perfect eSIM together — learn how eSIMs work and get set for your next trip abroad." },
-  { icon: '🪙', t: 'Refer friends. Earn ₹150.', d: 'Get ₹150 cashback for every friend you bring — they get a discount on their first eSIM.' },
-  { icon: '🌐', t: '190+ countries. One app.', d: 'Land, switch on, connect — trusted local networks across the world, paid in ₹.' },
-];
-
-function PromoCarousel() {
-  const [i, setI] = useState(0);
-  useEffect(() => { const t = setInterval(() => setI(x => (x + 1) % PROMO_SLIDES.length), 5000); return () => clearInterval(t); }, []);
-  const p = PROMO_SLIDES[i];
-  return (
-    <Pressable onPress={() => setI(x => (x + 1) % PROMO_SLIDES.length)} style={s.promo}>
-      <Text style={{ fontSize: 34, textAlign: 'center' }}>{p.icon}</Text>
-      <Text style={{ color: '#F5F6FC', fontWeight: '800', fontSize: 16, textAlign: 'center', marginTop: 6 }}>{p.t}</Text>
-      <Text style={{ color: '#A9ACC9', fontWeight: '600', fontSize: 12.5, textAlign: 'center', marginTop: 4, lineHeight: 18 }}>{p.d}</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 12 }}>
-        {PROMO_SLIDES.map((_, x) => (
-          <Pressable key={x} onPress={() => setI(x)}
-            style={{ width: x === i ? 18 : 7, height: 7, borderRadius: 4, backgroundColor: x === i ? T.coral : '#3A3F73' }} />
-        ))}
-      </View>
-    </Pressable>
-  );
-}
-
 function Store({ userName, query, setQuery, cat, setCat, list, mode, onCountry, onChat }) {
   return (
     <View style={s.fill}>
@@ -334,15 +286,18 @@ function Store({ userName, query, setQuery, cat, setCat, list, mode, onCountry, 
             <Text style={{ fontSize: 24, fontWeight: '800', color: T.ink, marginBottom: 12 }}>नमस्ते, {userName}</Text>
             <TextInput style={s.search} placeholder="Where are you travelling to?" placeholderTextColor={T.soft}
               value={query} onChangeText={setQuery} />
-            <PromoCarousel />
+            <View style={s.promo}>
+              <Text style={{ fontSize: 34, textAlign: 'center' }}>🌐</Text>
+              <Text style={{ color: '#F5F6FC', fontWeight: '800', fontSize: 16, textAlign: 'center', marginTop: 6 }}>190+ countries. One app.</Text>
+              <Text style={{ color: '#A9ACC9', fontWeight: '600', fontSize: 12.5, textAlign: 'center', marginTop: 4 }}>
+                Land, switch on, connect — trusted local networks, paid in ₹.
+              </Text>
+            </View>
             <View style={s.svcgrid}>
-              {[['📶', 'Country eSIM', '#E7ECF8', () => setCat('popular')],
-                ['🌏', 'Regional', '#E2F1E6', () => setCat('regional')],
-                ['🌐', 'Global', '#FBF0DA', () => setCat('global')],
-                ['🛡️', 'Insurance', '#FDE9E4', () => Alert.alert('Travel insurance', 'Add trip protection during checkout — cover from IRDAI-licensed partners for medical, delays and baggage.')],
-                ['💬', 'Ask AI', T.tint, onChat]].map(([ic, lb, bg, fn]) => (
+              {[['📶', 'Country', () => setCat('popular')], ['🌏', 'Regional', () => setCat('regional')],
+                ['🌐', 'Global', () => setCat('global')], ['💬', 'Ask AI', onChat]].map(([ic, lb, fn]) => (
                   <Pressable key={lb} style={s.svc} onPress={fn}>
-                    <View style={[s.svcIcon, { backgroundColor: bg }]}><Text style={{ fontSize: 20 }}>{ic}</Text></View>
+                    <View style={s.svcIcon}><Text style={{ fontSize: 20 }}>{ic}</Text></View>
                     <Text style={s.svcLbl}>{lb}</Text>
                   </Pressable>
                 ))}
