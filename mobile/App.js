@@ -9,7 +9,158 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
+
+/* soft pastel confetti backdrop shared by splash + welcome */
+const CONFETTI_SHAPES = [
+  ['6%', '78%', '#F6DBA6', 56, 28, '30deg', 14],
+  ['10%', '4%', '#CFE6D6', 42, 42, '0deg', 21],
+  ['26%', '58%', '#CBE2EE', 52, 52, '18deg', 10],
+  ['46%', '-4%', '#DDE6DA', 46, 46, '14deg', 10],
+  ['52%', '86%', '#F3C08F', 40, 40, '0deg', 20],
+  ['70%', '76%', '#CBE2EE', 50, 26, '-18deg', 13],
+  ['80%', '6%', '#F6DBA6', 34, 30, '-12deg', 12],
+  ['88%', '46%', '#DDE6DA', 44, 44, '0deg', 22],
+];
+const ConfettiBG = () => (
+  <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+    {CONFETTI_SHAPES.map(([top, left, bg, w, h, rot, r], i) => (
+      <View key={i} style={{
+        position: 'absolute', top, left, width: w, height: h, backgroundColor: bg,
+        opacity: .75, borderRadius: r, transform: [{ rotate: rot }],
+      }} />
+    ))}
+  </View>
+);
+
+/* welcome illustration: traveller searching the globe — animated (original art) */
+function SearchGlobeScene({ width = 250 }) {
+  const h = Math.round(width * 0.84);
+  const drift = useRef(new Animated.Value(0)).current;
+  const sweep = useRef(new Animated.Value(0)).current;
+  const pop1 = useRef(new Animated.Value(0)).current;
+  const pop2 = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(drift, { toValue: 1, duration: 5500, useNativeDriver: true }),
+      Animated.timing(drift, { toValue: 0, duration: 5500, useNativeDriver: true }),
+    ])).start();
+    Animated.loop(Animated.sequence([
+      Animated.timing(sweep, { toValue: 1, duration: 2600, useNativeDriver: true }),
+      Animated.delay(500),
+      Animated.timing(sweep, { toValue: 0, duration: 2600, useNativeDriver: true }),
+      Animated.delay(500),
+    ])).start();
+    const pop = (v, delay) => Animated.loop(Animated.sequence([
+      Animated.delay(delay),
+      Animated.spring(v, { toValue: 1, friction: 3.2, useNativeDriver: true }),
+      Animated.delay(1600),
+      Animated.timing(v, { toValue: 0, duration: 260, useNativeDriver: true }),
+    ])).start();
+    pop(pop1, 400); pop(pop2, 1700);
+  }, []);
+  return (
+    <View style={{ width, height: h }}>
+      <Svg width={width} height={h} viewBox="0 0 250 210">
+        <Circle cx="150" cy="95" r="82" fill="#E7EBF2" />
+        <Path d="M112 44q26-14 44 2-8 20-30 18-22-2-14-20z" fill="#C7D3E4" />
+        <Path d="M186 96q22-6 32 10-6 22-28 20-18-4-4-30z" fill="#C7D3E4" />
+        <Path d="M128 130q18-8 30 4-4 18-22 16-16-2-8-20z" fill="#C7D3E4" />
+        <Rect x="198" y="116" width="46" height="80" rx="12" fill="#DFE5EC" />
+        <Rect x="214" y="100" width="14" height="18" rx="4" fill="#C9D2DC" />
+        <Rect x="168" y="140" width="34" height="56" rx="10" fill="#E85340" />
+        <Rect x="172" y="154" width="26" height="10" rx="4" fill="#F08A76" />
+        <Rect x="172" y="170" width="26" height="10" rx="4" fill="#F08A76" />
+        <Circle cx="178" cy="200" r="5" fill="#23253A" /><Circle cx="192" cy="200" r="5" fill="#23253A" />
+        <Circle cx="208" cy="200" r="5" fill="#23253A" /><Circle cx="234" cy="200" r="5" fill="#23253A" />
+        <Path d="M26 146q26-16 54 0 6 18-8 20-20 6-38 0-14-2-8-20z" fill="#2E8674" />
+        <Path d="M30 118q22-18 44 0l-4 28q-18 8-36 0z" fill="#5C9CDF" />
+        <Path d="M70 116q16-10 20-24" stroke="#5C9CDF" strokeWidth="10" strokeLinecap="round" fill="none" />
+        <Circle cx="92" cy="88" r="6" fill="#B4744C" />
+        <Circle cx="52" cy="94" r="16" fill="#B4744C" />
+        <Path d="M36 90q2-16 16-16 14 0 16 14-8-7-16-5-10 2-16 7z" fill="#1F1710" />
+        <Circle cx="47" cy="95" r="4.5" fill="none" stroke="#23253A" strokeWidth="1.6" />
+        <Circle cx="58" cy="95" r="4.5" fill="none" stroke="#23253A" strokeWidth="1.6" />
+        <Rect x="34" y="128" width="48" height="26" rx="4" fill="#C9D2DC" transform="rotate(-6 58 141)" />
+        <Ellipse cx="34" cy="196" rx="12" ry="7" fill="#23253A" /><Ellipse cx="66" cy="198" rx="12" ry="7" fill="#23253A" />
+      </Svg>
+      <Animated.View style={{
+        position: 'absolute', left: 6, top: 18,
+        transform: [{ translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [0, 22] }) }],
+      }}>
+        <Svg width={58} height={22} viewBox="0 0 58 22">
+          <Ellipse cx="18" cy="15" rx="15" ry="6.5" fill="#EDF1F7" /><Ellipse cx="38" cy="11" rx="19" ry="8.5" fill="#EDF1F7" />
+        </Svg>
+      </Animated.View>
+      <Animated.View style={{ position: 'absolute', left: width * .42, top: h * .17, transform: [{ scale: pop1 }] }}>
+        <Svg width={26} height={34} viewBox="0 0 26 34">
+          <Path d="M13 0C6 0 1 5 1 12c0 9 12 22 12 22s12-13 12-22C25 5 20 0 13 0z" fill="#E85340" />
+          <Circle cx="13" cy="12" r="5" fill="#fff" />
+        </Svg>
+      </Animated.View>
+      <Animated.View style={{ position: 'absolute', left: width * .58, top: h * .42, transform: [{ scale: pop2 }] }}>
+        <Svg width={22} height={29} viewBox="0 0 26 34">
+          <Path d="M13 0C6 0 1 5 1 12c0 9 12 22 12 22s12-13 12-22C25 5 20 0 13 0z" fill="#E85340" />
+          <Circle cx="13" cy="12" r="5" fill="#fff" />
+        </Svg>
+      </Animated.View>
+      <Animated.View style={{
+        position: 'absolute', left: width * .22, top: h * .04,
+        transform: [
+          { translateX: sweep.interpolate({ inputRange: [0, 1], outputRange: [0, width * .22] }) },
+          { translateY: sweep.interpolate({ inputRange: [0, 1], outputRange: [0, h * .3] }) },
+        ],
+      }}>
+        <Svg width={72} height={88} viewBox="0 0 72 88">
+          <Circle cx="30" cy="30" r="25" fill="rgba(255,255,255,.5)" stroke="#23253A" strokeWidth="5" />
+          <Path d="M47 51 L63 80" stroke="#2E8674" strokeWidth="11" strokeLinecap="round" />
+        </Svg>
+      </Animated.View>
+    </View>
+  );
+}
+
+/* welcome illustration: traveller stepping out of a phone (original art, unused) */
+const PhoneTravellerScene = ({ width = 190 }) => (
+  <Svg width={width} height={width * 0.98} viewBox="0 0 200 196">
+    <Ellipse cx="100" cy="184" rx="80" ry="8" fill="#D9E2EE" />
+    {/* phone */}
+    <Rect x="55" y="6" width="90" height="170" rx="18" fill="#23253A" />
+    <Rect x="61" y="12" width="78" height="158" rx="12" fill="#DDEEF8" />
+    {/* screen scene */}
+    <Path d="M61 118 L88 82 L106 110 L120 90 L139 118 Z" fill="#A9C3DE" />
+    <Path d="M61 118 h78 v40 q0 12 -12 12 h-54 q-12 0 -12 -12 z" fill="#BFE0C6" />
+    {/* pines */}
+    <Path d="M146 128 l11 -26 11 26z" fill="#3F7D53" />
+    <Path d="M146 146 l11 -26 11 26z" fill="#4E8D62" />
+    <Rect x="154.5" y="146" width="5" height="14" fill="#6B4A2E" />
+    {/* traveller */}
+    <Rect x="58" y="118" width="28" height="40" rx="11" fill="#5C9CDF" />
+    <Path d="M72 168 q-4 -46 24 -46 q24 0 24 44 l-8 4z" fill="#E85340" />
+    <Path d="M86 124 q-10 4 -12 16" stroke="#4C86C9" strokeWidth="6" strokeLinecap="round" fill="none" />
+    <Circle cx="98" cy="98" r="17" fill="#B4744C" />
+    <Path d="M81 94 q2 -17 17 -17 q14 0 16 15 q-8 -8 -17 -6 q-10 2 -16 8z" fill="#2E1F14" />
+    <Path d="M118 134 q14 -7 22 -18" stroke="#E85340" strokeWidth="10" strokeLinecap="round" fill="none" />
+    <Circle cx="142" cy="114" r="6" fill="#B4744C" />
+    {/* grass */}
+    <Path d="M50 172 q6 -12 14 -2 q-8 4 -14 2z" fill="#8BC09A" />
+    <Path d="M140 176 q6 -10 12 -2 q-6 4 -12 2z" fill="#8BC09A" />
+  </Svg>
+);
+
+/* small line icons for the welcome bullets */
+const WIcon = ({ d, dot }) => (
+  <Svg width="21" height="21" viewBox="0 0 24 24">
+    <Path d={d} fill="none" stroke="#23253A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    {dot && <Circle cx="16" cy="8" r="1.7" fill="#23253A" />}
+  </Svg>
+);
+const WELCOME_BULLETS = [
+  ['M3.5 11.5 L11.5 3.5 h9 v9 l-8 8 z', true, 'No expensive international roaming'],
+  ['M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9s1.3-6.5 3.8-9z', false, 'Coverage in 190+ destinations'],
+  ['M12 3a9 9 0 100 18 9 9 0 000-18zM8.2 12.2l2.6 2.6 5-5.6', false, 'Connect in minutes, no physical SIM'],
+  ['M20 12a8 8 0 01-8 8H4.5l2.3-2.7A8 8 0 1120 12z', false, '24/7 support in English & हिन्दी'],
+];
 
 /* MobiYatri paper-plane logo mark (same path as the website wordmark) */
 const LogoMark = ({ size = 90, color = '#FF6B57' }) => (
@@ -93,7 +244,9 @@ const flagUrl = iso => `https://flagcdn.com/w160/${iso}.png`;
 
 /* ================= root ================= */
 export default function App() {
-  const [screen, setScreen] = useState('splash');
+  const [screen, setScreen] = useState('welcome');
+  const [showSplash, setShowSplash] = useState(true);
+  const splashFade = useRef(new Animated.Value(1)).current;
   const [tab, setTab] = useState('store');
   const [countries, setCountries] = useState(FALLBACK);
   const [regions, setRegions] = useState([]);
@@ -127,15 +280,15 @@ export default function App() {
         setMode(d.mode);
       }
     }).catch(() => {});
-    const t = setTimeout(() => setScreen(s => (s === 'splash' ? 'welcome' : s)), 3300);
+    const t = setTimeout(() => {
+      Animated.timing(splashFade, { toValue: 0, duration: 750, useNativeDriver: true })
+        .start(() => setShowSplash(false));
+    }, 3000);
     return () => { clearTimeout(t); sub && sub.subscription && sub.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
-    if (session && (screen === 'splash' || screen === 'welcome')) {
-      const t = setTimeout(() => setScreen('main'), screen === 'splash' ? 3300 : 0);
-      return () => clearTimeout(t);
-    }
+    if (session && screen === 'welcome') setScreen('main'); // skip welcome for signed-in users (splash still covers the swap)
   }, [session]);
 
   const userName = useMemo(() => {
@@ -204,15 +357,24 @@ export default function App() {
   };
   useEffect(() => { if (screen === 'main' && tab === 'esims') loadMyEsims(); }, [screen, tab, session]);
 
-  if (screen === 'splash') return <Splash />;
+  const splashOverlay = showSplash ? (
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: splashFade, zIndex: 99, elevation: 99 }]}>
+      <Splash />
+    </Animated.View>
+  ) : null;
+
   if (screen === 'welcome') return (
-    <Welcome onExplore={() => setScreen('main')} onAuth={() => setAuthOpen(true)}
-      authModal={<AuthModal open={authOpen} onClose={() => setAuthOpen(false)} onDone={() => { setAuthOpen(false); setScreen('main'); }} />} />
+    <View style={{ flex: 1 }}>
+      <Welcome onExplore={() => setScreen('main')} onAuth={() => setAuthOpen(true)}
+        authModal={<AuthModal open={authOpen} onClose={() => setAuthOpen(false)} onDone={() => { setAuthOpen(false); setScreen('main'); }} />} />
+      {splashOverlay}
+    </View>
   );
 
   return (
     <View style={{ flex: 1, backgroundColor: T.bg }}>
       <StatusBar barStyle="dark-content" />
+      {splashOverlay}
       {screen === 'main' && tab === 'store' && (
         <Store userName={userName} query={query} setQuery={setQuery} cat={cat} setCat={setCat}
           list={list} mode={mode} onCountry={openCountry} onChat={() => setChatOpen(true)} />
@@ -276,25 +438,10 @@ function Splash() {
   useEffect(() => {
     Animated.loop(Animated.timing(spin, { toValue: 1, duration: 6000, useNativeDriver: true })).start();
   }, []);
-  const CONFETTI = [
-    ['6%', '78%', '#F6DBA6', 56, 28, '30deg', 14],   // gold capsule top-right
-    ['10%', '4%', '#CFE6D6', 42, 42, '0deg', 21],    // mint circle
-    ['26%', '58%', '#CBE2EE', 52, 52, '18deg', 10],  // powder diamond
-    ['46%', '-4%', '#DDE6DA', 46, 46, '14deg', 10],
-    ['52%', '86%', '#F3C08F', 40, 40, '0deg', 20],   // peach circle
-    ['70%', '76%', '#CBE2EE', 50, 26, '-18deg', 13],
-    ['80%', '6%', '#F6DBA6', 34, 30, '-12deg', 12],
-    ['88%', '46%', '#DDE6DA', 44, 44, '0deg', 22],
-  ];
   return (
     <View style={[s.fill, { backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' }]}>
       <StatusBar barStyle="dark-content" />
-      {CONFETTI.map(([top, left, bg, w, h, rot, r], i) => (
-        <View key={i} pointerEvents="none" style={{
-          position: 'absolute', top, left, width: w, height: h, backgroundColor: bg,
-          opacity: .75, borderRadius: r, transform: [{ rotate: rot }],
-        }} />
-      ))}
+      <ConfettiBG />
       <Animated.View style={{
         transform: [{ scale: spin.interpolate({ inputRange: [0, .5, 1], outputRange: [1, 1.06, 1] }) }],
       }}>
@@ -317,52 +464,25 @@ function Splash() {
   );
 }
 
-/* night-sky scenery matching the web app's welcome screen (stars, glows, confetti, flight path) */
-function NightScenery() {
-  const stars = [[58, 64], [142, 36], [332, 58], [262, 26], [372, 128], [28, 152], [205, 80], [92, 112], [360, 300], [40, 520], [150, 560], [330, 480]];
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <View style={{ position: 'absolute', top: -90, right: -70, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(123,108,255,.16)' }} />
-      <View style={{ position: 'absolute', top: 260, left: -90, width: 260, height: 260, borderRadius: 130, backgroundColor: 'rgba(62,214,192,.10)' }} />
-      <View style={{ position: 'absolute', bottom: 40, right: -60, width: 280, height: 280, borderRadius: 140, backgroundColor: 'rgba(255,107,87,.16)' }} />
-      {stars.map(([x, y], i) => (
-        <View key={i} style={{ position: 'absolute', left: x, top: y, width: i % 3 ? 2.5 : 3.5, height: i % 3 ? 2.5 : 3.5, borderRadius: 2, backgroundColor: '#C9CEF5', opacity: .5 }} />
-      ))}
-      {[['8%', '10%', '#F6DBA6', 34, 15, '22deg'], ['13%', '78%', '#CFE6D6', 24, 24, '0deg'], ['40%', '4%', '#F3C98F', 16, 16, '0deg'],
-        ['78%', '8%', '#F6C185', 20, 20, '-15deg'], ['86%', '80%', '#CBE2DE', 34, 13, '30deg'], ['26%', '88%', '#F9E3BC', 14, 30, '-25deg']]
-        .map(([top, left, bg, w, h, rot], i) => (
-          <View key={'c' + i} style={{ position: 'absolute', top, left, width: w, height: h, backgroundColor: bg, opacity: .5, borderRadius: w === h ? w / 2 : 4, transform: [{ rotate: rot }] }} />
-        ))}
-      <Text style={{ position: 'absolute', top: '30%', right: '14%', fontSize: 26, transform: [{ rotate: '12deg' }] }}>🛩️</Text>
-    </View>
-  );
-}
-
 function Welcome({ onExplore, onAuth, authModal }) {
   return (
-    <View style={[s.fill, { backgroundColor: T.night }]}>
-      <StatusBar barStyle="light-content" />
-      <NightScenery />
+    <View style={[s.fill, { backgroundColor: T.bg }]}>
+      <StatusBar barStyle="dark-content" />
+      <ConfettiBG />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 }}>
-        <LogoMark size={74} />
-        <Text style={{ fontSize: 26, fontWeight: '800', color: '#F5F6FC', marginTop: 14 }}>Welcome to MobiYatri</Text>
-        <View style={{ flexDirection: 'row', marginTop: 10 }}>
-          <View style={{ width: 22, height: 4, backgroundColor: '#FF9933', borderRadius: 2 }} />
-          <View style={{ width: 22, height: 4, backgroundColor: '#F3ECDF', borderRadius: 2, marginHorizontal: 2 }} />
-          <View style={{ width: 22, height: 4, backgroundColor: '#2E7D4F', borderRadius: 2 }} />
-        </View>
-        <Text style={{ color: '#A9ACC9', textAlign: 'center', marginTop: 10, fontWeight: '600' }}>
-          नमस्ते! Travel data for Indian tourists — pay in ₹, connect anywhere.
-        </Text>
-        <View style={{ marginTop: 22, alignSelf: 'stretch' }}>
-          {['🏷  No expensive international roaming', '🌏  Coverage in 190+ destinations',
-            '⚡  Connect in minutes, no physical SIM', '💬  24/7 support in English & हिन्दी'].map(t => (
-              <Text key={t} style={{ color: '#E7E9F6', fontWeight: '700', fontSize: 14.5, marginVertical: 7 }}>{t}</Text>
-            ))}
+        <SearchGlobeScene width={250} />
+        <Text style={{ fontSize: 25, fontWeight: '800', color: T.ink, marginTop: 18 }}>Welcome to MobiYatri</Text>
+        <View style={{ marginTop: 18, alignSelf: 'stretch', paddingHorizontal: 10 }}>
+          {WELCOME_BULLETS.map(([d, dot, label]) => (
+            <View key={label} style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 8 }}>
+              <WIcon d={d} dot={dot} />
+              <Text style={{ color: T.ink, fontWeight: '600', fontSize: 14.5, marginLeft: 12, flex: 1 }}>{label}</Text>
+            </View>
+          ))}
         </View>
       </View>
       <View style={{ padding: 20, paddingBottom: 34 }}>
-        <Pressable style={s.btnOutlineDark} onPress={onAuth}><Text style={{ color: '#F5F6FC', fontWeight: '700', fontSize: 16 }}>Sign up / Log in</Text></Pressable>
+        <Pressable style={s.btnOutlineLight} onPress={onAuth}><Text style={{ color: T.ink, fontWeight: '800', fontSize: 16 }}>Sign up / Log in</Text></Pressable>
         <Pressable style={[s.btnPrimary, { marginTop: 12 }]} onPress={onExplore}><Text style={s.btnPrimaryTxt}>Explore eSIMs</Text></Pressable>
       </View>
       {authModal}
@@ -812,6 +932,7 @@ const s = StyleSheet.create({
   btnOutline: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#D8E1EF', borderRadius: 999, paddingVertical: 15, alignItems: 'center' },
   btnOutlineTxt: { color: T.ink, fontWeight: '700', fontSize: 16 },
   btnOutlineDark: { backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.26)', borderRadius: 999, paddingVertical: 15, alignItems: 'center' },
+  btnOutlineLight: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#D6DDEB', borderRadius: 999, paddingVertical: 15, alignItems: 'center' },
   field: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#D8E1EF', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15, color: T.ink, marginBottom: 12 },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: T.coralDeep, alignItems: 'center', justifyContent: 'center' },
   mitem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 15, borderRadius: 14, marginBottom: 8 },
