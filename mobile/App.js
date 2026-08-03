@@ -529,29 +529,63 @@ const PROMO_SLIDES = [
 
 function PromoCarousel() {
   const [i, setI] = useState(0);
-  useEffect(() => { const t = setInterval(() => setI(x => (x + 1) % PROMO_SLIDES.length), 5000); return () => clearInterval(t); }, []);
+  useEffect(() => { const t = setInterval(() => setI(x => (x + 1) % PROMO_SLIDES.length), 6000); return () => clearInterval(t); }, []);
   const p = PROMO_SLIDES[i];
+  const art = i === 0 ? <PhoneTravellerScene width={150} />
+    : i === 1 ? (
+      <Svg width={110} height={110} viewBox="0 0 110 110">
+        <Circle cx="55" cy="55" r="44" fill="#F5C043" />
+        <Circle cx="55" cy="55" r="44" fill="none" stroke="#D99A22" strokeWidth="5" />
+        <Circle cx="55" cy="55" r="32" fill="none" stroke="#D99A22" strokeWidth="2" opacity=".6" />
+        <Path d="M40 36h30M40 47h30M40 36c9 0 16 3 16 12s-7 12-16 12l19 18" stroke="#8A5A00" strokeWidth="5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    ) : <SearchGlobeScene width={175} />;
   return (
-    <Pressable onPress={() => setI(x => (x + 1) % PROMO_SLIDES.length)} style={s.promo}>
-      <Text style={{ fontSize: 34, textAlign: 'center' }}>{p.icon}</Text>
-      <Text style={{ color: '#F5F6FC', fontWeight: '800', fontSize: 16, textAlign: 'center', marginTop: 6 }}>{p.t}</Text>
-      <Text style={{ color: '#A9ACC9', fontWeight: '600', fontSize: 12.5, textAlign: 'center', marginTop: 4, lineHeight: 18 }}>{p.d}</Text>
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+    <View>
+      <View style={{ backgroundColor: T.bgDeep, borderRadius: 24, padding: 20, paddingTop: 18, minHeight: 300 }}>
+        <Pressable onPress={() => Alert.alert(p.t, p.d)} style={{
+          position: 'absolute', top: 14, right: 14, width: 34, height: 34, borderRadius: 17,
+          backgroundColor: T.mint, alignItems: 'center', justifyContent: 'center', zIndex: 2,
+        }}><Text style={{ fontStyle: 'italic', fontWeight: '800', color: T.mintInk, fontSize: 15 }}>i</Text></Pressable>
+        <Pressable onPress={() => setI(x => (x + 1) % PROMO_SLIDES.length)} style={{ alignItems: 'center' }}>
+          <View style={{ height: 170, justifyContent: 'center' }}>{art}</View>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 19, textAlign: 'center', marginTop: 8 }}>{p.t}</Text>
+          <Text style={{ color: T.soft, fontWeight: '600', fontSize: 13.5, textAlign: 'center', marginTop: 6, lineHeight: 20 }}>{p.d}</Text>
+        </Pressable>
+      </View>
+      <View style={{ backgroundColor: '#fff', borderRadius: 999, padding: 8, flexDirection: 'row', gap: 8, marginTop: 12 }}>
         {PROMO_SLIDES.map((_, x) => (
           <Pressable key={x} onPress={() => setI(x)}
-            style={{ width: x === i ? 18 : 7, height: 7, borderRadius: 4, backgroundColor: x === i ? T.coral : '#3A3F73' }} />
+            style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: x === i ? T.ink : '#D8DEE9' }} />
         ))}
       </View>
-    </Pressable>
+    </View>
   );
 }
 
 function Store({ userName, query, setQuery, cat, setCat, list, mode, onCountry, onChat }) {
+  const [compact, setCompact] = useState(false);
   return (
     <View style={s.fill}>
+      {compact && (
+        <View style={{
+          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20, backgroundColor: T.bg,
+          paddingTop: TOPPAD, paddingBottom: 10, paddingHorizontal: 16,
+          flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: T.line,
+        }}>
+          <View style={{ width: 74 }} />
+          <Text style={{ flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '800', color: T.ink }}>नमस्ते, {userName}</Text>
+          <View style={{ backgroundColor: T.mint, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
+            <Text style={{ color: T.mintInk, fontWeight: '800', fontSize: 13 }}>₹0.00</Text>
+          </View>
+        </View>
+      )}
       <FlatList
         data={list}
         keyExtractor={(item, i) => (item.iso || item.n) + i}
+        showsVerticalScrollIndicator={false}
+        onScroll={e => setCompact(e.nativeEvent.contentOffset.y > 100)}
+        scrollEventThrottle={32}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListHeaderComponent={
           <View style={{ paddingHorizontal: 16, paddingTop: TOPPAD }}>
@@ -565,18 +599,6 @@ function Store({ userName, query, setQuery, cat, setCat, list, mode, onCountry, 
             <TextInput style={s.search} placeholder="Where are you travelling to?" placeholderTextColor={T.soft}
               value={query} onChangeText={setQuery} />
             <PromoCarousel />
-            <View style={s.svcgrid}>
-              {[['📶', 'Country eSIM', '#E7ECF8', () => setCat('popular')],
-                ['🌏', 'Regional', '#E2F1E6', () => setCat('regional')],
-                ['🌐', 'Global', '#FBF0DA', () => setCat('global')],
-                ['🛡️', 'Insurance', '#FDE9E4', () => Alert.alert('Travel insurance', 'Add trip protection during checkout — cover from IRDAI-licensed partners for medical, delays and baggage.')],
-                ['💬', 'Ask AI', T.tint, onChat]].map(([ic, lb, bg, fn]) => (
-                  <Pressable key={lb} style={s.svc} onPress={fn}>
-                    <View style={[s.svcIcon, { backgroundColor: bg }]}><Text style={{ fontSize: 20 }}>{ic}</Text></View>
-                    <Text style={s.svcLbl}>{lb}</Text>
-                  </Pressable>
-                ))}
-            </View>
             <View style={{ flexDirection: 'row', gap: 22, borderBottomWidth: 1.5, borderColor: '#DDE4F0', marginBottom: 10 }}>
               {[['popular', 'Popular'], ['countries', 'Countries'], ['regional', 'Regional'], ['global', 'Global']].map(([k, lb]) => (
                 <Pressable key={k} onPress={() => setCat(k)} style={{ paddingVertical: 10, borderBottomWidth: 2.5, borderColor: cat === k ? T.ink : 'transparent', marginBottom: -1.5 }}>
@@ -1163,7 +1185,7 @@ const s = StyleSheet.create({
   svcIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: T.tint, alignItems: 'center', justifyContent: 'center' },
   svcLbl: { fontSize: 11.5, fontWeight: '700', color: T.ink },
   crow: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 10, borderRadius: 16, padding: 15, elevation: 2, shadowColor: '#2A2C4A', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  flag: { width: 38, height: 28, borderRadius: 6, backgroundColor: '#E8E7EF' },
+  flag: { width: 48, height: 34, borderRadius: 7, backgroundColor: '#E8E7EF' },
   fab: { position: 'absolute', right: 16, bottom: 100, width: 54, height: 54, borderRadius: 27, backgroundColor: T.coral, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: T.coral, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
   tabbar: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.97)', borderTopWidth: 1, borderColor: T.line, paddingTop: 8, paddingBottom: 24 },
   tabbtn: { flex: 1, alignItems: 'center', gap: 2 },
