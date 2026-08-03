@@ -1046,20 +1046,69 @@ const STATUS_LABEL = { GOT_RESOURCE: 'Ready to install', RELEASED: 'Ready to ins
 function EsimDetailModal({ esim, countries, onClose, onInstall }) {
   const [banner, setBanner] = useState(null);
   const [live, setLive] = useState(null);
+  const [renewOn, setRenewOn] = useState(false);
+  const [renewing, setRenewing] = useState(false);
+  const flash = (t, m) => { setBanner({ t, m }); setTimeout(() => setBanner(null), 3400); };
   useEffect(() => {
     setLive(null);
     if (!esim?.iccid) return;
     fetch(API + '/api/esim-status?iccid=' + esim.iccid)
       .then(r => r.json()).then(setLive).catch(() => setLive({ live: false }));
+    sb.auth.getSession().then(({ data: { session } }) =>
+      setRenewOn(!!(session?.user?.user_metadata?.renewals || {})[esim.iccid]));
   }, [esim && esim.iccid]);
+
+  const toggleRenew = async () => {
+    const next = !renewOn;
+    setRenewOn(next);
+    const { data: { session } } = await sb.auth.getSession();
+    const cur = (session?.user?.user_metadata?.renewals) || {};
+    await sb.auth.updateUser({ data: { renewals: { ...cur, [esim.iccid]: next } } }).catch(() => {});
+    flash(next ? 'ⓘ Renewals are on' : 'ⓘ Renewals are off',
+      next ? 'Your package will renew when you run out of data — we prompt you here with one tap (payments launch makes it automatic).'
+        : 'This eSIM will not be renewed.');
+  };
+
+  const findBundle = () => {
+    const o = esim.orders || {};
+    const c = countries.find(x => x.n === o.country_name);
+    const parts = (o.package_label || '').split(' · ');
+    for (const seg of ['std', 'unl']) {
+      for (const g of (c?.packages?.[seg] || [])) {
+        if (g.d === parts[1]) {
+          const p = g.list.find(x => x.label === parts[0]);
+          if (p) return { bundle: p.bundle, price: p.price };
+        }
+      }
+    }
+    return null;
+  };
+
+  const renewNow = async () => {
+    const found = findBundle();
+    const o = esim.orders || {};
+    if (!found?.bundle) return flash('ⓘ Renewal', 'This pack is no longer in the live catalogue — pick a fresh one from the store.');
+    setRenewing(true);
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const headers = { 'Content-Type': 'application/json' };
+      if (session) headers.Authorization = 'Bearer ' + session.access_token;
+      const r = await fetch(API + '/api/orders', {
+        method: 'POST', headers,
+        body: JSON.stringify({ bundle: found.bundle, country: o.country_name, package: o.package_label, price: found.price }),
+      }).then(x => x.json());
+      if (r.error) throw new Error(r.error);
+      flash('ⓘ Renewed', `Order ${r.orderReference || 'confirmed'} — the new eSIM is in your list${r.emailSent ? ' and its QR was emailed to you' : ''}.`);
+    } catch (e) { flash('ⓘ Renewal failed', e.message || 'Please try again.'); }
+    setRenewing(false);
+  };
   if (!esim) return null;
   const o = esim.orders || {};
   const c = countries.find(x => x.n === o.country_name);
   const parts = (o.package_label || '— · —').split(' · ');
   const copyIccid = () => {
     Share.share({ message: esim.iccid || '' });
-    setBanner('ICCID copied — you can now paste it where it\'s needed.');
-    setTimeout(() => setBanner(null), 3200);
+    flash('ⓘ ICCID copied', 'You can now paste the ICCID where it\'s needed.');
   };
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>
@@ -1071,8 +1120,8 @@ function EsimDetailModal({ esim, countries, onClose, onInstall }) {
         </View>
         {banner && (
           <View style={{ backgroundColor: '#5FB98A', padding: 14 }}>
-            <Text style={{ color: '#0F3D26', fontWeight: '800', fontSize: 14 }}>ⓘ ICCID copied</Text>
-            <Text style={{ color: '#0F3D26', fontWeight: '600', fontSize: 12.5, marginTop: 2 }}>{banner}</Text>
+            <Text style={{ color: '#0F3D26', fontWeight: '800', fontSize: 14 }}>{banner.t}</Text>
+            <Text style={{ color: '#0F3D26', fontWeight: '600', fontSize: 12.5, marginTop: 2 }}>{banner.m}</Text>
           </View>
         )}
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
@@ -1137,17 +1186,27 @@ function EsimDetailModal({ esim, countries, onClose, onInstall }) {
           </View>
           {o.price_inr ? <View style={[s.stat, { marginTop: 10 }]}><Text style={s.statK}>₹ Paid</Text><Text style={s.statV}>₹{o.price_inr}</Text></View> : null}
 
-          <View style={[s.card, { marginTop: 18 }]}>
+          <View style={[s.card, { marginTop: 18, backgroundColor: renewOn ? '#DDF0E2' : T.card }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ flex: 1, color: T.ink, fontWeight: '800', fontSize: 15.5 }}>Renewals</Text>
-              <Pressable onPress={() => { setBanner('Auto-renewals arrive with the payments launch.'); setTimeout(() => setBanner(null), 3200); }}
-                style={{ width: 48, height: 28, borderRadius: 999, backgroundColor: '#CBD2E4', padding: 3 }}>
+              <Pressable onPress={toggleRenew} style={{
+                width: 48, height: 28, borderRadius: 999, padding: 3,
+                backgroundColor: renewOn ? '#3E9B63' : '#CBD2E4',
+                alignItems: renewOn ? 'flex-end' : 'flex-start', justifyContent: 'center',
+              }}>
                 <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' }} />
               </Pressable>
             </View>
-            <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13, marginTop: 6, lineHeight: 19 }}>
-              Turn on to automatically renew your package when your eSIM runs low — launching with payments.
+            <Text style={{ color: renewOn ? '#1F5B33' : T.soft, fontWeight: '500', fontSize: 13, marginTop: 6, lineHeight: 19 }}>
+              {renewOn
+                ? `Your package renews${findBundle() ? ` for ₹${findBundle().price}` : ''} when your eSIM runs out of data — one tap here when it's time (automatic charging arrives with payments).`
+                : 'Turn on to renew your package when your eSIM runs low on data.'}
             </Text>
+            {renewOn && live?.live && ((live.totalBytes && (live.usedBytes || 0) / live.totalBytes >= 0.9) || ['USED_UP', 'UNAVAILABLE'].includes(live.esimStatus)) && (
+              <Pressable style={[s.btnPrimary, { marginTop: 12, opacity: renewing ? .6 : 1 }]} disabled={renewing} onPress={renewNow}>
+                {renewing ? <ActivityIndicator color="#fff" /> : <Text style={s.btnPrimaryTxt}>Renew now{findBundle() ? ` — ₹${findBundle().price}` : ''}</Text>}
+              </Pressable>
+            )}
           </View>
 
           <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15, marginTop: 18, marginBottom: 8 }}>Ready to use your eSIM?</Text>
