@@ -428,7 +428,7 @@ export default function App() {
           onBrowse={() => setTab('store')} />
       )}
       {screen === 'main' && tab === 'profile' && (
-        <Profile session={session} onAuth={() => setAuthOpen(true)}
+        <Profile session={session} countries={countries} onAuth={() => setAuthOpen(true)}
           onLogout={async () => { await sb.auth.signOut(); }}
           onChat={() => setChatOpen(true)} />
       )}
@@ -1572,25 +1572,195 @@ function LoyaltyModal({ ordersCount, onClose }) {
   );
 }
 
-function OrdersModal({ orders, onClose }) {
+function OrdersModal({ orders, countries, onClose }) {
+  const [sel, setSel] = useState(null);
   return (
     <SubScreen title="Orders" onClose={onClose}>
       {orders === null && <ActivityIndicator color={T.indigo} />}
-      {orders && orders.length === 0 && <Text style={{ color: T.soft, fontWeight: '600' }}>No orders yet.</Text>}
-      {(orders || []).map((o, i) => (
-        <View key={i} style={[s.card, { marginBottom: 10, flexDirection: 'row', alignItems: 'center' }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: T.ink, fontWeight: '700', fontSize: 14.5 }}>{o.country_name} <Text style={{ color: T.soft, fontSize: 12.5 }}>· {o.package_label}</Text></Text>
-            <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5, marginTop: 3 }}>{o.order_reference || ''} · {new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
-          </View>
-          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>₹{o.price_inr}</Text>
-        </View>
+      {orders && orders.length === 0 && (
+        <Text style={{ color: T.soft, fontWeight: '600' }}>After your first purchase, your orders will show up here — explore the store to get started.</Text>
+      )}
+      {(orders || []).map((o, i) => {
+        const c = countries.find(x => x.n === o.country_name);
+        return (
+          <Pressable key={i} onPress={() => setSel(o)} style={[s.card, { marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+            {c?.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <Text style={{ fontSize: 20 }}>🌏</Text>}
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>{o.country_name} / eSIM</Text>
+              <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5, marginTop: 2 }}>{o.package_label}</Text>
+              <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5, marginTop: 2 }}>{new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
+              <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14.5, marginTop: 4 }}>₹{o.price_inr}</Text>
+            </View>
+            <Text style={{ color: '#B2BFD4', fontSize: 18 }}>›</Text>
+          </Pressable>
+        );
+      })}
+      {sel && <OrderDetailsModal order={sel} countries={countries} onClose={() => setSel(null)} />}
+    </SubScreen>
+  );
+}
+
+/* Saved cards — honest empty state until payments launch */
+function SavedCardsModal({ onClose }) {
+  return (
+    <SubScreen title="Saved cards" onClose={onClose}>
+      <Text style={{ color: T.ink, fontWeight: '600', fontSize: 15, lineHeight: 22 }}>
+        When you add a new card, you'll see your saved card details here.
+      </Text>
+      <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13, lineHeight: 19, marginTop: 10 }}>
+        Card saving arrives with the Razorpay payments launch. MobiYatri never stores card numbers itself — they stay with the PCI-certified payment provider.
+      </Text>
+      <Pressable style={[s.btnPrimary, { marginTop: 20, opacity: .55 }]}
+        onPress={() => Alert.alert('Add new card', 'Available once payments launch with Razorpay.')}>
+        <Text style={s.btnPrimaryTxt}>Add new card</Text>
+      </Pressable>
+    </SubScreen>
+  );
+}
+
+/* Currency — INR-first list, other currencies arrive with payments */
+const CURRENCIES = [['INR', 'Indian rupee (INR) ₹'], ['USD', 'United States dollar (USD) $'], ['AED', 'UAE dirham (AED)'],
+  ['GBP', 'Pound sterling (GBP) £'], ['EUR', 'Euro (EUR) €'], ['SGD', 'Singapore dollar (SGD) S$'],
+  ['AUD', 'Australian dollar (AUD) $'], ['JPY', 'Japanese yen (JPY) ¥']];
+function CurrencyModal({ onClose }) {
+  const [q, setQ] = useState('');
+  const list = CURRENCIES.filter(([, l]) => l.toLowerCase().includes(q.toLowerCase()));
+  return (
+    <SubScreen title="Currency" onClose={onClose}>
+      <TextInput value={q} onChangeText={setQ} placeholder="Search by currency" placeholderTextColor={T.soft} style={s.field} />
+      {list.map(([code, label]) => (
+        <Pressable key={code} onPress={() => code !== 'INR' &&
+          Alert.alert(`Change to ${label}?`, 'Prices are shown in Indian rupees during the beta — more display currencies arrive with the payments launch.')}
+          style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderColor: T.line }}>
+          <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 15.5 }}>{label}</Text>
+          {code === 'INR' && <Text style={{ color: T.ink, fontWeight: '800' }}>✓</Text>}
+        </Pressable>
       ))}
     </SubScreen>
   );
 }
 
-function Profile({ session, onAuth, onLogout, onChat }) {
+/* Order details + refund request flow */
+const REFUND_REASONS = [
+  ['🛍️', 'Wrong purchase', 'I wanted a different destination or package.'],
+  ['📅', 'Plans changed', "I don't need the eSIM or package anymore."],
+  ['📱', 'Installation issues', 'I had trouble adding the eSIM to my device.'],
+  ['⇅', 'eSIM not working', 'I had trouble using my data.'],
+];
+function OrderDetailsModal({ order, countries, onClose }) {
+  const [refund, setRefund] = useState(null);   // reason row
+  const [sent, setSent] = useState(false);
+  const [banner, setBanner] = useState(null);
+  const c = countries.find(x => x.n === order.country_name);
+  const parts = (order.package_label || '— · —').split(' · ');
+  const tile = (k, v) => (
+    <View style={[s.stat, { marginBottom: 8 }]}><Text style={s.statK}>{k}</Text><Text style={s.statV}>{v}</Text></View>
+  );
+  const submitRefund = async () => {
+    await sb.auth.updateUser({ data: { refund_request: { order: order.order_reference, reason: refund[1], at: new Date().toISOString() } } }).catch(() => {});
+    Linking.openURL('mailto:hello@mobiyatri.in?subject=' + encodeURIComponent('Refund request ' + (order.order_reference || '')) +
+      '&body=' + encodeURIComponent(`Order: ${order.order_reference}\nReason: ${refund[1]} — ${refund[2]}`)).catch(() => {});
+    setSent(true);
+  };
+  return (
+    <SubScreen title="Order details" onClose={onClose} banner={banner}>
+      <View style={[s.card, { marginBottom: 12 }]}>
+        <Text style={{ color: T.ink, fontWeight: '800', fontSize: 17, marginBottom: 10 }}>Order information</Text>
+        {tile('Order ID', '#' + (order.order_reference || '—'))}
+        {tile('Order date', new Date(order.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }))}
+        <View style={{ alignSelf: 'flex-start', backgroundColor: T.mint, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
+          <Text style={{ color: T.mintInk, fontWeight: '800', fontSize: 13 }}>✓ Completed</Text>
+        </View>
+        <Pressable style={[s.btnOutlineLight, { marginTop: 12 }]}
+          onPress={() => setBanner('Your receipt was emailed with the QR at purchase — need another copy? Ask Yatri Sahayak.') || setTimeout(() => setBanner(null), 3400)}>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>View receipt</Text>
+        </Pressable>
+      </View>
+      <View style={[s.card, { marginBottom: 12 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderColor: T.line, paddingBottom: 10, marginBottom: 10 }}>
+          {c?.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <Text style={{ fontSize: 20 }}>🌏</Text>}
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 17 }}>{order.country_name}</Text>
+        </View>
+        <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14.5, marginBottom: 8 }}>Package</Text>
+        {tile('📍 Coverage', order.country_name)}
+        {tile('⇅ Data', parts[0])}
+        {tile('📅 Validity', parts[1] || '—')}
+      </View>
+      <View style={[s.card, { marginBottom: 12 }]}>
+        <Text style={{ color: T.ink, fontWeight: '800', fontSize: 17 }}>Payment details</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+          <Text style={{ color: T.soft, fontWeight: '700' }}>Payment method</Text>
+          <Text style={{ color: T.ink, fontWeight: '700' }}>Beta — no charge</Text>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, borderTopWidth: 1, borderColor: T.line, paddingTop: 8 }}>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 16 }}>Total</Text>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 16 }}>₹{order.price_inr}</Text>
+        </View>
+      </View>
+      <Pressable onPress={() => setRefund(REFUND_REASONS[0])} style={[s.card, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+        <Text style={{ fontSize: 22 }}>⚠️</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15.5 }}>Request refund</Text>
+          <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5 }}>Get help for your order.</Text>
+        </View>
+        <Text style={{ color: '#B2BFD4', fontSize: 18 }}>›</Text>
+      </Pressable>
+
+      {refund && (
+        <Modal visible transparent animationType="slide" onRequestClose={() => { setRefund(null); setSent(false); }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(20,22,40,.45)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: T.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34, maxHeight: '88%' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ flex: 1, fontSize: 20, fontWeight: '800', color: T.ink }}>{sent ? 'Request sent' : 'Request refund'}</Text>
+                <Pressable onPress={() => { setRefund(null); setSent(false); }}><Text style={{ fontSize: 18, color: T.ink }}>✕</Text></Pressable>
+              </View>
+              {sent ? (
+                <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+                  <View style={{ width: 76, height: 76, borderRadius: 38, backgroundColor: T.mint, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 32 }}>✓</Text>
+                  </View>
+                  <Text style={{ color: T.ink, fontWeight: '800', fontSize: 19, marginTop: 12, textAlign: 'center' }}>Your refund request was submitted</Text>
+                  <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
+                    Support reviews it within a few hours — refunds are credited as YatriCash or a replacement eSIM. You can also chat with Yatri Sahayak any time.
+                  </Text>
+                  <Pressable style={[s.btnPrimary, { alignSelf: 'stretch', marginTop: 16 }]} onPress={() => { setRefund(null); setSent(false); }}>
+                    <Text style={s.btnPrimaryTxt}>OK, I got it</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <ScrollView>
+                  <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, marginBottom: 10 }}>
+                    Choose a reason — we may be able to refund your order or offer a replacement.
+                  </Text>
+                  {REFUND_REASONS.map(r => (
+                    <Pressable key={r[1]} onPress={() => setRefund(r)}
+                      style={[s.card, { marginBottom: 10, flexDirection: 'row', gap: 12, borderWidth: 2, borderColor: refund[1] === r[1] ? T.indigo : 'transparent' }]}>
+                      <Text style={{ fontSize: 20 }}>{r[0]}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>{r[1]}</Text>
+                        <Text style={{ color: T.soft, fontWeight: '500', fontSize: 12.5 }}>{r[2]}</Text>
+                      </View>
+                    </Pressable>
+                  ))}
+                  <View style={{ backgroundColor: '#FFF3D9', borderWidth: 1.5, borderColor: '#E8B04B', borderRadius: 14, padding: 13, marginTop: 4 }}>
+                    <Text style={{ color: '#7A4B00', fontWeight: '700', fontSize: 13.5 }}>
+                      🪙 Refund amount (as YatriCash): ₹{order.price_inr}
+                    </Text>
+                  </View>
+                  <Pressable style={[s.btnPrimary, { marginTop: 14 }]} onPress={submitRefund}>
+                    <Text style={s.btnPrimaryTxt}>Apply refund</Text>
+                  </Pressable>
+                </ScrollView>
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
+    </SubScreen>
+  );
+}
+
+function Profile({ session, countries = [], onAuth, onLogout, onChat }) {
   const name = session ? ((session.user.user_metadata && session.user.user_metadata.full_name) || session.user.email) : 'Guest';
   const [modal, setModal] = useState(null);
   const [orders, setOrders] = useState(null);
@@ -1609,14 +1779,14 @@ function Profile({ session, onAuth, onLogout, onChat }) {
     ['Loyalty and YatriCash', need(() => setModal('loyalty'))],
     ['Notification preferences', need(() => setModal('notify'))],
     ['Trusted devices', need(() => setModal('devices'))],
-    ['Saved cards', () => Alert.alert('Saved cards', 'Card saving arrives with the payments launch — MobiYatri never stores card numbers itself.')],
+    ['Saved cards', need(() => setModal('cards'))],
     ['Refer and earn', need(() => refCode && Share.share({ message: `Use my code ${refCode} for a discount on your first MobiYatri travel eSIM — mobiyatri.in` }))],
     ['Orders', need(() => setModal('orders'))],
     ['MobiYatri for Business', () => Linking.openURL('mailto:hello@mobiyatri.in?subject=MobiYatri%20for%20Business')],
   ];
   const MENU2 = [
     ['Languages', () => Alert.alert('Languages', 'English + हिन्दी support everywhere. Full app translation is on the roadmap.')],
-    ['Currency: Indian rupee (INR) ₹', null],
+    ['Currency: Indian rupee (INR) ₹', () => setModal('currency')],
     ['Help center', onChat],
     ['More info', () => Linking.openURL('https://mobiyatri.in')],
   ];
@@ -1659,7 +1829,8 @@ function Profile({ session, onAuth, onLogout, onChat }) {
           {MENU2.map(([lb, fn], i) => <Row key={lb} label={lb} fn={fn} last={i === MENU2.length - 1} />)}
         </View>
         {session ? (
-          <Pressable style={[s.btnOutlineLight, { marginTop: 18 }]} onPress={onLogout}>
+          <Pressable style={[s.btnOutlineLight, { marginTop: 18 }]}
+            onPress={() => Alert.alert('Log out', 'Are you sure you want to log out?', [{ text: 'No' }, { text: 'Yes', onPress: onLogout }])}>
             <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15.5 }}>Log out</Text>
           </Pressable>
         ) : null}
@@ -1672,7 +1843,9 @@ function Profile({ session, onAuth, onLogout, onChat }) {
       {modal === 'loyalty' && <LoyaltyModal ordersCount={(orders || []).length} onClose={() => setModal(null)} />}
       {modal === 'notify' && <NotifyModal session={session} onClose={() => setModal(null)} />}
       {modal === 'devices' && <DevicesModal session={session} onClose={() => setModal(null)} />}
-      {modal === 'orders' && <OrdersModal orders={orders} onClose={() => setModal(null)} />}
+      {modal === 'orders' && <OrdersModal orders={orders} countries={countries} onClose={() => setModal(null)} />}
+      {modal === 'cards' && <SavedCardsModal onClose={() => setModal(null)} />}
+      {modal === 'currency' && <CurrencyModal onClose={() => setModal(null)} />}
     </View>
   );
 }
