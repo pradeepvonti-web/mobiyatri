@@ -814,18 +814,36 @@ function Profile({ session, onAuth, onLogout, onChat }) {
 }
 
 /* ================= modals ================= */
+const PASS_RULES = [
+  ['Minimum 8 characters', p => p.length >= 8],
+  ['Uppercase', p => /[A-Z]/.test(p)],
+  ['Lowercase', p => /[a-z]/.test(p)],
+  ['Numbers 1234567890', p => /\d/.test(p)],
+  ['A symbol +-*/=?:!%$#', p => /[^A-Za-z0-9]/.test(p)],
+];
+
 function AuthModal({ open, onClose, onDone }) {
   const [mode, setMode] = useState('signup');
-  const [name, setName] = useState('');
+  const [first, setFirst] = useState('');
+  const [last, setLast] = useState('');
   const [email, setEmail] = useState('');
   const [pass, setPass] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [refCode, setRefCode] = useState('');
+  const [promos, setPromos] = useState(false);
   const [busy, setBusy] = useState(false);
+  const rulesOk = PASS_RULES.every(([, fn]) => fn(pass));
+  const canGo = mode === 'login' ? (email && pass) : (first && email && rulesOk);
+
   const go = async () => {
-    if (!email || !pass) return;
+    if (!canGo) return;
     setBusy(true);
     try {
       if (mode === 'signup') {
-        const { error } = await sb.auth.signUp({ email, password: pass, options: { data: { full_name: name } } });
+        const { error } = await sb.auth.signUp({
+          email, password: pass,
+          options: { data: { full_name: (first + ' ' + last).trim(), referred_by: refCode || null, notify_prefs: { offers: promos } } },
+        });
         if (error) throw error;
       } else {
         const { error } = await sb.auth.signInWithPassword({ email, password: pass });
@@ -835,26 +853,88 @@ function AuthModal({ open, onClose, onDone }) {
     } catch (e) { Alert.alert('Account', e.message || 'Something went wrong'); }
     setBusy(false);
   };
+
+  const forgot = async () => {
+    if (!email) return Alert.alert('Forgot password', 'Type your email above first, then tap again.');
+    const { error } = await sb.auth.resetPasswordForEmail(email);
+    Alert.alert('Forgot password', error ? error.message : 'Reset link sent — check your email.');
+  };
+
+  const eye = (
+    <Pressable onPress={() => setShowPass(v => !v)} style={{ position: 'absolute', right: 14, top: 15 }}>
+      <Text style={{ fontSize: 16, opacity: .6 }}>{showPass ? '🙈' : '👁'}</Text>
+    </Pressable>
+  );
+
   return (
     <Modal visible={open} animationType="slide" onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[s.fill, { padding: 22, paddingTop: TOPPAD }]}>
-        <Pressable onPress={onClose} style={{ alignSelf: 'flex-end' }}><Text style={{ fontSize: 22, color: T.ink }}>✕</Text></Pressable>
-        <View style={{ flexDirection: 'row', gap: 26, borderBottomWidth: 1.5, borderColor: T.line, marginBottom: 20 }}>
-          {[['login', 'Log in'], ['signup', 'Sign up']].map(([k, lb]) => (
-            <Pressable key={k} onPress={() => setMode(k)} style={{ paddingVertical: 10, borderBottomWidth: 2.5, borderColor: mode === k ? T.ink : 'transparent' }}>
-              <Text style={{ fontWeight: '700', fontSize: 15, color: mode === k ? T.ink : T.soft }}>{lb}</Text>
-            </Pressable>
-          ))}
-        </View>
-        {mode === 'signup' ? <TextInput style={s.field} placeholder="Full name" placeholderTextColor={T.soft} value={name} onChangeText={setName} /> : null}
-        <TextInput style={s.field} placeholder="Email" placeholderTextColor={T.soft} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
-        <TextInput style={s.field} placeholder="Password" placeholderTextColor={T.soft} secureTextEntry value={pass} onChangeText={setPass} />
-        <Pressable style={[s.btnPrimary, { marginTop: 8 }]} onPress={go} disabled={busy}>
-          {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.btnPrimaryTxt}>{mode === 'signup' ? 'Agree and sign up' : 'Log in'}</Text>}
-        </Pressable>
-        <Text style={{ color: T.soft, fontSize: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 14 }}>
-          By continuing you agree to the Terms and Privacy Policy.
-        </Text>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[s.fill, { paddingTop: TOPPAD }]}>
+        <ScrollView contentContainerStyle={{ padding: 22, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+          <Pressable onPress={onClose} style={{
+            alignSelf: 'flex-end', width: 38, height: 38, borderRadius: 19, backgroundColor: '#fff',
+            alignItems: 'center', justifyContent: 'center', elevation: 2,
+          }}><Text style={{ fontSize: 16, color: T.ink }}>✕</Text></Pressable>
+
+          {/* tabs */}
+          <View style={{ flexDirection: 'row', borderBottomWidth: 1.5, borderColor: T.line, marginBottom: 18 }}>
+            {[['login', 'Log in'], ['signup', 'Sign up']].map(([k, lb]) => (
+              <Pressable key={k} onPress={() => setMode(k)} style={{ flex: 1, alignItems: 'center', paddingVertical: 11, borderBottomWidth: 2.5, borderColor: mode === k ? T.ink : 'transparent' }}>
+                <Text style={{ fontWeight: '800', fontSize: 15.5, color: mode === k ? T.ink : T.soft }}>{lb}</Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* social row — Google (email works today; Google arrives with the store build) */}
+          <Pressable onPress={() => Alert.alert('Google sign-in', 'Coming with the app-store build — please use email for now.')}
+            style={{ borderWidth: 1.5, borderColor: '#D6DDEB', backgroundColor: '#fff', borderRadius: 999, paddingVertical: 12, alignItems: 'center', marginBottom: 16 }}>
+            <Text style={{ fontWeight: '800', fontSize: 14.5, color: T.ink }}>Continue with Google</Text>
+          </Pressable>
+
+          {mode === 'signup' && (
+            <>
+              <TextInput style={s.field} placeholder="First name" placeholderTextColor={T.soft} value={first} onChangeText={setFirst} />
+              <TextInput style={s.field} placeholder="Last name (Optional)" placeholderTextColor={T.soft} value={last} onChangeText={setLast} />
+            </>
+          )}
+          <TextInput style={s.field} placeholder="Email" placeholderTextColor={T.soft} autoCapitalize="none" keyboardType="email-address" value={email} onChangeText={setEmail} />
+          <View>
+            <TextInput style={s.field} placeholder="Password" placeholderTextColor={T.soft} secureTextEntry={!showPass} value={pass} onChangeText={setPass} />
+            {eye}
+          </View>
+
+          {mode === 'login' ? (
+            <Pressable onPress={forgot}><Text style={{ fontWeight: '800', fontSize: 13.5, color: T.ink, marginBottom: 14 }}>Forgot password</Text></Pressable>
+          ) : (
+            <>
+              <View style={{ marginBottom: 12 }}>
+                {PASS_RULES.map(([label, fn]) => {
+                  const ok = fn(pass);
+                  return (
+                    <View key={label} style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 2 }}>
+                      <Text style={{ width: 20, color: ok ? '#1F7A40' : T.soft, fontWeight: '800', fontSize: 12.5 }}>{ok ? '✓' : '—'}</Text>
+                      <Text style={{ color: ok ? '#1F7A40' : T.soft, fontWeight: '600', fontSize: 12.5 }}>{label}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+              <TextInput style={s.field} placeholder="Referral or voucher code" placeholderTextColor={T.soft} autoCapitalize="none" value={refCode} onChangeText={setRefCode} />
+              <Pressable onPress={() => setPromos(v => !v)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                <View style={{
+                  width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: promos ? T.indigo : '#C5CBDD',
+                  backgroundColor: promos ? T.indigo : '#fff', alignItems: 'center', justifyContent: 'center', marginRight: 10,
+                }}>{promos ? <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>✓</Text> : null}</View>
+                <Text style={{ flex: 1, color: T.soft, fontWeight: '600', fontSize: 12.5 }}>Send me promotions, product updates and new destination alerts</Text>
+              </Pressable>
+            </>
+          )}
+
+          <Pressable style={[s.btnPrimary, { opacity: canGo ? 1 : .5 }]} onPress={go} disabled={busy || !canGo}>
+            {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.btnPrimaryTxt}>{mode === 'signup' ? 'Agree and sign up' : 'Log in'}</Text>}
+          </Pressable>
+          <Text style={{ color: T.soft, fontSize: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 14 }}>
+            By continuing you agree to the Terms and Privacy Policy (mobiyatri.in).
+          </Text>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );
