@@ -475,6 +475,56 @@ function firstPkg(c) {
 }
 
 /* ================= screens ================= */
+/* splash art: vehicles riding around the globe — slowly orbits (original) */
+function GlobeRideScene({ width = 230 }) {
+  const orbit = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(Animated.timing(orbit, { toValue: 1, duration: 26000, useNativeDriver: true })).start();
+  }, []);
+  return (
+    <Animated.View style={{
+      width, height: width,
+      transform: [{ rotate: orbit.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }],
+    }}>
+      <Svg width={width} height={width} viewBox="0 0 240 240">
+        {/* globe */}
+        <Circle cx="120" cy="120" r="76" fill="#E3B93C" />
+        <Path d="M70 84q34-22 74-14 22 4 30 18-16 12-44 10l-12 12-20-4-8 10-16-6z" fill="#F5F0E7" />
+        <Path d="M84 132q16-8 26 2l-4 26-14 8-10-16z" fill="#F5F0E7" />
+        <Path d="M150 158q14-6 24 2l-8 14-16-2z" fill="#F5F0E7" />
+        <Path d="M56 118q10-4 16 2l-6 12-12-2z" fill="#F5F0E7" />
+        {/* bike — top */}
+        <G transform="translate(120 32)">
+          <Circle cx="-24" cy="0" r="11" stroke="#16182A" strokeWidth="3" fill="none" />
+          <Circle cx="18" cy="2" r="11" stroke="#16182A" strokeWidth="3" fill="none" />
+          <Path d="M-24 0l12-16 20 0 10 18M-12 -16l8 16h-20M-14 -20l8 0M16 -18l8 4" stroke="#E85340" strokeWidth="3" fill="none" strokeLinejoin="round" />
+        </G>
+        {/* boat — left */}
+        <G transform="translate(42 104) rotate(-42)">
+          <Path d="M-28 4h56l-12 18h-34z" fill="#E85340" />
+          <Rect x="-20" y="-12" width="40" height="16" rx="6" fill="#D9CBF2" />
+          <Path d="M-14 -8h8M-2 -8h8M10 -8h6" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+        </G>
+        {/* car — right */}
+        <G transform="translate(204 120) rotate(90)">
+          <Path d="M-26 6q2-16 14-16h24q12 0 14 16z" fill="#3D7CC0" />
+          <Rect x="-30" y="4" width="60" height="14" rx="7" fill="#5C9CDF" />
+          <Rect x="-8" y="-6" width="16" height="9" rx="3" fill="#DDEEF8" />
+          <Circle cx="-16" cy="18" r="6" fill="#16182A" /><Circle cx="-16" cy="18" r="2" fill="#fff" />
+          <Circle cx="16" cy="18" r="6" fill="#16182A" /><Circle cx="16" cy="18" r="2" fill="#fff" />
+        </G>
+        {/* plane — bottom */}
+        <G transform="translate(118 212) rotate(180)">
+          <Path d="M-26 0q26-8 52 0-6 8-26 8t-26-8z" fill="#3D7CC0" transform="rotate(180 0 2)" />
+          <Path d="M-24 -2h48q6 2 0 6h-48q-6-4 0-6z" fill="#5C9CDF" />
+          <Path d="M-2 -2l-12-14h8l12 14zM2 4l-10 12h8l10-12z" fill="#3D7CC0" />
+          <Path d="M-18 0h6M-8 0h6M2 0h6M12 0h6" stroke="#DDEEF8" strokeWidth="2.6" strokeLinecap="round" />
+        </G>
+      </Svg>
+    </Animated.View>
+  );
+}
+
 function Splash() {
   const spin = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -484,11 +534,7 @@ function Splash() {
     <View style={[s.fill, { backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' }]}>
       <StatusBar barStyle="dark-content" />
       <ConfettiBG />
-      <Animated.View style={{
-        transform: [{ scale: spin.interpolate({ inputRange: [0, .5, 1], outputRange: [1, 1.06, 1] }) }],
-      }}>
-        <TravelScene width={240} />
-      </Animated.View>
+      <GlobeRideScene width={225} />
       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20 }}>
         <LogoMark size={38} />
         <Text style={{ fontSize: 36, fontWeight: '800', marginLeft: 8 }}>
