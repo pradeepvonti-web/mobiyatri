@@ -1248,37 +1248,432 @@ function EsimDetailModal({ esim, countries, onClose, onInstall }) {
   );
 }
 
-function Profile({ session, onAuth, onLogout, onChat }) {
-  const name = session ? ((session.user.user_metadata && session.user.user_metadata.full_name) || session.user.email) : 'Guest';
+/* shared chrome for profile sub-screens */
+function SubScreen({ title, onClose, banner, children }) {
   return (
-    <ScrollView style={s.fill} contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 110 }}>
-      <Text style={{ fontSize: 24, fontWeight: '800', color: T.ink }}>Profile</Text>
-      <View style={{ alignItems: 'center', marginVertical: 16 }}>
-        <View style={s.avatar}><Text style={{ color: '#fff', fontWeight: '800', fontSize: 24 }}>{(name[0] || 'G').toUpperCase()}</Text></View>
-        <Text style={{ fontWeight: '800', fontSize: 18, color: T.ink, marginTop: 8 }}>{name}</Text>
-        {!session ? <Pressable onPress={onAuth}><Text style={{ color: T.coral, fontWeight: '700', marginTop: 4 }}>Sign in / create account</Text></Pressable> : null}
+    <Modal visible animationType="slide" onRequestClose={onClose}>
+      <View style={s.fill}>
+        <View style={{ paddingTop: TOPPAD, paddingHorizontal: 16, paddingBottom: 10, flexDirection: 'row', alignItems: 'center' }}>
+          <Pressable onPress={onClose} style={{ padding: 6 }}><Text style={{ fontSize: 20, fontWeight: '800', color: T.ink }}>‹</Text></Pressable>
+          <Text style={{ fontWeight: '800', fontSize: 22, color: T.ink, marginLeft: 4 }}>{title}</Text>
+        </View>
+        {banner && (
+          <View style={{ backgroundColor: '#5FB98A', padding: 14 }}>
+            <Text style={{ color: '#0F3D26', fontWeight: '700', fontSize: 13.5 }}>{banner}</Text>
+          </View>
+        )}
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+          {children}
+        </ScrollView>
       </View>
-      {[['💬', 'Ask Yatri Sahayak (AI support)', onChat],
-        ['📱', 'Check device compatibility', () => Alert.alert('Compatibility check', 'Dial *#06# — if you see an EID number, your phone supports eSIM.\n\niPhone XS/XR+, Pixel 3+, Samsung S20+ and most flagships after 2020. Phone must be network-unlocked.')],
-        ['🛡', 'Travel insurance', () => Linking.openURL('https://www.policybazaar.com/travel-insurance/')],
-        ['💱', 'Currency · INR ₹', null],
-      ].map(([ic, lb, fn]) => (
-        <Pressable key={lb} style={s.mitem} onPress={fn || undefined}>
-          <Text style={{ fontSize: 18, width: 30 }}>{ic}</Text>
-          <Text style={{ fontWeight: '700', fontSize: 14.5, color: T.ink, flex: 1 }}>{lb}</Text>
-          <Text style={{ color: '#B2BFD4', fontSize: 18 }}>›</Text>
+    </Modal>
+  );
+}
+
+const pinput = { backgroundColor: '#fff', borderWidth: 1, borderColor: T.line, borderRadius: 14, padding: 14, marginBottom: 10 };
+
+/* Account information: edit name, change password, data request, delete account */
+function AccountModal({ session, onClose }) {
+  const meta = session?.user?.user_metadata || {};
+  const full = (meta.full_name || '').split(' ');
+  const [first, setFirst] = useState(full[0] || '');
+  const [last, setLast] = useState(full.slice(1).join(' '));
+  const [banner, setBanner] = useState(null);
+  const [pwOpen, setPwOpen] = useState(false);
+  const [delOpen, setDelOpen] = useState(false);
+  const flash = m => { setBanner(m); setTimeout(() => setBanner(null), 3400); };
+  const saveName = async () => {
+    const { error } = await sb.auth.updateUser({ data: { full_name: (first + ' ' + last).trim() } });
+    flash(error ? error.message : 'Your name has been updated.');
+  };
+  return (
+    <SubScreen title="Account information" onClose={onClose} banner={banner}>
+      <View style={pinput}><Text style={s.statK}>First name</Text>
+        <TextInput value={first} onChangeText={setFirst} style={{ color: T.ink, fontWeight: '700', fontSize: 15.5, padding: 0, marginTop: 2 }} /></View>
+      <View style={pinput}><Text style={s.statK}>Last name (Optional)</Text>
+        <TextInput value={last} onChangeText={setLast} style={{ color: T.ink, fontWeight: '700', fontSize: 15.5, padding: 0, marginTop: 2 }} /></View>
+      <View style={[pinput, { opacity: .65 }]}><Text style={s.statK}>Email  🔒</Text>
+        <Text style={{ color: T.ink, fontWeight: '700', fontSize: 15.5, marginTop: 2 }}>{session?.user?.email}</Text></View>
+      <Pressable style={s.btnOutlineLight} onPress={saveName}><Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>Save changes</Text></Pressable>
+      <Pressable style={[s.btnOutlineLight, { marginTop: 10 }]} onPress={() => setPwOpen(true)}>
+        <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>Change password</Text></Pressable>
+
+      <Text style={{ color: T.ink, fontWeight: '800', fontSize: 17, marginTop: 26 }}>Download your data</Text>
+      <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, lineHeight: 20, marginTop: 6 }}>
+        At your request we will prepare all the data we store about you (account, orders, eSIMs) and email it to you.
+      </Text>
+      <Pressable style={[s.btnOutlineLight, { marginTop: 12 }]}
+        onPress={() => Linking.openURL('mailto:hello@mobiyatri.in?subject=Data%20export%20request&body=Please%20send%20me%20all%20data%20stored%20for%20' + (session?.user?.email || ''))}>
+        <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>Request my data</Text></Pressable>
+
+      <Text style={{ color: T.ink, fontWeight: '800', fontSize: 17, marginTop: 26 }}>Delete your account</Text>
+      <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, lineHeight: 20, marginTop: 6 }}>
+        You can delete your account permanently — the process takes up to 7 days and can't be undone after completion. Logging back in cancels the request.
+      </Text>
+      <Pressable style={[s.btnOutlineLight, { marginTop: 12, borderColor: '#D94B3B' }]} onPress={() => setDelOpen(true)}>
+        <Text style={{ color: '#D94B3B', fontWeight: '800', fontSize: 15 }}>Delete account</Text></Pressable>
+
+      {pwOpen && <ChangePasswordSheet session={session} onClose={() => setPwOpen(false)}
+        onDone={() => { setPwOpen(false); flash('Password has been successfully updated.'); }} />}
+      {delOpen && <DeleteAccountSheet session={session} onClose={() => setDelOpen(false)}
+        onDone={() => { setDelOpen(false); flash('Your deletion request was recorded — you\'ll get an email when processed. Logging in again cancels it.'); }} />}
+    </SubScreen>
+  );
+}
+
+function ChangePasswordSheet({ session, onClose, onDone }) {
+  const [cur, setCur] = useState('');
+  const [nw, setNw] = useState('');
+  const [re, setRe] = useState('');
+  const [busy, setBusy] = useState(false);
+  const ok = PASS_RULES.every(([, fn]) => fn(nw)) && nw === re && cur;
+  const save = async () => {
+    setBusy(true);
+    try {
+      const { error: badCur } = await sb.auth.signInWithPassword({ email: session.user.email, password: cur });
+      if (badCur) throw new Error('Current password is incorrect');
+      const { error } = await sb.auth.updateUser({ password: nw });
+      if (error) throw error;
+      onDone();
+    } catch (e) { Alert.alert('Change password', e.message); }
+    setBusy(false);
+  };
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(20,22,40,.45)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: T.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={{ flex: 1, fontSize: 20, fontWeight: '800', color: T.ink }}>Change password</Text>
+            <Pressable onPress={onClose}><Text style={{ fontSize: 18, color: T.ink }}>✕</Text></Pressable>
+          </View>
+          <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, marginBottom: 12 }}>
+            Please enter your current password and choose a new password.
+          </Text>
+          <TextInput value={cur} onChangeText={setCur} secureTextEntry placeholder="Current password" placeholderTextColor={T.soft} style={s.field} />
+          <TextInput value={nw} onChangeText={setNw} secureTextEntry placeholder="New password" placeholderTextColor={T.soft} style={s.field} />
+          {nw.length > 0 && PASS_RULES.map(([label, fn]) => (
+            <Text key={label} style={{ color: fn(nw) ? '#1F7A40' : T.soft, fontWeight: '600', fontSize: 12.5, marginVertical: 1 }}>
+              {fn(nw) ? '✓' : '—'}  {label}
+            </Text>
+          ))}
+          <TextInput value={re} onChangeText={setRe} secureTextEntry placeholder="Retype new password" placeholderTextColor={T.soft} style={[s.field, { marginTop: 8 }]} />
+          <Pressable style={[s.btnPrimary, { marginTop: 12, opacity: ok && !busy ? 1 : .5 }]} disabled={!ok || busy} onPress={save}>
+            {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.btnPrimaryTxt}>Save password</Text>}
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const DEL_REASONS = ['Incompatible device', 'Digital footprint', 'No longer in need (not traveling soon)', 'Poor customer service', 'Bad user experience', 'Other'];
+
+function DeleteAccountSheet({ session, onClose, onDone }) {
+  const [step, setStep] = useState(1);
+  const [reason, setReason] = useState(null);
+  const [note, setNote] = useState('');
+  const submit = async () => {
+    await sb.auth.updateUser({ data: { delete_request: { reason, note, at: new Date().toISOString() } } }).catch(() => {});
+    Linking.openURL('mailto:hello@mobiyatri.in?subject=Account%20deletion%20request&body=' +
+      encodeURIComponent(`Please delete my account (${session?.user?.email}). Reason: ${reason}. ${note}`)).catch(() => {});
+    onDone();
+  };
+  return (
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(20,22,40,.45)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: T.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34, maxHeight: '88%' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <Text style={{ flex: 1, fontSize: 20, fontWeight: '800', color: T.ink }}>Delete your account</Text>
+            <Pressable onPress={onClose}><Text style={{ fontSize: 18, color: T.ink }}>✕</Text></Pressable>
+          </View>
+          {step === 1 ? (
+            <ScrollView>
+              <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, marginBottom: 12 }}>
+                You can delete your account permanently — the process is not immediate and can't be undone after completion.
+              </Text>
+              {DEL_REASONS.map(r => (
+                <Pressable key={r} onPress={() => setReason(r)} style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 7 }}>
+                  <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: reason === r ? 7 : 2, borderColor: reason === r ? T.coral : '#C5CBDD', marginRight: 12 }} />
+                  <Text style={{ color: T.ink, fontWeight: '600', fontSize: 14.5, flex: 1 }}>{r}</Text>
+                </Pressable>
+              ))}
+              <TextInput value={note} onChangeText={setNote} placeholder="Additional comments…" placeholderTextColor={T.soft}
+                multiline style={[s.field, { height: 110, textAlignVertical: 'top', marginTop: 10 }]} />
+              <Pressable style={[s.btnPrimary, { marginTop: 12, opacity: reason ? 1 : .5 }]} disabled={!reason} onPress={() => setStep(2)}>
+                <Text style={s.btnPrimaryTxt}>Continue</Text>
+              </Pressable>
+            </ScrollView>
+          ) : (
+            <ScrollView>
+              <Text style={{ color: T.ink, fontWeight: '600', fontSize: 14, lineHeight: 22 }}>
+                Before starting, please make sure you understand:{'\n\n'}
+                · Your deletion request takes up to 7 days to process{'\n'}
+                · Logging back in cancels the deletion{'\n'}
+                · Any YatriCash you earned will be lost{'\n'}
+                · Your eSIMs and remaining data will be disabled{'\n'}
+                · Personal data is removed except what the Privacy Policy requires us to keep{'\n'}
+                · Once processed, the account cannot be recovered
+              </Text>
+              <Pressable style={[s.btnPrimary, { marginTop: 18 }]} onPress={submit}>
+                <Text style={s.btnPrimaryTxt}>Delete account</Text>
+              </Pressable>
+            </ScrollView>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+/* Inbox with filter chips + empty states */
+const INBOX_TABS = ['All', 'Promotions', 'New features', 'Service updates'];
+function InboxModal({ onClose }) {
+  const [tab, setTab] = useState('All');
+  const [welcome, setWelcome] = useState(true);
+  const EMPTY = {
+    All: ['📬', "Looks like you're all caught up", 'When you receive messages you\'ll see them here — look out for promotions, new features and service updates.'],
+    Promotions: ['🛒', 'Promotions delivered right to you', 'When we have special offers for you, they\'ll appear right here.'],
+    'New features': ['✨', 'Fresh features land here first', 'We\'ll tell you when something new arrives in MobiYatri.'],
+    'Service updates': ['🛠️', 'No service updates', 'Network or service notices for your eSIMs will appear here.'],
+  };
+  const [ic, h, sub] = EMPTY[tab];
+  return (
+    <SubScreen title="Inbox" onClose={onClose}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+        {INBOX_TABS.map(x => (
+          <Pressable key={x} onPress={() => setTab(x)} style={{
+            borderWidth: 1.5, borderColor: tab === x ? T.coral : '#C9D4E8', backgroundColor: tab === x ? '#fff' : 'transparent',
+            borderRadius: 999, paddingVertical: 9, paddingHorizontal: 18, marginRight: 8,
+          }}><Text style={{ color: T.ink, fontWeight: '700', fontSize: 13.5 }}>{x}</Text></Pressable>
+        ))}
+      </ScrollView>
+      {welcome && tab === 'All' ? (
+        <View style={[s.card, { alignItems: 'center', padding: 26 }]}>
+          <Text style={{ fontSize: 44 }}>💌</Text>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 19, marginTop: 10 }}>Welcome to your inbox</Text>
+          <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, textAlign: 'center', marginTop: 6 }}>
+            You'll find info on promotions, new features and service updates.
+          </Text>
+          <Pressable style={[s.btnPrimary, { alignSelf: 'stretch', marginTop: 14 }]} onPress={() => setWelcome(false)}>
+            <Text style={s.btnPrimaryTxt}>OK, I got it</Text></Pressable>
+        </View>
+      ) : (
+        <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+          <Text style={{ fontSize: 44 }}>{ic}</Text>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 18, marginTop: 12, textAlign: 'center' }}>{h}</Text>
+          <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, textAlign: 'center', marginTop: 6, paddingHorizontal: 12 }}>{sub}</Text>
+        </View>
+      )}
+    </SubScreen>
+  );
+}
+
+/* Notification preferences: per-category cards + push/email sheet */
+const NOTIF_CATS = [
+  ['offers', 'Promotions and offers', "Don't miss out on sales and discounts"],
+  ['loyalty', 'Loyalty and rewards', 'Keep track of YatriCash and referrals'],
+  ['product', 'Product improvements', 'Stay up-to-date and give feedback'],
+  ['travel', 'Travel inspiration', 'Get tips to plan your next trip'],
+];
+function NotifyModal({ session, onClose }) {
+  const [prefs, setPrefs] = useState(() => (session?.user?.user_metadata?.notify_channels) || {});
+  const [sheet, setSheet] = useState(null);
+  const isOn = k => prefs[k]?.push !== false || prefs[k]?.email !== false;
+  const save = async next => {
+    setPrefs(next);
+    await sb.auth.updateUser({ data: { notify_channels: next } }).catch(() => {});
+  };
+  return (
+    <SubScreen title="Notification preferences" onClose={onClose}>
+      {NOTIF_CATS.map(([k, title, sub]) => (
+        <Pressable key={k} onPress={() => setSheet(k)} style={[s.card, { marginBottom: 12 }]}>
+          <View style={{ flexDirection: 'row' }}>
+            <Text style={{ flex: 1, color: T.ink, fontWeight: '800', fontSize: 16.5 }}>{title}</Text>
+            <Text style={{ color: T.soft }}>ⓘ</Text>
+          </View>
+          <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, marginTop: 4, borderBottomWidth: 1, borderColor: T.line, paddingBottom: 12 }}>{sub}</Text>
+          <View style={{ alignSelf: 'flex-start', backgroundColor: isOn(k) ? T.mint : T.bgDeep, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5, marginTop: 10 }}>
+            <Text style={{ color: isOn(k) ? T.mintInk : T.soft, fontWeight: '800', fontSize: 13 }}>● {isOn(k) ? 'On' : 'Off'}</Text>
+          </View>
         </Pressable>
       ))}
-      {session ? (
-        <Pressable style={s.mitem} onPress={onLogout}>
-          <Text style={{ fontSize: 18, width: 30 }}>🚪</Text>
-          <Text style={{ fontWeight: '700', fontSize: 14.5, color: T.ink, flex: 1 }}>Log out</Text>
-        </Pressable>
-      ) : null}
-      <Text style={{ textAlign: 'center', color: T.soft, fontSize: 11.5, fontWeight: '600', marginTop: 20 }}>
-        MobiYatri v1.0 · Made in India with ❤️ · शुभ यात्रा
+      {sheet && (
+        <Modal visible transparent animationType="slide" onRequestClose={() => setSheet(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(20,22,40,.45)', justifyContent: 'flex-end' }}>
+            <View style={{ backgroundColor: T.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 34 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={{ flex: 1, fontSize: 19, fontWeight: '800', color: T.ink }}>{NOTIF_CATS.find(c => c[0] === sheet)[1]}</Text>
+                <Pressable onPress={() => setSheet(null)}><Text style={{ fontSize: 18, color: T.ink }}>✕</Text></Pressable>
+              </View>
+              <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, marginBottom: 14 }}>{NOTIF_CATS.find(c => c[0] === sheet)[2]}.</Text>
+              {[['push', 'Push notifications'], ['email', 'Email']].map(([ch, label]) => {
+                const on = prefs[sheet]?.[ch] !== false;
+                return (
+                  <View key={ch} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 15, marginBottom: 8 }}>
+                    <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 15 }}>{label}</Text>
+                    <Pressable onPress={() => save({ ...prefs, [sheet]: { ...prefs[sheet], [ch]: !on } })} style={{
+                      width: 48, height: 28, borderRadius: 999, padding: 3, backgroundColor: on ? T.coral : '#CBD2E4',
+                      alignItems: on ? 'flex-end' : 'flex-start', justifyContent: 'center',
+                    }}><View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' }} /></Pressable>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        </Modal>
+      )}
+    </SubScreen>
+  );
+}
+
+/* Trusted devices + Loyalty + Orders */
+function DevicesModal({ session, onClose }) {
+  return (
+    <SubScreen title="Trusted devices" onClose={onClose}>
+      <Text style={{ color: T.soft, fontWeight: '500', fontSize: 13.5, lineHeight: 20, marginBottom: 14 }}>
+        The following devices are signed in to your account. If you don't recognise one, change your password to secure your account.
       </Text>
-    </ScrollView>
+      <View style={s.card}>
+        <View style={{ alignSelf: 'flex-start', backgroundColor: '#CBE6F2', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 10 }}>
+          <Text style={{ color: '#1B5A78', fontWeight: '800', fontSize: 12.5 }}>ⓘ Current device</Text>
+        </View>
+        <Text style={{ color: T.ink, fontWeight: '800', fontSize: 16 }}>📱 This {Platform.OS === 'ios' ? 'iPhone' : 'Android'} ({Platform.OS} {Platform.Version})</Text>
+        <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5, marginTop: 4 }}>
+          Signed in since {session ? new Date(session.user.last_sign_in_at || session.user.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+        </Text>
+      </View>
+    </SubScreen>
+  );
+}
+
+function LoyaltyModal({ ordersCount, onClose }) {
+  return (
+    <SubScreen title="Loyalty and YatriCash" onClose={onClose}>
+      <View style={[s.card, { backgroundColor: T.indigoDark }]}>
+        <Text style={{ color: '#A9ACC9', fontWeight: '700', fontSize: 12.5 }}>YATRICASH BALANCE · PREVIEW</Text>
+        <Text style={{ color: '#fff', fontWeight: '800', fontSize: 36, marginTop: 4 }}>₹0</Text>
+        <Text style={{ color: '#A9ACC9', fontWeight: '500', fontSize: 12.5, marginTop: 6 }}>
+          Earn ₹150 per referral and trip cashback — redeemable when payments launch.
+        </Text>
+      </View>
+      <View style={[s.card, { marginTop: 12 }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14.5 }}>Yatri tier</Text>
+          <Text style={{ color: T.soft, fontWeight: '700', fontSize: 13 }}>{ordersCount}/3 trips to Musafir</Text>
+        </View>
+        <View style={{ height: 9, backgroundColor: T.bgDeep, borderRadius: 5, marginTop: 10, overflow: 'hidden' }}>
+          <View style={{ height: '100%', width: Math.min(100, ordersCount / 3 * 100) + '%', backgroundColor: T.coral, borderRadius: 5 }} />
+        </View>
+        <Text style={{ color: T.soft, fontWeight: '500', fontSize: 12.5, marginTop: 10 }}>
+          Musafir unlocks priority support and launch-day cashback boosts. Program preview — details may change.
+        </Text>
+      </View>
+    </SubScreen>
+  );
+}
+
+function OrdersModal({ orders, onClose }) {
+  return (
+    <SubScreen title="Orders" onClose={onClose}>
+      {orders === null && <ActivityIndicator color={T.indigo} />}
+      {orders && orders.length === 0 && <Text style={{ color: T.soft, fontWeight: '600' }}>No orders yet.</Text>}
+      {(orders || []).map((o, i) => (
+        <View key={i} style={[s.card, { marginBottom: 10, flexDirection: 'row', alignItems: 'center' }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: T.ink, fontWeight: '700', fontSize: 14.5 }}>{o.country_name} <Text style={{ color: T.soft, fontSize: 12.5 }}>· {o.package_label}</Text></Text>
+            <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5, marginTop: 3 }}>{o.order_reference || ''} · {new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
+          </View>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>₹{o.price_inr}</Text>
+        </View>
+      ))}
+    </SubScreen>
+  );
+}
+
+function Profile({ session, onAuth, onLogout, onChat }) {
+  const name = session ? ((session.user.user_metadata && session.user.user_metadata.full_name) || session.user.email) : 'Guest';
+  const [modal, setModal] = useState(null);
+  const [orders, setOrders] = useState(null);
+  const [refCode, setRefCode] = useState(null);
+  useEffect(() => {
+    if (!session) return;
+    sb.from('orders').select('order_reference,country_name,package_label,price_inr,created_at')
+      .order('created_at', { ascending: false }).then(({ data }) => setOrders(data || []));
+    sb.from('profiles').select('referral_code').eq('id', session.user.id).single()
+      .then(({ data }) => setRefCode(data?.referral_code || null));
+  }, [session]);
+  const need = fn => (session ? fn : onAuth);
+  const MENU1 = [
+    ['Account information', need(() => setModal('account'))],
+    ['Inbox', need(() => setModal('inbox'))],
+    ['Loyalty and YatriCash', need(() => setModal('loyalty'))],
+    ['Notification preferences', need(() => setModal('notify'))],
+    ['Trusted devices', need(() => setModal('devices'))],
+    ['Saved cards', () => Alert.alert('Saved cards', 'Card saving arrives with the payments launch — MobiYatri never stores card numbers itself.')],
+    ['Refer and earn', need(() => refCode && Share.share({ message: `Use my code ${refCode} for a discount on your first MobiYatri travel eSIM — mobiyatri.in` }))],
+    ['Orders', need(() => setModal('orders'))],
+    ['MobiYatri for Business', () => Linking.openURL('mailto:hello@mobiyatri.in?subject=MobiYatri%20for%20Business')],
+  ];
+  const MENU2 = [
+    ['Languages', () => Alert.alert('Languages', 'English + हिन्दी support everywhere. Full app translation is on the roadmap.')],
+    ['Currency: Indian rupee (INR) ₹', null],
+    ['Help center', onChat],
+    ['More info', () => Linking.openURL('https://mobiyatri.in')],
+  ];
+  const Row = ({ label, fn, last }) => (
+    <Pressable onPress={fn || undefined} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: last ? 0 : 1, borderColor: T.line }}>
+      <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 15.5 }}>{label}</Text>
+      {fn ? <Text style={{ color: '#B2BFD4', fontSize: 18 }}>›</Text> : null}
+    </Pressable>
+  );
+  return (
+    <View style={s.fill}>
+      <ScrollView style={s.fill} contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ flex: 1, fontSize: 24, fontWeight: '800', color: T.ink }}>Profile</Text>
+          <View style={{ backgroundColor: T.mint, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 }}>
+            <Text style={{ color: T.mintInk, fontWeight: '800', fontSize: 13 }}>₹0.00</Text>
+          </View>
+        </View>
+        {session && (
+          <Pressable onPress={() => refCode && Share.share({ message: `Use my code ${refCode} for a discount on your first MobiYatri travel eSIM — mobiyatri.in` })}
+            style={[s.card, { marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+            <Text style={{ fontSize: 20 }}>🪙</Text>
+            <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 14 }}>Get ₹150 YatriCash for each referral</Text>
+            <Text style={{ color: T.ink, fontWeight: '800' }}>›</Text>
+          </Pressable>
+        )}
+        <View style={[s.card, { marginTop: 14, padding: 18 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+            <View style={s.avatar}><Text style={{ color: '#fff', fontWeight: '800', fontSize: 22 }}>{(name[0] || 'G').toUpperCase()}</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: '800', fontSize: 19, color: T.ink }}>{name}</Text>
+              {session
+                ? <Text style={{ color: T.soft, fontWeight: '600', fontSize: 13 }}>Yatri · member since {new Date(session.user.created_at).getFullYear()}</Text>
+                : <Pressable onPress={onAuth}><Text style={{ color: T.coral, fontWeight: '700', fontSize: 13.5 }}>Sign in / create account</Text></Pressable>}
+            </View>
+          </View>
+          {MENU1.map(([lb, fn], i) => <Row key={lb} label={lb} fn={fn} last={i === MENU1.length - 1} />)}
+        </View>
+        <View style={[s.card, { marginTop: 14, padding: 18, paddingVertical: 4 }]}>
+          {MENU2.map(([lb, fn], i) => <Row key={lb} label={lb} fn={fn} last={i === MENU2.length - 1} />)}
+        </View>
+        {session ? (
+          <Pressable style={[s.btnOutlineLight, { marginTop: 18 }]} onPress={onLogout}>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15.5 }}>Log out</Text>
+          </Pressable>
+        ) : null}
+        <Text style={{ textAlign: 'center', color: T.soft, fontSize: 11.5, fontWeight: '600', marginTop: 18 }}>
+          MobiYatri v1.2 · Made in India with ❤️ · शुभ यात्रा
+        </Text>
+      </ScrollView>
+      {modal === 'account' && <AccountModal session={session} onClose={() => setModal(null)} />}
+      {modal === 'inbox' && <InboxModal onClose={() => setModal(null)} />}
+      {modal === 'loyalty' && <LoyaltyModal ordersCount={(orders || []).length} onClose={() => setModal(null)} />}
+      {modal === 'notify' && <NotifyModal session={session} onClose={() => setModal(null)} />}
+      {modal === 'devices' && <DevicesModal session={session} onClose={() => setModal(null)} />}
+      {modal === 'orders' && <OrdersModal orders={orders} onClose={() => setModal(null)} />}
+    </View>
   );
 }
 
