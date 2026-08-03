@@ -663,10 +663,56 @@ function Checkout({ price, insQuote, insOn, setInsOn, onBack, onPay, paying }) {
   );
 }
 
+/* order-complete art: hand holding a phone, signal badge pulsing above (original) */
+function ConnectedScene({ width = 170 }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 900, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 900, useNativeDriver: true }),
+    ])).start();
+  }, []);
+  const h = Math.round(width * 1.05);
+  return (
+    <View style={{ width, height: h, alignSelf: 'center' }}>
+      <Svg width={width} height={h} viewBox="0 0 170 178">
+        {/* floating dots */}
+        <Circle cx="18" cy="70" r="4" fill="#5C9CDF" /><Circle cx="10" cy="104" r="6" fill="#23253A" />
+        <Circle cx="156" cy="86" r="4" fill="#E85340" /><Circle cx="160" cy="112" r="6" fill="#5C9CDF" />
+        <Circle cx="26" cy="48" r="2.5" fill="#23253A" />
+        {/* sleeve + hand */}
+        <Path d="M38 168q-10-28 10-40l14-8 44 6 8 42z" fill="#7B86E8" />
+        <Path d="M52 122q-8-32 6-44 8-6 12 2l2 14 40-4q10 2 8 12l-4 44-50 10z" fill="#F6E3D5" />
+        {/* phone */}
+        <Rect x="58" y="34" width="62" height="106" rx="14" fill="#fff" stroke="#33386E" strokeWidth="4" />
+        <Rect x="78" y="38" width="22" height="7" rx="3.5" fill="#7B86E8" />
+        {/* screen: network badge + coral bar */}
+        <Circle cx="89" cy="78" r="19" fill="none" stroke="#33386E" strokeWidth="1.8" />
+        <Path d="M78 86h22v-10l-11-8-11 8z" fill="#7B86E8" />
+        <Rect x="72" y="102" width="34" height="14" rx="3" fill="#FF6B57" />
+        <Path d="M80 109h18" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+      </Svg>
+      {/* pulsing signal badge */}
+      <Animated.View style={{
+        position: 'absolute', top: 0, left: width / 2 - 26,
+        transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.14] }) }],
+        opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [.85, 1] }),
+      }}>
+        <Svg width={52} height={52} viewBox="0 0 52 52">
+          <Circle cx="26" cy="26" r="24" fill="#FF6B57" />
+          <Path d="M14 24a17 17 0 0124 0" stroke="#FFD3CB" strokeWidth="4" fill="none" strokeLinecap="round" />
+          <Path d="M19 30a10 10 0 0114 0" stroke="#fff" strokeWidth="4" fill="none" strokeLinecap="round" />
+          <Circle cx="26" cy="37" r="3" fill="#fff" />
+        </Svg>
+      </Animated.View>
+    </View>
+  );
+}
+
 function OrderComplete({ order, policy, country, onDone, onInstall }) {
   return (
     <View style={[s.fill, { padding: 20, paddingTop: TOPPAD + 30 }]}>
-      <Text style={{ fontSize: 56, textAlign: 'center' }}>🎉</Text>
+      <ConnectedScene width={170} />
       <Text style={{ color: T.coral, fontWeight: '800', fontSize: 17, textAlign: 'center', marginTop: 8 }}>शुभ यात्रा!</Text>
       <Text style={{ fontWeight: '800', fontSize: 22, color: T.ink, textAlign: 'center', marginTop: 4 }}>Your {country} eSIM is ready</Text>
       {order && order.orderReference ? (
