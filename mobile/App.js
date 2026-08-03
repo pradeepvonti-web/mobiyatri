@@ -127,13 +127,13 @@ export default function App() {
         setMode(d.mode);
       }
     }).catch(() => {});
-    const t = setTimeout(() => setScreen(s => (s === 'splash' ? 'welcome' : s)), 2200);
+    const t = setTimeout(() => setScreen(s => (s === 'splash' ? 'welcome' : s)), 3300);
     return () => { clearTimeout(t); sub && sub.subscription && sub.subscription.unsubscribe(); };
   }, []);
 
   useEffect(() => {
     if (session && (screen === 'splash' || screen === 'welcome')) {
-      const t = setTimeout(() => setScreen('main'), screen === 'splash' ? 2200 : 0);
+      const t = setTimeout(() => setScreen('main'), screen === 'splash' ? 3300 : 0);
       return () => clearTimeout(t);
     }
   }, [session]);
