@@ -13,10 +13,7 @@ import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as WebBrowser from 'expo-web-browser';
 import * as ExpoLinking from 'expo-linking';
-import {
-  useFonts, Alexandria_400Regular, Alexandria_500Medium,
-  Alexandria_600SemiBold, Alexandria_700Bold, Alexandria_800ExtraBold,
-} from '@expo-google-fonts/alexandria';
+import { useFonts, Alexandria_700Bold, Alexandria_800ExtraBold } from '@expo-google-fonts/alexandria';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -288,15 +285,16 @@ const T = {
 };
 const TOPPAD = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 8 : 54;
 
-/* Alexandria everywhere — weight-mapped so existing fontWeight props keep working */
-const FONT_BY_WEIGHT = {
-  '400': 'Alexandria_400Regular', '500': 'Alexandria_500Medium', '600': 'Alexandria_600SemiBold',
-  '700': 'Alexandria_700Bold', '800': 'Alexandria_800ExtraBold', '900': 'Alexandria_800ExtraBold',
-  normal: 'Alexandria_400Regular', bold: 'Alexandria_700Bold',
-};
+/* Type pairing (same as the website): Alexandria for display headings, Satoshi for body/UI.
+   Headings = bold weights at 17px+; everything else gets Satoshi for readability. */
+const SATOSHI = { '400': 'Satoshi-Regular', '500': 'Satoshi-Medium', '600': 'Satoshi-Medium', '700': 'Satoshi-Bold', '800': 'Satoshi-Black', '900': 'Satoshi-Black', normal: 'Satoshi-Regular', bold: 'Satoshi-Bold' };
+const ALEXANDRIA = { '700': 'Alexandria_700Bold', '800': 'Alexandria_800ExtraBold', '900': 'Alexandria_800ExtraBold' };
 const brandFont = style => {
-  const w = String(StyleSheet.flatten(style)?.fontWeight ?? '400');
-  return { fontFamily: FONT_BY_WEIGHT[w] || 'Alexandria_400Regular' };
+  const st = StyleSheet.flatten(style) || {};
+  const w = String(st.fontWeight ?? '400');
+  const size = st.fontSize ?? 14;
+  const isDisplay = size >= 17 && (w === '700' || w === '800' || w === '900' || w === 'bold');
+  return { fontFamily: (isDisplay ? ALEXANDRIA[w === 'bold' ? '700' : w] : SATOSHI[w]) || 'Satoshi-Regular' };
 };
 const Text = ({ style, ...p }) => <RNText {...p} style={[brandFont(style), style]} />;
 const TextInput = ({ style, ...p }) => <RNTextInput {...p} style={[brandFont(style), style]} />;
@@ -331,8 +329,11 @@ async function shareOrCopy(message, okMsg) {
 /* ================= root ================= */
 export default function App() {
   const [fontsLoaded] = useFonts({
-    Alexandria_400Regular, Alexandria_500Medium, Alexandria_600SemiBold,
     Alexandria_700Bold, Alexandria_800ExtraBold,
+    'Satoshi-Regular': require('./assets/fonts/Satoshi-Regular.ttf'),
+    'Satoshi-Medium': require('./assets/fonts/Satoshi-Medium.ttf'),
+    'Satoshi-Bold': require('./assets/fonts/Satoshi-Bold.ttf'),
+    'Satoshi-Black': require('./assets/fonts/Satoshi-Black.ttf'),
   });
   const [screen, setScreen] = useState('welcome');
   const [showSplash, setShowSplash] = useState(true);
