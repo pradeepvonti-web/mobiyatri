@@ -406,6 +406,40 @@ async function askAssistant(messages, context) {
 }
 
 /* ---------------- delivery email (Resend) ---------------- */
+/* ---------------- WhatsApp delivery (Meta Cloud API) ----------------
+   Set WHATSAPP_TOKEN + WHATSAPP_PHONE_ID in .env to activate. Business-initiated
+   messages must use a template approved in Meta Business Manager; we use the
+   template named by WHATSAPP_TEMPLATE (default: esim_delivery) with 3 body
+   variables: {{1}} country, {{2}} package, {{3}} activation code. */
+const waConfigured = () => !!(process.env.WHATSAPP_TOKEN && process.env.WHATSAPP_PHONE_ID);
+async function sendWhatsAppDelivery(toPhone, info) {
+  if (!waConfigured() || !toPhone) return false;
+  const phone = String(toPhone).replace(/[^\d]/g, '');           // E.164 digits, e.g. 9198XXXXXXXX
+  const template = process.env.WHATSAPP_TEMPLATE || 'esim_delivery';
+  try {
+    const r = await fetch(`https://graph.facebook.com/v21.0/${process.env.WHATSAPP_PHONE_ID}/messages`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + process.env.WHATSAPP_TOKEN, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp', to: phone, type: 'template',
+        template: {
+          name: template, language: { code: 'en' },
+          components: [{
+            type: 'body',
+            parameters: [
+              { type: 'text', text: info.country || 'your destination' },
+              { type: 'text', text: info.package || '' },
+              { type: 'text', text: (info.esim && info.esim.lpa) ? info.esim.lpa : (info.orderReference || '') },
+            ],
+          }],
+        },
+      }),
+    });
+    if (!r.ok) { console.error('whatsapp send failed:', r.status, (await r.text()).slice(0, 200)); return false; }
+    return true;
+  } catch (e) { console.error('whatsapp error:', e.message); return false; }
+}
+
 async function sendDeliveryEmail(toEmail, info) {
   const key = process.env.RESEND_API_KEY || '';
   if (!key || !toEmail || !info.esim || !info.esim.lpa) return false;
@@ -652,11 +686,15 @@ const server = http.createServer(async (req, res) => {
             }),
           });
           result.persisted = true; result.orderId = ord.id; result.esimId = es.id;
-          result.emailSent = await sendDeliveryEmail(user.email, {
+          const delivery = {
             orderReference: result.orderReference,
             country: body.country, package: body.package, price: body.price,
             esim: result.esim,
-          });
+          };
+          result.emailSent = await sendDeliveryEmail(user.email, delivery);
+          // WhatsApp delivery when configured and the traveller opted in with a number
+          const waPhone = user.user_metadata && user.user_metadata.wa_optin && user.user_metadata.phone;
+          result.whatsappSent = await sendWhatsAppDelivery(waPhone, delivery);
         }
       }
       return send(200, result);

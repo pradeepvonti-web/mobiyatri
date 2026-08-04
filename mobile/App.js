@@ -1727,12 +1727,16 @@ function AccountModal({ session, onClose }) {
   const [first, setFirst] = useState(full[0] || '');
   const [last, setLast] = useState(full.slice(1).join(' '));
   const [banner, setBanner] = useState(null);
+  const [phone, setPhone] = useState(meta.phone || '');
+  const [waOptin, setWaOptin] = useState(!!meta.wa_optin);
   const [pwOpen, setPwOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
   const flash = m => { setBanner(m); setTimeout(() => setBanner(null), 3400); };
   const saveName = async () => {
-    const { error } = await sb.auth.updateUser({ data: { full_name: (first + ' ' + last).trim() } });
-    flash(error ? error.message : 'Your name has been updated.');
+    const digits = phone.replace(/[^0-9]/g, '');
+    if (digits && digits.length < 10) return flash('Enter a full mobile number with country code, e.g. 91 98765 43210.');
+    const { error } = await sb.auth.updateUser({ data: { full_name: (first + ' ' + last).trim(), phone: digits, wa_optin: waOptin && !!digits } });
+    flash(error ? error.message : 'Your details have been updated.');
   };
   return (
     <SubScreen title="Account information" onClose={onClose} banner={banner}>
@@ -1742,6 +1746,14 @@ function AccountModal({ session, onClose }) {
         <TextInput value={last} onChangeText={setLast} style={{ color: T.ink, fontWeight: '700', fontSize: 15.5, padding: 0, marginTop: 2 }} /></View>
       <View style={[pinput, { opacity: .65 }]}><Text style={s.statK}>Email  🔒</Text>
         <Text style={{ color: T.ink, fontWeight: '700', fontSize: 15.5, marginTop: 2 }}>{session?.user?.email}</Text></View>
+      <View style={pinput}><Text style={s.statK}>WhatsApp number (with country code)</Text>
+        <TextInput value={phone} onChangeText={setPhone} keyboardType='phone-pad' placeholder='91 98765 43210' placeholderTextColor={T.soft}
+          style={{ color: T.ink, fontWeight: '700', fontSize: 15.5, padding: 0, marginTop: 2 }} /></View>
+      <Pressable onPress={() => setWaOptin(v => !v)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: waOptin ? T.indigo : '#D8CDBB', backgroundColor: waOptin ? T.indigo : '#fff', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+          {waOptin ? <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>✓</Text> : null}</View>
+        <Text style={{ flex: 1, color: T.soft, fontWeight: '600', fontSize: 12.5 }}>Send my eSIM QR and trip updates on WhatsApp</Text>
+      </Pressable>
       <Pressable style={s.btnOutlineLight} onPress={saveName}><Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>Save changes</Text></Pressable>
       <Pressable style={[s.btnOutlineLight, { marginTop: 10 }]} onPress={() => setPwOpen(true)}>
         <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>Change password</Text></Pressable>
