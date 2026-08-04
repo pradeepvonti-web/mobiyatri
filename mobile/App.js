@@ -478,7 +478,11 @@ export default function App() {
       )}
       {screen === 'main' && tab === 'profile' && (
         <Profile session={session} countries={countries} onAuth={() => setAuthOpen(true)}
-          onLogout={async () => { await sb.auth.signOut(); }}
+          onLogout={async () => {
+            await sb.auth.signOut();
+            setMyEsims([]); setOrder(null); setSel(null); setPkg(null);
+            setTab('store'); setScreen('welcome');   // back to the initial screen
+          }}
           onChat={() => setChatOpen(true)} />
       )}
       {screen === 'country' && sel && (
