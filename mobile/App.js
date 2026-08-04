@@ -1401,6 +1401,27 @@ function EsimDetailModal({ esim, countries, onClose, onInstall }) {
   );
 }
 
+/* cross-platform confirm dialog (Alert.alert buttons are a no-op on web) */
+function ConfirmDialog({ open, title, body, cancel = 'No', confirm = 'Yes', onCancel, onConfirm }) {
+  if (!open) return null;
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onCancel}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(20,22,40,.45)', alignItems: 'center', justifyContent: 'center', padding: 26 }}>
+        <View style={{ backgroundColor: T.bg, borderRadius: 22, padding: 24, width: '100%', maxWidth: 380 }}>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 19, lineHeight: 26 }}>{title}</Text>
+          {body ? <Text style={{ color: T.soft, fontWeight: '500', fontSize: 14, marginTop: 8, lineHeight: 20 }}>{body}</Text> : null}
+          <Pressable style={[s.btnOutlineLight, { marginTop: 18 }]} onPress={onCancel}>
+            <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15.5 }}>{cancel}</Text>
+          </Pressable>
+          <Pressable style={[s.btnPrimary, { marginTop: 10 }]} onPress={onConfirm}>
+            <Text style={s.btnPrimaryTxt}>{confirm}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 /* shared chrome for profile sub-screens */
 function SubScreen({ title, onClose, banner, children }) {
   return (
@@ -1982,8 +2003,7 @@ function Profile({ session, countries = [], onAuth, onLogout, onChat }) {
           {MENU2.map(([lb, fn], i) => <Row key={lb} label={lb} fn={fn} last={i === MENU2.length - 1} />)}
         </View>
         {session ? (
-          <Pressable style={[s.btnOutlineLight, { marginTop: 18 }]}
-            onPress={() => Alert.alert('Log out', 'Are you sure you want to log out?', [{ text: 'No' }, { text: 'Yes', onPress: onLogout }])}>
+          <Pressable style={[s.btnOutlineLight, { marginTop: 18 }]} onPress={() => setModal('logout')}>
             <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15.5 }}>Log out</Text>
           </Pressable>
         ) : null}
@@ -1991,6 +2011,8 @@ function Profile({ session, countries = [], onAuth, onLogout, onChat }) {
           MobiYatri v1.2 · Made in India with ❤️ · शुभ यात्रा
         </Text>
       </ScrollView>
+      <ConfirmDialog open={modal === 'logout'} title="Are you sure you want to log out?"
+        onCancel={() => setModal(null)} onConfirm={() => { setModal(null); onLogout(); }} />
       {modal === 'account' && <AccountModal session={session} onClose={() => setModal(null)} />}
       {modal === 'inbox' && <InboxModal onClose={() => setModal(null)} />}
       {modal === 'loyalty' && <LoyaltyModal ordersCount={(orders || []).length} onClose={() => setModal(null)} />}
