@@ -496,9 +496,9 @@ export default function App() {
 
       {screen === 'main' && (
         <View style={s.tabbar}>
-          {[['store', 'Store', '🛍'], ['esims', 'My eSIMs', '▦'], ['profile', 'Profile', '👤']].map(([k, label, ic]) => (
+          {[['store', 'Store'], ['esims', 'My eSIMs'], ['profile', 'Profile']].map(([k, label]) => (
             <Pressable key={k} style={s.tabbtn} onPress={() => setTab(k)}>
-              <Text style={{ fontSize: 20, opacity: tab === k ? 1 : 0.45 }}>{ic}</Text>
+              <TabIcon name={k} active={tab === k} />
               <Text style={[s.tablbl, tab === k && { color: T.ink }]}>{label}</Text>
               {tab === k && <View style={s.tabdot} />}
             </Pressable>
@@ -991,6 +991,40 @@ function TravelToolkit({ name, iso }) {
         </Modal>
       )}
     </View>
+  );
+}
+
+/* tab-bar icons — line style, filled accent when active */
+function TabIcon({ name, active, size = 24 }) {
+  const stroke = active ? T.ink : '#A79C8C';
+  const fill = active ? T.coral : 'none';
+  const sw = 1.9;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      {name === 'store' && (
+        <>
+          <Path d="M4.5 8.5h15l-1.1 10a2.2 2.2 0 0 1-2.2 2H7.8a2.2 2.2 0 0 1-2.2-2z"
+            fill={active ? 'rgba(255,107,87,.18)' : 'none'} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
+          <Path d="M9 8.5V7a3 3 0 0 1 6 0v1.5" fill="none" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
+          {active && <Circle cx="12" cy="13.5" r="1.6" fill={T.coral} />}
+        </>
+      )}
+      {name === 'esims' && (
+        <>
+          <Path d="M6 3.5h7.6L18 7.9V20a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5 20V5a1.5 1.5 0 0 1 1-1.5z"
+            fill={active ? 'rgba(255,107,87,.18)' : 'none'} stroke={stroke} strokeWidth={sw} strokeLinejoin="round" />
+          <Rect x="8" y="11" width="7" height="6" rx="1.4" fill={active ? T.coral : 'none'} stroke={stroke} strokeWidth="1.6" />
+          <Path d="M8 14h7M11.5 11v6" stroke={active ? '#fff' : stroke} strokeWidth="1.3" />
+        </>
+      )}
+      {name === 'profile' && (
+        <>
+          <Circle cx="12" cy="8.6" r="3.8" fill={active ? 'rgba(255,107,87,.18)' : 'none'} stroke={stroke} strokeWidth={sw} />
+          <Path d="M4.8 20.2c0-3.8 3.2-6.2 7.2-6.2s7.2 2.4 7.2 6.2" fill={active ? 'rgba(255,107,87,.18)' : 'none'}
+            stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
+        </>
+      )}
+    </Svg>
   );
 }
 
