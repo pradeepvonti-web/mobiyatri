@@ -740,9 +740,17 @@ const server = http.createServer(async (req, res) => {
       const u = new URL(req.url, 'http://x');
       const ok = u.searchParams.get('razorpay_payment_id') && !u.searchParams.get('cancelled');
       res.writeHead(200, { 'Content-Type': 'text/html' });
-      return res.end(`<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;background:#F7F2E9;color:#16182A;text-align:center;padding-top:60px">
-        <h2>${ok ? 'Payment received ✓' : 'Payment cancelled'}</h2><p>You can return to MobiYatri.</p>
-        <script>window.mobiyatriResult=${JSON.stringify(Object.fromEntries(u.searchParams))}</script></body>`);
+      return res.end(`<!doctype html><meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <body style="font-family:system-ui,-apple-system,sans-serif;background:#F7F2E9;color:#16182A;text-align:center;padding:60px 24px">
+        <div style="font-size:44px">${ok ? '✅' : '↩️'}</div>
+        <h2 style="margin:12px 0 6px">${ok ? 'Payment received' : 'Payment cancelled'}</h2>
+        <p style="color:#6A6478;font-size:15px;line-height:1.6">${ok
+          ? 'Setting up your eSIM — returning to MobiYatri…'
+          : 'You have not been charged. Returning to MobiYatri…'}</p>
+        <script>window.mobiyatriResult=${JSON.stringify(Object.fromEntries(u.searchParams))};
+        try{ if(window.opener){ window.opener.postMessage(window.mobiyatriResult,'*'); window.close(); } }catch(e){}</script>
+        </body>`);
     }
     if (req.method === 'POST' && req.url === '/api/payments/webhook') {
       let raw = ''; for await (const ch of req) raw += ch;
