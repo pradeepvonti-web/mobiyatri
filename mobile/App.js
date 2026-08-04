@@ -486,14 +486,14 @@ export default function App() {
           onChat={() => setChatOpen(true)} />
       )}
       {screen === 'country' && sel && (
-        <Country c={sel} pkg={pkg} setPkg={setPkg} onBack={() => setScreen('main')} onBuy={buyNow} />
+        <Country c={sel} pkg={pkg} setPkg={setPkg} session={session} onAuth={() => setAuthOpen(true)} onBack={() => setScreen('main')} onBuy={buyNow} />
       )}
       {screen === 'checkout' && (
         <Checkout price={pkg ? pkg.price : 0} insQuote={insQuote} insOn={insOn} setInsOn={setInsOn}
           onBack={() => setScreen('country')} onPay={payNow} paying={paying} />
       )}
       {screen === 'ordercomplete' && (
-        <OrderComplete order={order} policy={policy} country={sel ? sel.n : ''} iso={sel ? sel.iso : null}
+        <OrderComplete order={order} policy={policy} country={sel ? sel.n : ''} iso={sel ? sel.iso : null} session={session}
           onDone={() => { setScreen('main'); setTab('esims'); }}
           onInstall={() => { setInstallEsim({ lpa_string: order && order.esim && order.esim.lpa, iccid: order && order.esim && order.esim.iccid }); setInstallOpen(true); }} />
       )}
@@ -864,7 +864,49 @@ const VISA_DB = {
 };
 const PLUG_DB = { th: 'A/B/C · 230V', ae: 'G · 230V', sg: 'G · 230V', id: 'C/F · 230V', my: 'G · 240V', vn: 'A/C · 220V', us: 'A/B · 120V', gb: 'G · 230V', jp: 'A/B · 100V', fr: 'C/E · 230V', de: 'C/F · 230V', au: 'I · 230V', lk: 'D/G · 230V', np: 'C/D · 230V', mv: 'D/G · 230V', kr: 'C/F · 220V' };
 
-function TravelToolkit({ name, iso }) {
+/* toolkit icons — tinted rounded tile + line mark, one visual family */
+const TOOL_TINT = {
+  money: ['#EAF3EC', '#2E7D5B'], visa: ['#EAF0FA', '#3E6FB0'], weather: ['#E9F2FA', '#4A8FC0'],
+  basics: ['#FBF0DE', '#B07A22'], plan: ['#F3EDFB', '#7A5AB8'], holidays: ['#FDEDE9', '#C4553F'],
+};
+function ToolIcon({ kind, size = 38 }) {
+  const [bg, fg] = TOOL_TINT[kind] || TOOL_TINT.money;
+  const p = { fill: 'none', stroke: fg, strokeWidth: 1.9, strokeLinecap: 'round', strokeLinejoin: 'round' };
+  return (
+    <View style={{ width: size, height: size, borderRadius: 11, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={size * 0.58} height={size * 0.58} viewBox="0 0 24 24">
+        {kind === 'money' && (<>
+          <Circle cx="12" cy="12" r="8.6" {...p} />
+          <Path d="M9.6 8.4h4.8M9.6 11h4.8M9.6 8.4c2.6 0 4 .9 4 2.6s-1.4 2.6-4 2.6l4.8 4.4" {...p} />
+        </>)}
+        {kind === 'visa' && (<>
+          <Rect x="4.6" y="3.4" width="14.8" height="17.2" rx="2.6" {...p} />
+          <Circle cx="12" cy="10" r="2.9" {...p} />
+          <Path d="M8.6 16.6h6.8" {...p} />
+        </>)}
+        {kind === 'weather' && (<>
+          <Circle cx="8.8" cy="8.6" r="3.1" {...p} />
+          <Path d="M9.4 18.2h8.2a3.4 3.4 0 0 0 .3-6.8 4.6 4.6 0 0 0-8.7-.9 3.9 3.9 0 0 0 .2 7.7z" {...p} />
+        </>)}
+        {kind === 'basics' && (<>
+          <Path d="M9 3.4v5.2M15 3.4v5.2" {...p} />
+          <Path d="M6.6 8.6h10.8v3.2a5.4 5.4 0 0 1-5.4 5.4 5.4 5.4 0 0 1-5.4-5.4z" {...p} />
+          <Path d="M12 17.2v3.4" {...p} />
+        </>)}
+        {kind === 'plan' && (<>
+          <Path d="M12 3.2l1.9 4.6 4.9.4-3.7 3.2 1.1 4.8L12 13.7 7.8 16.2l1.1-4.8L5.2 8.2l4.9-.4z" {...p} />
+        </>)}
+        {kind === 'holidays' && (<>
+          <Rect x="3.8" y="5.2" width="16.4" height="15" rx="2.6" {...p} />
+          <Path d="M3.8 9.6h16.4M8.4 3.4v3.6M15.6 3.4v3.6" {...p} />
+          <Circle cx="12" cy="14.4" r="1.5" fill={fg} stroke="none" />
+        </>)}
+      </Svg>
+    </View>
+  );
+}
+
+function TravelToolkit({ name, iso, session, onAuth }) {
   const [tool, setTool] = useState(null);
   const [data, setData] = useState(null);
   const place = /\(([^)]+)\)/.exec(name || '')?.[1] || (name || '').split(' (')[0];
@@ -893,21 +935,37 @@ function TravelToolkit({ name, iso }) {
     } catch (e) { setData({ err: true }); }
   };
   const CARDS = [
-    ['💱', 'Money', 'Live ₹ exchange rate', 'money'],
-    ['🛂', 'Visa info', 'Rules for Indian passports', 'visa'],
-    ['🌦️', 'Weather', '3-day forecast there', 'weather'],
-    ['🔌', 'Trip basics', 'Local time · plugs · emergency', 'basics'],
-    ['✨', 'Trip plan', 'AI itinerary by Yatri Sahayak', 'plan'],
-    ['📅', 'Holidays', 'Public holidays there', 'holidays'],
+    ['Money', 'Live ₹ exchange rate', 'money'],
+    ['Visa info', 'Rules for Indian passports', 'visa'],
+    ['Weather', '3-day forecast there', 'weather'],
+    ['Trip basics', 'Local time · plugs · emergency', 'basics'],
+    ['Trip plan', 'AI itinerary by Yatri Sahayak', 'plan'],
+    ['Holidays', 'Public holidays there', 'holidays'],
   ];
+  const locked = !session;
   return (
     <View style={{ marginTop: 18 }}>
-      <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15.5, marginBottom: 8 }}>Travel toolkit</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+        <Text style={{ flex: 1, color: T.ink, fontWeight: '800', fontSize: 15.5 }}>Travel toolkit</Text>
+        {locked && (
+          <View style={{ backgroundColor: T.mint, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+            <Text style={{ color: T.mintInk, fontWeight: '800', fontSize: 11 }}>FREE WITH ACCOUNT</Text>
+          </View>
+        )}
+      </View>
+      {locked && (
+        <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5, marginBottom: 8 }}>
+          Sign in to unlock live rates, visa rules, weather and an AI trip plan for {name}.
+        </Text>
+      )}
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {CARDS.map(([ic, t, d, k]) => (
-          <Pressable key={t} onPress={() => openTool(k)}
-            style={{ width: '48%', backgroundColor: '#fff', borderRadius: 14, padding: 13, borderWidth: 1, borderColor: T.line }}>
-            <Text style={{ fontSize: 20 }}>{ic}</Text>
+        {CARDS.map(([t, d, k]) => (
+          <Pressable key={t} onPress={() => (locked ? onAuth && onAuth() : openTool(k))}
+            style={{ width: '48%', backgroundColor: '#fff', borderRadius: 14, padding: 13, borderWidth: 1, borderColor: T.line, opacity: locked ? .72 : 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <ToolIcon kind={k} />
+              {locked && <Text style={{ marginLeft: 'auto', fontSize: 12, color: T.soft }}>🔒</Text>}
+            </View>
             <Text style={{ color: T.ink, fontWeight: '800', fontSize: 13.5, marginTop: 6 }}>{t}</Text>
             <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5, marginTop: 2 }} numberOfLines={2}>{d}</Text>
           </Pressable>
@@ -1094,7 +1152,7 @@ function RegionBadge({ kind = 'global', size = 40 }) {
 }
 const regionKind = item => (item.icon || (/(global)/i.test(item.n || '') ? 'global' : 'global'));
 
-function Country({ c, pkg, setPkg, onBack, onBuy }) {
+function Country({ c, pkg, setPkg, session, onAuth, onBack, onBuy }) {
   const groups = (c.packages && [...(c.packages.std || []), ...((c.packages.unl || []).map(g => ({ ...g, unl: true })))]) || [];
   return (
     <View style={s.fill}>
@@ -1124,7 +1182,7 @@ function Country({ c, pkg, setPkg, onBack, onBuy }) {
             })}
           </View>
         ))}
-        <TravelToolkit name={c.n} iso={c.iso} />
+        <TravelToolkit name={c.n} iso={c.iso} session={session} onAuth={onAuth} />
       </ScrollView>
       <View style={s.buybar}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -1231,7 +1289,7 @@ function ConnectedScene({ width = 170 }) {
   );
 }
 
-function OrderComplete({ order, policy, country, iso, onDone, onInstall }) {
+function OrderComplete({ order, policy, country, iso, session, onDone, onInstall }) {
   return (
     <View style={[s.fill, { padding: 20, paddingTop: TOPPAD + 30 }]}>
       <ConnectedScene width={170} />
@@ -1242,7 +1300,7 @@ function OrderComplete({ order, policy, country, iso, onDone, onInstall }) {
           Order {order.orderReference}{order.persisted ? ' · saved to your account' : ''}{order.emailSent ? ' · QR emailed' : ''}
         </Text>
       ) : null}
-      <TravelToolkit name={country} iso={iso} />
+      <TravelToolkit name={country} iso={iso} session={session} />
       {policy ? (
         <View style={[s.card, { marginTop: 18, flexDirection: 'row', gap: 12, alignItems: 'center' }]}>
           <Text style={{ fontSize: 24 }}>🛡</Text>
