@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as WebBrowser from 'expo-web-browser';
 import * as ExpoLinking from 'expo-linking';
@@ -833,7 +833,7 @@ function Store({ userName, query, setQuery, cat, setCat, list, mode, onCountry, 
           <Pressable style={s.crow} onPress={() => onCountry(item)}>
             {item.iso
               ? <Image source={{ uri: flagUrl(item.iso) }} style={s.flag} />
-              : <View style={[s.flag, { backgroundColor: '#C9DEF2', alignItems: 'center', justifyContent: 'center' }]}><Text>🌏</Text></View>}
+              : <RegionBadge kind={regionKind(item)} size={48} />}
             <Text style={{ flex: 1, fontWeight: '700', fontSize: 15, color: T.ink }}>{item.n}</Text>
             <Text style={{ fontWeight: '800', fontSize: 15, color: T.ink }}>₹{item.from} <Text style={{ color: T.soft, fontSize: 11 }}>INR</Text></Text>
           </Pressable>
@@ -994,6 +994,68 @@ function TravelToolkit({ name, iso }) {
   );
 }
 
+/* premium region badges — gradient tile + crafted mark per region (replaces emoji) */
+const REGION_ART = {
+  asia:   { c1: '#F4B63F', c2: '#E8934B' },
+  gulf:   { c1: '#E8B04B', c2: '#C98A2E' },
+  europe: { c1: '#7C9BE0', c2: '#5C74C4' },
+  africa: { c1: '#E2915C', c2: '#C9713F' },
+  na:     { c1: '#5FA8C9', c2: '#3E7FA6' },
+  americas: { c1: '#5FA8C9', c2: '#3E7FA6' },
+  global: { c1: '#4E9E8C', c2: '#2E7D6B' },
+};
+function RegionBadge({ kind = 'global', size = 40 }) {
+  const { c1, c2 } = REGION_ART[kind] || REGION_ART.global;
+  const r = size / 2;
+  return (
+    <Svg width={size} height={size * 0.74} viewBox="0 0 40 30">
+      <Defs>
+        <LinearGradient id={'rg' + kind} x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor={c1} /><Stop offset="1" stopColor={c2} />
+        </LinearGradient>
+      </Defs>
+      <Rect x="0" y="0" width="40" height="30" rx="7" fill={`url(#rg${kind})`} />
+      {kind === 'global' ? (
+        <>
+          <Circle cx="20" cy="15" r="9.5" fill="none" stroke="#fff" strokeWidth="1.6" opacity=".95" />
+          <Path d="M10.5 15h19M20 5.5c3 3 4.4 6 4.4 9.5S23 21.5 20 24.5c-3-3-4.4-6-4.4-9.5S17 8.5 20 5.5z" stroke="#fff" strokeWidth="1.4" fill="none" opacity=".9" />
+        </>
+      ) : kind === 'europe' ? (
+        <>
+          <Circle cx="20" cy="15" r="8.5" fill="none" stroke="#fff" strokeWidth="1.5" opacity=".9" />
+          {[0, 1, 2, 3, 4, 5, 6, 7].map(i => {
+            const a = (i / 8) * Math.PI * 2;
+            return <Circle key={i} cx={20 + Math.cos(a) * 5.6} cy={15 + Math.sin(a) * 5.6} r="1.15" fill="#fff" />;
+          })}
+        </>
+      ) : kind === 'gulf' ? (
+        <>
+          <Path d="M14 21V13l5-4 5 4v8z" fill="#fff" opacity=".95" />
+          <Path d="M19 9c0-2 0-2.6 0-3.4" stroke="#fff" strokeWidth="1.2" />
+          <Circle cx="19" cy="5" r="1.3" fill="#fff" />
+          <Path d="M11 21h17" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
+        </>
+      ) : kind === 'asia' ? (
+        <>
+          <Path d="M11 20c3-6 7-9 12-9M11 20h18" stroke="#fff" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+          <Circle cx="26" cy="10" r="3.4" fill="#fff" opacity=".95" />
+          <Path d="M14 20v-3.5M18 20v-5.5M22 20v-4" stroke="#fff" strokeWidth="1.3" strokeLinecap="round" opacity=".85" />
+        </>
+      ) : kind === 'africa' ? (
+        <>
+          <Path d="M17 7c4-1 7 1 6 5-1 3-4 4-4 7 0 2-1 4-3 4-3 0-4-4-4-8s2-7 5-8z" fill="#fff" opacity=".95" />
+          <Circle cx="26" cy="19" r="2.6" fill="#fff" opacity=".8" />
+        </>
+      ) : (
+        <>
+          <Path d="M20 6l2.6 5.6 6 .7-4.4 4.2 1.2 6-5.4-3-5.4 3 1.2-6L11.4 12.3l6-.7z" fill="#fff" opacity=".95" />
+        </>
+      )}
+    </Svg>
+  );
+}
+const regionKind = item => (item.icon || (/(global)/i.test(item.n || '') ? 'global' : 'global'));
+
 function Country({ c, pkg, setPkg, onBack, onBuy }) {
   const groups = (c.packages && [...(c.packages.std || []), ...((c.packages.unl || []).map(g => ({ ...g, unl: true })))]) || [];
   return (
@@ -1003,7 +1065,7 @@ function Country({ c, pkg, setPkg, onBack, onBuy }) {
         <Text style={{ fontSize: 26, fontWeight: '800', color: T.ink, marginVertical: 10 }}>{c.n}</Text>
         <View style={s.card}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            {c.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <Text style={{ fontSize: 22 }}>🌏</Text>}
+            {c.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <RegionBadge kind={regionKind(c||{})} size={46} />}
             <Text style={{ fontWeight: '800', fontSize: 15, color: T.ink }}>{c.n}</Text>
           </View>
           <Text style={{ color: T.soft, fontWeight: '600', marginTop: 8, fontSize: 13 }}>📶 {c.op || 'Local networks'} · 5G where available</Text>
@@ -1194,7 +1256,7 @@ function MyEsims({ esims, session, countries, onAuth, onInstall, onBrowse }) {
         return (
           <View key={(e.iccid || '') + i} style={[s.card, { marginBottom: 14, padding: 18 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderColor: T.line, paddingBottom: 12 }}>
-              {c && c.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <Text style={{ fontSize: 20 }}>🌏</Text>}
+              {c && c.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <RegionBadge kind={regionKind(c||{})} size={44} />}
               <Text style={{ fontWeight: '800', fontSize: 18, color: T.ink }}>{o.country_name || 'eSIM'}</Text>
             </View>
             <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14.5, marginTop: 12, marginBottom: 8 }}>Package</Text>
@@ -1328,7 +1390,7 @@ function EsimDetailModal({ esim, countries, onClose, onInstall }) {
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
           <View style={[s.card, { padding: 18 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderColor: T.line, paddingBottom: 12, marginBottom: 12 }}>
-              {c && c.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <Text style={{ fontSize: 22 }}>🌏</Text>}
+              {c && c.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <RegionBadge kind={regionKind(c||{})} size={46} />}
               <Text style={{ fontWeight: '800', fontSize: 19, color: T.ink }}>{o.country_name || 'eSIM'}</Text>
             </View>
             <Text style={{ color: T.ink, fontWeight: '700', fontSize: 13.5, marginBottom: 8 }}>📡 {(c && c.op) || 'Partner network'}  <Text style={{ color: T.soft, fontSize: 11.5 }}>5G</Text></Text>
@@ -1806,7 +1868,7 @@ function OrdersModal({ orders, countries, onClose }) {
         const c = countries.find(x => x.n === o.country_name);
         return (
           <Pressable key={i} onPress={() => setSel(o)} style={[s.card, { marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
-            {c?.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <Text style={{ fontSize: 20 }}>🌏</Text>}
+            {c?.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <RegionBadge kind={regionKind(c||{})} size={44} />}
             <View style={{ flex: 1 }}>
               <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>{o.country_name} / eSIM</Text>
               <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5, marginTop: 2 }}>{o.package_label}</Text>
@@ -1900,7 +1962,7 @@ function OrderDetailsModal({ order, countries, onClose }) {
       </View>
       <View style={[s.card, { marginBottom: 12 }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, borderBottomWidth: 1, borderColor: T.line, paddingBottom: 10, marginBottom: 10 }}>
-          {c?.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <Text style={{ fontSize: 20 }}>🌏</Text>}
+          {c?.iso ? <Image source={{ uri: flagUrl(c.iso) }} style={s.flag} /> : <RegionBadge kind={regionKind(c||{})} size={44} />}
           <Text style={{ color: T.ink, fontWeight: '800', fontSize: 17 }}>{order.country_name}</Text>
         </View>
         <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14.5, marginBottom: 8 }}>Package</Text>
