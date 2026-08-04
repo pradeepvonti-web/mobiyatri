@@ -510,7 +510,7 @@ async function sendDeliveryEmail(toEmail, info) {
       </div>
       <div style="padding:28px">
         <h1 style="font-size:20px;margin:0 0 6px">Your ${info.country || ''} eSIM is ready 🎉</h1>
-        <p style="font-size:14px;color:#7C7D90;margin:0 0 20px">${info.package || ''} · ₹${info.price || ''} — Shubh Yatra!</p>
+        <p style="font-size:14px;color:#7C7D90;margin:0 0 20px">${info.package || ''}${info.agency ? ` · arranged by <b style="color:#23253A">${info.agency}</b>` : ` · ₹${info.price || ''}`} — Shubh Yatra!</p>
         <div style="text-align:center;background:#F6F2EA;border-radius:12px;padding:20px;margin-bottom:20px">
           <img src="${qr}" width="220" height="220" alt="eSIM QR code" style="display:inline-block;background:#fff;border-radius:8px;padding:8px"/>
           <p style="font-size:12px;color:#7C7D90;margin:10px 0 0">Scan with your phone's camera, or install from the MobiYatri app</p>
@@ -568,6 +568,74 @@ async function sbFetch(p, opts = {}) {
 async function getUserFromToken(token) {
   const r = await fetch(SB_URL + '/auth/v1/user', { headers: { apikey: SB_SERVICE, Authorization: 'Bearer ' + token } });
   return r.ok ? r.json() : null;
+}
+
+/* ---------------- partner portal (travel agents & tour operators) ----------------
+   Agencies pre-fund a wallet, buy eSIMs in bulk for a departure at a commission
+   off retail, then assign each eSIM to a named passenger. Writes go through the
+   service role here; RLS keeps agencies out of each other's rows on direct reads. */
+const GST_RATE = 0.18;
+
+async function partnerFromReq(req) {
+  const token = (req.headers.authorization || '').replace(/^Bearer /, '');
+  if (!SB_URL || !SB_SERVICE || !token) return { user: null, partner: null };
+  const user = await getUserFromToken(token);
+  if (!user || !user.id) return { user: null, partner: null };
+  const rows = await sbFetch(`/rest/v1/partners?owner_id=eq.${user.id}&select=*`);
+  return { user, partner: rows[0] || null };
+}
+
+// agent price = retail minus the agency's commission, rounded to the rupee
+const agentPrice = (retailInr, pct) => Math.max(1, Math.round(Number(retailInr || 0) * (1 - Number(pct || 0) / 100)));
+
+async function walletMove(partner, deltaPaise, kind, note, ref) {
+  const next = Number(partner.wallet_paise || 0) + deltaPaise;
+  await sbFetch(`/rest/v1/partners?id=eq.${partner.id}`, {
+    method: 'PATCH', body: JSON.stringify({ wallet_paise: next }),
+  });
+  await sbFetch('/rest/v1/partner_ledger', {
+    method: 'POST',
+    body: JSON.stringify({ partner_id: partner.id, delta_paise: deltaPaise, kind, note: note || null, ref: ref || null }),
+  });
+  return next;
+}
+
+function invoiceHtml({ partner, batch }) {
+  const net = Math.round(batch.total_inr / (1 + GST_RATE));
+  const gst = batch.total_inr - net;
+  const inr = n => '₹' + Number(n).toLocaleString('en-IN');
+  const row = (l, v) => `<tr><td>${l}</td><td class="r">${v}</td></tr>`;
+  return `<!doctype html><meta charset="utf-8"><title>Invoice ${batch.id.slice(0, 8).toUpperCase()}</title>
+<style>
+ body{font:14px/1.6 -apple-system,Segoe UI,Roboto,sans-serif;color:#16182A;max-width:760px;margin:40px auto;padding:0 24px}
+ h1{font-size:22px;margin:0 0 4px} .muted{color:#6A6478}
+ .head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #16182A;padding-bottom:16px;margin-bottom:24px}
+ .brand{font-weight:800;font-size:20px;color:#FF6B57}
+ table{width:100%;border-collapse:collapse;margin:18px 0}
+ td,th{padding:10px 0;border-bottom:1px solid #E9E0D0;text-align:left} .r{text-align:right}
+ tfoot td{border:0;font-weight:700} .box{background:#F7F2E9;padding:16px;border-radius:10px}
+ @media print{body{margin:0}.noprint{display:none}}
+</style>
+<div class="head">
+  <div><div class="brand">MobiYatri</div><div class="muted">Travel eSIMs for Indian travellers</div></div>
+  <div class="r"><h1>Tax Invoice</h1><div class="muted">#${batch.id.slice(0, 8).toUpperCase()}<br>${new Date(batch.created_at).toLocaleDateString('en-IN')}</div></div>
+</div>
+<div class="box">
+  <strong>Billed to</strong><br>${partner.agency_name}${partner.city ? ', ' + partner.city : ''}
+  ${partner.gstin ? `<br>GSTIN: ${partner.gstin}` : ''}
+  ${partner.contact_phone ? `<br>${partner.contact_phone}` : ''}
+</div>
+<table>
+  <thead><tr><th>Description</th><th class="r">Amount</th></tr></thead>
+  <tbody>
+    ${row(`${batch.country_name} — ${batch.package_label}<br><span class="muted">${batch.qty} × ${inr(batch.unit_price_inr)}${batch.tour_name ? ' · ' + batch.tour_name : ''}</span>`, inr(batch.total_inr))}
+    ${row('Taxable value', inr(net))}
+    ${row(`GST @ ${GST_RATE * 100}%`, inr(gst))}
+  </tbody>
+  <tfoot><tr><td>Total</td><td class="r">${inr(batch.total_inr)}</td></tr></tfoot>
+</table>
+<p class="muted">Paid from prepaid wallet balance. This is a computer-generated invoice.</p>
+<p class="noprint"><button onclick="print()">Print / Save PDF</button></p>`;
 }
 
 /* ---------------- catalogue -> Supabase sync ---------------- */
@@ -761,6 +829,153 @@ const server = http.createServer(async (req, res) => {
       try { const ev = JSON.parse(raw); console.log('razorpay webhook:', ev.event); } catch {}
       return send(200, { received: true });
     }
+    /* -------- partner portal -------- */
+    if (req.url.startsWith('/api/partner/')) {
+      try {
+      const readBody = async () => { let b = ''; for await (const ch of req) b += ch; return JSON.parse(b || '{}'); };
+      const { user, partner } = await partnerFromReq(req);
+      if (!user) return send(401, { error: 'sign in required' });
+
+      if (req.method === 'GET' && req.url.startsWith('/api/partner/me')) {
+        if (!partner) return send(200, { partner: null, email: user.email });
+        const ledger = await sbFetch(`/rest/v1/partner_ledger?partner_id=eq.${partner.id}&select=*&order=created_at.desc&limit=20`);
+        return send(200, { partner, ledger, email: user.email, gstRate: GST_RATE });
+      }
+
+      if (req.method === 'POST' && req.url === '/api/partner/register') {
+        if (partner) return send(200, { partner });
+        const b = await readBody();
+        if (!b.agency_name) return send(400, { error: 'agency name required' });
+        const [row] = await sbFetch('/rest/v1/partners', {
+          method: 'POST',
+          body: JSON.stringify({
+            owner_id: user.id, agency_name: b.agency_name, contact_name: b.contact_name || null,
+            contact_phone: b.contact_phone || null, gstin: b.gstin || null, city: b.city || null,
+          }),
+        });
+        return send(200, { partner: row });
+      }
+
+      if (!partner) return send(403, { error: 'not a partner account' });
+
+      if (req.method === 'POST' && req.url === '/api/partner/topup') {
+        const b = await readBody();
+        const amt = Math.round(Number(b.amountInr || 0));
+        if (!(amt > 0)) return send(400, { error: 'amount required' });
+        if (rzpConfigured()) {
+          if (!b.razorpay_payment_id || !rzpVerifySignature(b.razorpay_order_id, b.razorpay_payment_id, b.razorpay_signature)) {
+            return send(402, { error: 'payment required' });
+          }
+        }
+        const bal = await walletMove(partner, amt * 100, 'topup', 'Wallet top-up', b.razorpay_payment_id || null);
+        return send(200, { wallet_paise: bal });
+      }
+
+      if (req.method === 'GET' && req.url.startsWith('/api/partner/batches')) {
+        const batches = await sbFetch(`/rest/v1/partner_batches?partner_id=eq.${partner.id}&select=*&order=created_at.desc`);
+        const assigns = await sbFetch(`/rest/v1/partner_assignments?partner_id=eq.${partner.id}&select=batch_id,passenger_name,delivered_at`);
+        return send(200, {
+          batches: batches.map(x => ({
+            ...x,
+            assigned: assigns.filter(a => a.batch_id === x.id && a.passenger_name).length,
+            delivered: assigns.filter(a => a.batch_id === x.id && a.delivered_at).length,
+          })),
+        });
+      }
+
+      if (req.method === 'GET' && req.url.startsWith('/api/partner/batch')) {
+        const id = new URL(req.url, 'http://x').searchParams.get('id');
+        if (!id) return send(400, { error: 'id required' });
+        const [batch] = await sbFetch(`/rest/v1/partner_batches?id=eq.${id}&partner_id=eq.${partner.id}&select=*`);
+        if (!batch) return send(404, { error: 'not found' });
+        const seats = await sbFetch(`/rest/v1/partner_assignments?batch_id=eq.${id}&select=*&order=created_at.asc`);
+        return send(200, { batch, seats });
+      }
+
+      // bulk provision: debit wallet, buy qty eSIMs, open one unassigned seat each
+      if (req.method === 'POST' && req.url === '/api/partner/batch') {
+        const b = await readBody();
+        const qty = Math.round(Number(b.qty || 0));
+        if (!b.bundle || !(qty > 0) || qty > 100) return send(400, { error: 'bundle and qty (1-100) required' });
+        const unit = agentPrice(b.retailInr, partner.commission_pct);
+        const total = unit * qty;
+        if (Number(partner.wallet_paise || 0) < total * 100) {
+          return send(402, { error: 'insufficient wallet balance', needInr: total, haveInr: Math.floor(Number(partner.wallet_paise || 0) / 100) });
+        }
+        const esims = [];
+        for (let i = 0; i < qty; i++) {
+          try { esims.push(await placeOrder(b.bundle)); }
+          catch (err) { break; }                                   // charge only for what we got
+        }
+        if (!esims.length) return send(502, { error: 'vendor could not provision any eSIM' });
+        const got = esims.length;
+        const charged = unit * got;
+        const [batch] = await sbFetch('/rest/v1/partner_batches', {
+          method: 'POST',
+          body: JSON.stringify({
+            partner_id: partner.id, tour_name: b.tour || null,
+            country_name: b.country || null, package_label: b.package || null,
+            bundle_id: b.bundle, qty: got, unit_price_inr: unit, total_inr: charged,
+          }),
+        });
+        await sbFetch('/rest/v1/partner_assignments', {
+          method: 'POST',
+          body: JSON.stringify(esims.map(r => ({
+            batch_id: batch.id, partner_id: partner.id,
+            iccid: r.esim.iccid, lpa_string: r.esim.lpa,
+            smdp_address: r.esim.smdpAddress, matching_id: r.esim.matchingId,
+          }))),
+        });
+        const bal = await walletMove(partner, -charged * 100, 'purchase',
+          `${got} × ${b.country || ''} ${b.package || ''}`.trim(), batch.id);
+        return send(200, { batch, provisioned: got, requested: qty, wallet_paise: bal });
+      }
+
+      // name a seat and deliver the QR to that passenger
+      if (req.method === 'POST' && req.url === '/api/partner/assign') {
+        const b = await readBody();
+        if (!b.id || !b.passenger_name) return send(400, { error: 'id and passenger_name required' });
+        const [seat] = await sbFetch(`/rest/v1/partner_assignments?id=eq.${b.id}&partner_id=eq.${partner.id}&select=*`);
+        if (!seat) return send(404, { error: 'not found' });
+        const [batch] = await sbFetch(`/rest/v1/partner_batches?id=eq.${seat.batch_id}&select=*`);
+        const delivery = {
+          orderReference: seat.id.slice(0, 8).toUpperCase(),
+          country: batch ? batch.country_name : '', package: batch ? batch.package_label : '',
+          price: batch ? batch.unit_price_inr : 0,
+          esim: { iccid: seat.iccid, lpa: seat.lpa_string, smdpAddress: seat.smdp_address, matchingId: seat.matching_id },
+          agency: partner.agency_name,
+        };
+        let emailed = false, whatsapped = false;
+        if (b.passenger_email) emailed = await sendDeliveryEmail(b.passenger_email, delivery);
+        if (b.passenger_phone) whatsapped = await sendWhatsAppDelivery(b.passenger_phone, delivery);
+        const [row] = await sbFetch(`/rest/v1/partner_assignments?id=eq.${b.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            passenger_name: b.passenger_name, passenger_phone: b.passenger_phone || null,
+            passenger_email: b.passenger_email || null,
+            delivered_at: (emailed || whatsapped) ? new Date().toISOString() : seat.delivered_at,
+          }),
+        });
+        return send(200, { seat: row, emailed, whatsapped });
+      }
+
+      if (req.method === 'GET' && req.url.startsWith('/api/partner/invoice')) {
+        const id = new URL(req.url, 'http://x').searchParams.get('batch');
+        const [batch] = await sbFetch(`/rest/v1/partner_batches?id=eq.${id}&partner_id=eq.${partner.id}&select=*`);
+        if (!batch) return send(404, { error: 'not found' });
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        return res.end(invoiceHtml({ partner, batch }));
+      }
+      return send(404, { error: 'not found' });
+      } catch (e) {
+        // partner tables not created yet -> tell the UI instead of a bare 500
+        if (/PGRST205|does not exist|schema cache/i.test(String(e.message || e))) {
+          return send(503, { error: 'partner tables missing', setupRequired: true, sql: 'supabase/partner_portal.sql' });
+        }
+        throw e;
+      }
+    }
+
     if (req.method === 'POST' && req.url === '/api/orders') {
       let b = ''; for await (const ch of req) b += ch;
       const body = JSON.parse(b || '{}');

@@ -323,8 +323,9 @@ export function BusinessBand() {
             </motion.div>
           ))}
         </Stagger>
-        <Reveal style={{ textAlign: 'center', marginTop: 34 }}>
-          <a className="pill pill-coral" href="mailto:hello@mobiyatri.in?subject=MobiYatri%20for%20Business">
+        <Reveal style={{ textAlign: 'center', marginTop: 34, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <a className="pill pill-coral" href="/partner">Open a partner account</a>
+          <a className="pill pill-white" href="mailto:hello@mobiyatri.in?subject=MobiYatri%20for%20Business">
             Talk to us — hello@mobiyatri.in
           </a>
         </Reveal>

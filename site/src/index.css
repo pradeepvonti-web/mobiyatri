@@ -33,6 +33,7 @@ h1,h2,h3{font-family:var(--head);letter-spacing:-0.01em}
 .pill-coral{background:var(--coral);color:#fff;box-shadow:0 8px 24px rgba(255,107,87,.32)}
 .pill-white{background:#fff;color:var(--ink);box-shadow:0 4px 16px rgba(22,24,42,.08)}
 .pill-outline{background:transparent;color:var(--ink);border:2px solid var(--ink)}
+.pill-dark{background:var(--ink);color:#fff}
 
 /* rounded page band */
 .band{border-radius:var(--band-radius);margin:28px auto;max-width:1280px;padding:72px 24px;position:relative;overflow:hidden}

@@ -13,6 +13,7 @@ import Country from './pages/Country.jsx';
 import Checkout from './pages/Checkout.jsx';
 import MyEsims from './pages/MyEsims.jsx';
 import Profile from './pages/Profile.jsx';
+import Partner from './pages/Partner.jsx';
 import { WhyBand, WhatBand, HowBand, InsuranceBand, ReferralBand, BusinessBand, SupportBand, AppBand } from './components/Bands.jsx';
 import { AuthProvider } from './lib/auth.jsx';
 import { ToastProvider } from './components/ui.jsx';
@@ -68,6 +69,7 @@ const CARD_MENUS = [
   {
     label: 'Business & insurance',
     links: [
+      ['Agent & tour operator portal', '/partner'],
       ['MobiYatri for Business', '/#business'],
       ['Travel insurance', '/#insurance'],
       ['Refer & earn ₹150', '/profile'],
@@ -159,6 +161,7 @@ export default function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/my-esims" element={<MyEsims />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/partner" element={<Partner />} />
           <Route path="*" element={<Landing />} />
         </Routes>
         <Footer />
