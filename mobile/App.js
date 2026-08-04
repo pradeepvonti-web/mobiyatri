@@ -538,7 +538,7 @@ export default function App() {
         <Country c={sel} pkg={pkg} setPkg={setPkg} session={session} onAuth={() => setAuthOpen(true)} onBack={() => setScreen('main')} onBuy={buyNow} />
       )}
       {screen === 'checkout' && (
-        <Checkout price={pkg ? pkg.price : 0} insQuote={insQuote} insOn={insOn} setInsOn={setInsOn}
+        <Checkout price={pkg ? pkg.price : 0} pkg={pkg} country={sel} insQuote={insQuote} insOn={insOn} setInsOn={setInsOn}
           onBack={() => setScreen('country')} onPay={payNow} paying={paying} />
       )}
       {screen === 'ordercomplete' && (
@@ -1280,39 +1280,80 @@ function Country({ c, pkg, setPkg, session, onAuth, onBack, onBuy }) {
   );
 }
 
-function Checkout({ price, insQuote, insOn, setInsOn, onBack, onPay, paying }) {
-  const [pay, setPay] = useState('gpay');
+function Checkout({ price, pkg, country, insQuote, insOn, setInsOn, onBack, onPay, paying }) {
   const total = price + (insOn && insQuote ? insQuote.premiumINR : 0);
-  const opts = [['gpay', 'Google Pay', 'UPI · instant'], ['phonepe', 'PhonePe', 'UPI · instant'], ['paytm', 'Paytm UPI', 'UPI · instant'], ['card', 'Card', 'Visa · Mastercard · RuPay']];
+  const Row = ({ k, v, bold }) => (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 7 }}>
+      <Text style={{ color: bold ? T.ink : T.soft, fontWeight: bold ? '800' : '600', fontSize: bold ? 15 : 13.5 }}>{k}</Text>
+      <Text style={{ color: T.ink, fontWeight: '800', fontSize: bold ? 16 : 13.5 }}>{v}</Text>
+    </View>
+  );
   return (
     <View style={s.fill}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingTop: TOPPAD, paddingBottom: 150 }}>
-        <Pressable onPress={onBack}><Text style={{ fontSize: 22, color: T.ink, fontWeight: '700' }}>‹ Back</Text></Pressable>
-        <Text style={{ fontSize: 20, fontWeight: '800', color: T.ink, textAlign: 'center', marginBottom: 14 }}>Secure checkout</Text>
-        {insQuote ? (
-          <Pressable style={[s.card, { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 }]} onPress={() => setInsOn(!insOn)}>
-            <Text style={{ fontSize: 24 }}>🛡</Text>
+      <View style={{ paddingTop: TOPPAD, paddingHorizontal: 16, paddingBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
+        <Pressable onPress={onBack} style={{ padding: 6 }}><Text style={{ fontSize: 20, color: T.ink, fontWeight: '800' }}>‹</Text></Pressable>
+        <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '800', color: T.ink, marginRight: 26 }}>Checkout</Text>
+      </View>
+      <ScrollView showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ padding: 16, paddingTop: 6, paddingBottom: 170 }}>
+
+        {/* what you're buying */}
+        <View style={s.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            {country && country.iso
+              ? <Image source={{ uri: flagUrl(country.iso) }} style={s.flag} />
+              : <RegionBadge kind={regionKind(country || {})} size={44} />}
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '800', color: T.ink, fontSize: 14 }}>Add trip protection  <Text style={{ fontSize: 10, color: T.soft }}>DEMO</Text></Text>
-              <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12 }}>₹{insQuote.premiumINR} · medical {insQuote.coverage.medical} + baggage + delays</Text>
+              <Text style={{ color: T.ink, fontWeight: '800', fontSize: 16.5 }}>{country ? country.n : 'eSIM'}</Text>
+              <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5, marginTop: 2 }}>
+                {pkg ? `${pkg.label} · ${pkg.days}` : ''} · instant delivery
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* trip protection */}
+        {insQuote ? (
+          <Pressable style={[s.card, { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }]} onPress={() => setInsOn(!insOn)}>
+            <ToolIcon kind="visa" size={38} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: '800', color: T.ink, fontSize: 14.5 }}>Add trip protection</Text>
+              <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12 }}>
+                ₹{insQuote.premiumINR} · medical {insQuote.coverage.medical} + baggage + delays
+              </Text>
             </View>
             <View style={[s.toggle, insOn && { backgroundColor: T.coral }]}>
               <View style={[s.knob, insOn && { alignSelf: 'flex-end' }]} />
             </View>
           </Pressable>
         ) : null}
-        <Text style={{ fontWeight: '800', color: T.ink, fontSize: 13, textAlign: 'center', marginVertical: 8 }}>— Pay with —</Text>
-        {opts.map(([k, name, sub]) => (
-          <Pressable key={k} style={[s.pkg, pay === k && { borderColor: T.coral }]} onPress={() => setPay(k)}>
-            <View>
-              <Text style={{ fontWeight: '700', color: T.ink, fontSize: 14.5 }}>{name}</Text>
-              <Text style={{ color: T.soft, fontSize: 11.5, fontWeight: '600' }}>{sub}</Text>
-            </View>
-            <View style={[s.radio, pay === k && { borderColor: T.coral }]}>{pay === k ? <View style={s.radioDot} /> : null}</View>
-          </Pressable>
-        ))}
-        <Text style={{ color: T.soft, fontSize: 11.5, fontWeight: '600', textAlign: 'center', marginTop: 10 }}>
-          Demo checkout — Razorpay UPI goes live at launch.
+
+        {/* price breakdown */}
+        <View style={[s.card, { marginTop: 12 }]}>
+          <Row k={`${country ? country.n : 'eSIM'} data pack`} v={`₹${price}`} />
+          {insOn && insQuote ? <Row k="Trip protection" v={`₹${insQuote.premiumINR}`} /> : null}
+          <View style={{ height: 1, backgroundColor: T.line, marginVertical: 6 }} />
+          <Row k="Total" v={`₹${total}`} bold />
+          <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5, marginTop: 4 }}>Inclusive of taxes · billed in Indian rupees</Text>
+        </View>
+
+        {/* how payment happens — informational, Razorpay's sheet picks the method */}
+        <View style={[s.card, { marginTop: 12 }]}>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14.5 }}>🔒 Secure payment</Text>
+          <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5, marginTop: 4, lineHeight: 18 }}>
+            Tap Pay and choose UPI, card or netbanking on the secure Razorpay screen. MobiYatri never sees your card details.
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+            {['UPI', 'RuPay', 'Visa', 'Mastercard', 'Netbanking'].map(m => (
+              <View key={m} style={{ backgroundColor: T.bg, borderWidth: 1, borderColor: T.line, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4 }}>
+                <Text style={{ color: T.soft, fontWeight: '700', fontSize: 11 }}>{m}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <Text style={{ color: T.soft, fontSize: 11.5, fontWeight: '600', marginTop: 12, lineHeight: 17 }}>
+          Your eSIM is issued only after payment is confirmed. Validity starts when it first connects at your destination.
         </Text>
       </ScrollView>
       <View style={s.buybar}>
@@ -1321,7 +1362,7 @@ function Checkout({ price, insQuote, insOn, setInsOn, onBack, onPay, paying }) {
           <Text style={{ fontWeight: '800', fontSize: 19, color: T.ink }}>₹{total}</Text>
         </View>
         <Pressable style={[s.btnPrimary, paying && { opacity: 0.6 }]} onPress={onPay} disabled={paying}>
-          {paying ? <ActivityIndicator color="#fff" /> : <Text style={s.btnPrimaryTxt}>Pay now</Text>}
+          {paying ? <ActivityIndicator color="#fff" /> : <Text style={s.btnPrimaryTxt}>Pay ₹{total} securely</Text>}
         </Pressable>
       </View>
     </View>
