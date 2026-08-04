@@ -461,12 +461,29 @@ export default function App() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ price: total, country: sel.n, package: payload.package }),
       }).then(r => r.json()).catch(() => ({ configured: false }));
-      if (cfg.configured && cfg.checkoutUrl) {
-        const returnUrl = API + '/api/payments/return';
-        const res = await WebBrowser.openAuthSessionAsync(API + cfg.checkoutUrl, returnUrl);
-        if (res.type !== 'success' || !res.url) { setPaying(false); return; }   // user cancelled
-        const q = Object.fromEntries(new URL(res.url).searchParams);
-        if (q.cancelled || !q.razorpay_payment_id) { setPaying(false); return; }
+      if (cfg.configured) {
+        let q = null;
+        if (Platform.OS === 'web') {
+          // in-page Razorpay modal — no new tab
+          q = await new Promise(resolve => {
+            const launch = () => new window.Razorpay({
+              key: cfg.keyId, order_id: cfg.orderId, amount: cfg.amount * 100, currency: 'INR',
+              name: 'MobiYatri', description: `${sel.n} eSIM · ${payload.package}`,
+              theme: { color: T.coral },
+              handler: r => resolve(r), modal: { ondismiss: () => resolve(null) },
+            }).open();
+            if (window.Razorpay) return launch();
+            const sc = document.createElement('script');
+            sc.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            sc.onload = launch; sc.onerror = () => resolve(null);
+            document.body.appendChild(sc);
+          });
+        } else {
+          // native: Razorpay opens in an in-app browser sheet over the app
+          const res = await WebBrowser.openAuthSessionAsync(API + cfg.checkoutUrl, API + '/api/payments/return');
+          if (res.type === 'success' && res.url) q = Object.fromEntries(new URL(res.url).searchParams);
+        }
+        if (!q || q.cancelled || !q.razorpay_payment_id) { setPaying(false); return; }   // cancelled — nothing charged
         payload.razorpay_order_id = q.razorpay_order_id;
         payload.razorpay_payment_id = q.razorpay_payment_id;
         payload.razorpay_signature = q.razorpay_signature;
