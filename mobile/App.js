@@ -469,7 +469,13 @@ export default function App() {
             const launch = () => new window.Razorpay({
               key: cfg.keyId, order_id: cfg.orderId, amount: cfg.amount * 100, currency: 'INR',
               name: 'MobiYatri', description: `${sel.n} eSIM · ${payload.package}`,
-              theme: { color: T.coral },
+              image: API + '/mobile/assets/icon.png',
+              prefill: {
+                name: (session && session.user.user_metadata && session.user.user_metadata.full_name) || '',
+                email: (session && session.user.email) || '',
+                contact: (session && session.user.user_metadata && session.user.user_metadata.phone) || '',
+              },
+              theme: { color: T.coral, backdrop_color: 'rgba(22,24,42,0.55)' },
               handler: r => resolve(r), modal: { ondismiss: () => resolve(null) },
             }).open();
             if (window.Razorpay) return launch();
@@ -480,7 +486,9 @@ export default function App() {
           });
         } else {
           // native: Razorpay opens in an in-app browser sheet over the app
-          const res = await WebBrowser.openAuthSessionAsync(API + cfg.checkoutUrl, API + '/api/payments/return');
+          const meta = (session && session.user.user_metadata) || {};
+          const extra = '&name=' + encodeURIComponent(meta.full_name || '') + '&email=' + encodeURIComponent((session && session.user.email) || '') + '&contact=' + encodeURIComponent(meta.phone || '');
+          const res = await WebBrowser.openAuthSessionAsync(API + cfg.checkoutUrl + extra, API + '/api/payments/return');
           if (res.type === 'success' && res.url) q = Object.fromEntries(new URL(res.url).searchParams);
         }
         if (!q || q.cancelled || !q.razorpay_payment_id) { setPaying(false); return; }   // cancelled — nothing charged

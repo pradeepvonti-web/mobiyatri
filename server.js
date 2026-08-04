@@ -452,7 +452,9 @@ align-items:center;justify-content:center;height:100vh;margin:0;text-align:cente
 <script>
 var opts={key:"${esc(q.key)}",order_id:"${esc(q.orderId)}",amount:${Number(q.amount) * 100},currency:"INR",
 name:"MobiYatri",description:${JSON.stringify(esc(q.country) + ' eSIM · ' + esc(q.pkg))},
-theme:{color:"#FF6B57"},
+image:location.origin+"/mobile/assets/icon.png",
+prefill:{name:${JSON.stringify(esc(q.name))},email:${JSON.stringify(esc(q.email))},contact:${JSON.stringify(esc(q.contact))}},
+theme:{color:"#FF6B57",backdrop_color:"rgba(22,24,42,0.55)"},
 handler:function(res){location.href="/api/payments/return?"+new URLSearchParams(res).toString();},
 modal:{ondismiss:function(){location.href="/api/payments/return?cancelled=1";}}};
 new Razorpay(opts).open();
@@ -733,6 +735,7 @@ const server = http.createServer(async (req, res) => {
       return res.end(rzpCheckoutPage({
         key: process.env.RAZORPAY_KEY_ID, orderId: u.searchParams.get('orderId'),
         amount: u.searchParams.get('amount'), country: u.searchParams.get('country'), pkg: u.searchParams.get('pkg'),
+        name: u.searchParams.get('name'), email: u.searchParams.get('email'), contact: u.searchParams.get('contact'),
       }));
     }
     if (req.method === 'GET' && req.url.startsWith('/api/payments/return')) {
