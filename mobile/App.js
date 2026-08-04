@@ -285,6 +285,23 @@ const FALLBACK = [
 
 const flagUrl = iso => `https://flagcdn.com/w160/${iso}.png`;
 
+/* Share on native; fall back to clipboard on web (navigator.share is absent on desktop browsers) */
+async function shareOrCopy(message, okMsg) {
+  try {
+    const res = await Share.share({ message });
+    if (Platform.OS !== 'web' || (res && res.action !== 'dismissedAction')) return true;
+  } catch (e) { /* fall through to clipboard */ }
+  try {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      await navigator.clipboard.writeText(message);
+      Alert.alert('Copied', okMsg || 'Copied to your clipboard.');
+      return true;
+    }
+  } catch (e) { /* fall through */ }
+  Alert.alert('Copy this', message);
+  return false;
+}
+
 /* ================= root ================= */
 export default function App() {
   const [screen, setScreen] = useState('welcome');
@@ -1260,7 +1277,7 @@ function EsimDetailModal({ esim, countries, onClose, onInstall }) {
   const c = countries.find(x => x.n === o.country_name);
   const parts = (o.package_label || '— · —').split(' · ');
   const copyIccid = () => {
-    Share.share({ message: esim.iccid || '' });
+    shareOrCopy(esim.iccid || '', 'ICCID copied.');
     flash('ⓘ ICCID copied', 'You can now paste the ICCID where it\'s needed.');
   };
   return (
@@ -1954,7 +1971,7 @@ function Profile({ session, countries = [], onAuth, onLogout, onChat }) {
     ['Notification preferences', need(() => setModal('notify'))],
     ['Trusted devices', need(() => setModal('devices'))],
     ['Saved cards', need(() => setModal('cards'))],
-    ['Refer and earn', need(() => refCode && Share.share({ message: `Use my code ${refCode} for a discount on your first MobiYatri travel eSIM — mobiyatri.in` }))],
+    ['Refer and earn', need(() => refCode && shareOrCopy(`Use my code ${refCode} for a discount on your first MobiYatri travel eSIM — mobiyatri.in`, 'Invite copied — paste it to your friends.'))],
     ['Orders', need(() => setModal('orders'))],
     ['MobiYatri for Business', () => Linking.openURL('mailto:hello@mobiyatri.in?subject=MobiYatri%20for%20Business')],
   ];
@@ -1980,7 +1997,7 @@ function Profile({ session, countries = [], onAuth, onLogout, onChat }) {
           </View>
         </View>
         {session && (
-          <Pressable onPress={() => refCode && Share.share({ message: `Use my code ${refCode} for a discount on your first MobiYatri travel eSIM — mobiyatri.in` })}
+          <Pressable onPress={() => refCode && shareOrCopy(`Use my code ${refCode} for a discount on your first MobiYatri travel eSIM — mobiyatri.in`, 'Invite copied — paste it to your friends.')}
             style={[s.card, { marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
             <Text style={{ fontSize: 20 }}>🪙</Text>
             <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 14 }}>Get ₹150 YatriCash for each referral</Text>
@@ -2271,11 +2288,11 @@ function InstallModal({ open, esim, onClose }) {
         ]);
         setDone(true); return;
       } catch (e) {
-        try { await Share.share({ message: lpa }); } catch (_) {}
+        try { await shareOrCopy(lpa, 'Activation code copied.'); } catch (_) {}
         setDone(true); return;
       }
     }
-    if (lpa) Share.share({ message: lpa });
+    if (lpa) shareOrCopy(lpa, 'Activation code copied.');
     setDone(true);
   };
   return (
@@ -2341,7 +2358,7 @@ function InstallModal({ open, esim, onClose }) {
             <Pressable style={[s.btnPrimary, { marginTop: 18 }]} onPress={start}>
               <Text style={s.btnPrimaryTxt}>Start installation</Text>
             </Pressable>
-            <Pressable style={[s.btnOutlineLight, { marginTop: 10 }]} onPress={() => lpa && Share.share({ message: lpa })}>
+            <Pressable style={[s.btnOutlineLight, { marginTop: 10 }]} onPress={() => lpa && shareOrCopy(lpa, 'Activation code copied.')}>
               <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>Share and more</Text>
             </Pressable>
           </>
