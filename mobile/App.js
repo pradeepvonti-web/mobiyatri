@@ -453,11 +453,29 @@ export default function App() {
     try {
       const headers = { 'Content-Type': 'application/json' };
       if (session) headers.Authorization = 'Bearer ' + session.access_token;
+      const total = pkg.price + (insOn && insQuote ? insQuote.premiumINR : 0);
+      const payload = { bundle: pkg.bundle, country: sel.n, package: pkg.label + ' · ' + pkg.days, price: pkg.price };
+
+      // Razorpay: pay first, provision after the signature is verified server-side
+      const cfg = await fetch(API + '/api/payments/create-order', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price: total, country: sel.n, package: payload.package }),
+      }).then(r => r.json()).catch(() => ({ configured: false }));
+      if (cfg.configured && cfg.checkoutUrl) {
+        const returnUrl = API + '/api/payments/return';
+        const res = await WebBrowser.openAuthSessionAsync(API + cfg.checkoutUrl, returnUrl);
+        if (res.type !== 'success' || !res.url) { setPaying(false); return; }   // user cancelled
+        const q = Object.fromEntries(new URL(res.url).searchParams);
+        if (q.cancelled || !q.razorpay_payment_id) { setPaying(false); return; }
+        payload.razorpay_order_id = q.razorpay_order_id;
+        payload.razorpay_payment_id = q.razorpay_payment_id;
+        payload.razorpay_signature = q.razorpay_signature;
+      }
+
       const o = await fetch(API + '/api/orders', {
-        method: 'POST', headers,
-        body: JSON.stringify({ bundle: pkg.bundle, country: sel.n, package: pkg.label + ' · ' + pkg.days, price: pkg.price }),
+        method: 'POST', headers, body: JSON.stringify(payload),
       }).then(r => r.json());
-      if (o.error) throw new Error(o.error);
+      if (o.error) throw new Error(o.error === 'payment required' ? 'Payment could not be verified — you have not been charged.' : o.error);
       setOrder(o); setPolicy(null); setScreen('ordercomplete');
       if (insOn && insQuote) {
         const p = await fetch(API + '/api/insurance/policy', {

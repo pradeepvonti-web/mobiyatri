@@ -64,11 +64,41 @@ export default function Checkout() {
     const t1 = setTimeout(() => setStep(1), 900);
     try {
       const headers = await authHeaders();
+      const payload = { bundle: order.bundle, country: order.country, package: order.pkg, price: order.price };
+
+      // Razorpay checkout — pay first, provision only after server-side verification
+      const cfg = await fetch('/api/payments/create-order', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price: total, country: order.country, package: order.pkg }),
+      }).then(r => r.json()).catch(() => ({ configured: false }));
+      if (cfg.configured) {
+        clearTimeout(t1);
+        const paid = await new Promise((resolve) => {
+          const launch = () => {
+            const rzp = new window.Razorpay({
+              key: cfg.keyId, order_id: cfg.orderId, amount: cfg.amount * 100, currency: 'INR',
+              name: 'MobiYatri', description: `${order.country} eSIM · ${order.pkg}`,
+              theme: { color: '#FF6B57' },
+              handler: r => resolve(r),
+              modal: { ondismiss: () => resolve(null) },
+            });
+            rzp.open();
+          };
+          if (window.Razorpay) return launch();
+          const sc = document.createElement('script');
+          sc.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          sc.onload = launch; sc.onerror = () => resolve(null);
+          document.body.appendChild(sc);
+        });
+        if (!paid) { setStep(-1); return; }                       // cancelled — nothing charged
+        Object.assign(payload, paid);                              // razorpay_order_id/payment_id/signature
+        setStep(1);
+      }
+
       const o = await fetch('/api/orders', {
-        method: 'POST', headers,
-        body: JSON.stringify({ bundle: order.bundle, country: order.country, package: order.pkg, price: order.price })
+        method: 'POST', headers, body: JSON.stringify(payload),
       }).then(r => r.json());
-      if (o.error) throw new Error(o.error);
+      if (o.error) throw new Error(o.error === 'payment required' ? 'Payment could not be verified — you have not been charged.' : o.error);
       setStep(2);
       if (ins.on && ins.quote) {
         fetch('/api/insurance/policy', {
