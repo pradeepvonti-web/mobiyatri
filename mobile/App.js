@@ -36,22 +36,22 @@ const ConfettiBG = () => {
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Svg width="100%" height="100%" viewBox="0 0 375 812" preserveAspectRatio="xMidYMid slice">
         {/* concentric outline rings, top-right */}
-        <Circle cx="342" cy="76" r="96" stroke="#C9D4E8" strokeWidth="1.5" fill="none" />
-        <Circle cx="342" cy="76" r="64" stroke="#C9D4E8" strokeWidth="1.5" fill="none" opacity=".7" />
+        <Circle cx="342" cy="76" r="96" stroke="#DCD1BF" strokeWidth="1.5" fill="none" />
+        <Circle cx="342" cy="76" r="64" stroke="#DCD1BF" strokeWidth="1.5" fill="none" opacity=".7" />
         <Circle cx="342" cy="76" r="34" stroke="#F3B9AE" strokeWidth="1.5" fill="none" opacity=".8" />
         {/* ring cluster, bottom-left */}
-        <Circle cx="18" cy="726" r="104" stroke="#C9D4E8" strokeWidth="1.5" fill="none" />
+        <Circle cx="18" cy="726" r="104" stroke="#DCD1BF" strokeWidth="1.5" fill="none" />
         <Circle cx="18" cy="726" r="70" stroke="#F3B9AE" strokeWidth="1.5" fill="none" opacity=".7" />
         {/* thin arcs */}
-        <Path d="M-20 330q90-30 96-140" stroke="#D5DEED" strokeWidth="1.6" fill="none" />
+        <Path d="M-20 330q90-30 96-140" stroke="#E4DACA" strokeWidth="1.6" fill="none" />
         <Path d="M395 470q-100 24-110 150" stroke="#E8D9C4" strokeWidth="1.6" fill="none" />
         {/* diagonal rounded dashes, mid-right and mid-left */}
-        <G stroke="#C9D4E8" strokeWidth="5" strokeLinecap="round" opacity=".65">
+        <G stroke="#DCD1BF" strokeWidth="5" strokeLinecap="round" opacity=".65">
           <Path d="M336 300l22-22M352 316l22-22" />
           <Path d="M10 470l20-20M-4 452l20-20" />
         </G>
         {/* fine dot grids */}
-        {dots.map(([x, y], i) => <Circle key={i} cx={x} cy={y} r="1.7" fill="#AEBBD4" opacity=".55" />)}
+        {dots.map(([x, y], i) => <Circle key={i} cx={x} cy={y} r="1.7" fill="#C4B8A4" opacity=".55" />)}
         {/* single coral accent ring */}
         <Circle cx="196" cy="788" r="8" stroke="#FF6B57" strokeWidth="2" fill="none" opacity=".55" />
       </Svg>
@@ -89,10 +89,10 @@ function SearchGlobeScene({ width = 250 }) {
     <View style={{ width, height: h }}>
       <Svg width={width} height={h} viewBox="0 0 250 210">
         <Circle cx="150" cy="95" r="82" fill="#E7EBF2" />
-        <Path d="M112 44q26-14 44 2-8 20-30 18-22-2-14-20z" fill="#C7D3E4" />
-        <Path d="M186 96q22-6 32 10-6 22-28 20-18-4-4-30z" fill="#C7D3E4" />
-        <Path d="M128 130q18-8 30 4-4 18-22 16-16-2-8-20z" fill="#C7D3E4" />
-        <Rect x="198" y="116" width="46" height="80" rx="12" fill="#DFE5EC" />
+        <Path d="M112 44q26-14 44 2-8 20-30 18-22-2-14-20z" fill="#DCD1BF" />
+        <Path d="M186 96q22-6 32 10-6 22-28 20-18-4-4-30z" fill="#DCD1BF" />
+        <Path d="M128 130q18-8 30 4-4 18-22 16-16-2-8-20z" fill="#DCD1BF" />
+        <Rect x="198" y="116" width="46" height="80" rx="12" fill="#E9E0D0" />
         <Rect x="214" y="100" width="14" height="18" rx="4" fill="#C9D2DC" />
         <Rect x="168" y="140" width="34" height="56" rx="10" fill="#E85340" />
         <Rect x="172" y="154" width="26" height="10" rx="4" fill="#F08A76" />
@@ -202,9 +202,9 @@ const TravelScene = ({ width = 230 }) => (
     <Path d="M45 60 L95 48 L95 150 L45 162 Z" fill="#E3E9F2" />
     <Path d="M95 48 L145 60 L145 162 L95 150 Z" fill="#EDF1F7" />
     <Path d="M145 60 L195 48 L195 150 L145 162 Z" fill="#E3E9F2" />
-    <Path d="M55 82q18-10 30 4-4 16-22 14-14-4-8-18z" fill="#C7D3E4" />
-    <Path d="M150 102q16-8 28 2-2 14-18 14-14-2-10-16z" fill="#C7D3E4" />
-    <Path d="M100 122q12-6 20 2-2 10-14 10-10-2-6-12z" fill="#C7D3E4" />
+    <Path d="M55 82q18-10 30 4-4 16-22 14-14-4-8-18z" fill="#DCD1BF" />
+    <Path d="M150 102q16-8 28 2-2 14-18 14-14-2-10-16z" fill="#DCD1BF" />
+    <Path d="M100 122q12-6 20 2-2 10-14 10-10-2-6-12z" fill="#DCD1BF" />
     {/* location pin */}
     <Path d="M120 72c-10 0-17 7-17 16 0 12 17 30 17 30s17-18 17-30c0-9-7-16-17-16z" fill="#5C9CDF" />
     <Circle cx="120" cy="88" r="6.5" fill="#fff" />
@@ -269,9 +269,18 @@ async function googleSignIn() {
 
 /* ---------------- theme ---------------- */
 const T = {
-  bg: '#F1F5FB', bgTop: '#E4EAF6', card: '#FFFFFF', ink: '#23253A', soft: '#76819B',
-  line: '#E5EBF5', coral: '#FF6B57', coralDeep: '#E85340', indigo: '#33386E',
-  indigoDark: '#20234A', night: '#151834', mint: '#D6EBDB', mintInk: '#1F7A40', tint: '#E7ECF8',
+  bg: '#F7F2E9',        // warm ivory base
+  bgTop: '#EFE7D9',     // deeper ivory band
+  bgDeep: '#EFE7D9',
+  card: '#FFFFFF',
+  ink: '#16182A',       // near-black
+  soft: '#6A6478',      // warm grey text
+  line: '#E9E0D0',      // warm hairline
+  coral: '#FF6B57', coralDeep: '#E85340',
+  indigo: '#33386E', indigoDark: '#20234A', night: '#151834',
+  mint: '#DCEDDC', mintInk: '#1F5B33',
+  tint: '#EDE4F2',
+  powder: '#A5C8D8', sage: '#8FC09B', peach: '#F3C08F', gold: '#F4B63F',
 };
 const TOPPAD = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 8 : 54;
 
@@ -507,10 +516,10 @@ function GlobeRideScene({ width = 230 }) {
       <Svg width={width} height={width} viewBox="0 0 240 240">
         {/* globe */}
         <Circle cx="120" cy="120" r="76" fill="#E3B93C" />
-        <Path d="M70 84q34-22 74-14 22 4 30 18-16 12-44 10l-12 12-20-4-8 10-16-6z" fill="#F5F0E7" />
-        <Path d="M84 132q16-8 26 2l-4 26-14 8-10-16z" fill="#F5F0E7" />
-        <Path d="M150 158q14-6 24 2l-8 14-16-2z" fill="#F5F0E7" />
-        <Path d="M56 118q10-4 16 2l-6 12-12-2z" fill="#F5F0E7" />
+        <Path d="M70 84q34-22 74-14 22 4 30 18-16 12-44 10l-12 12-20-4-8 10-16-6z" fill="#F7F2E9" />
+        <Path d="M84 132q16-8 26 2l-4 26-14 8-10-16z" fill="#F7F2E9" />
+        <Path d="M150 158q14-6 24 2l-8 14-16-2z" fill="#F7F2E9" />
+        <Path d="M56 118q10-4 16 2l-6 12-12-2z" fill="#F7F2E9" />
         {/* bike — top */}
         <G transform="translate(120 32)">
           <Circle cx="-24" cy="0" r="11" stroke="#16182A" strokeWidth="3" fill="none" />
@@ -661,7 +670,7 @@ function PlaneTossScene({ width = 150 }) {
     <View style={{ width, height: width }}>
       <Svg width={width} height={width} viewBox="0 0 150 150">
         <Rect x="18" y="34" width="114" height="96" rx="16" fill="#5C9CDF" />
-        <Path d="M45 130q4-44 30-44 26 0 30 44z" fill="#F5F0E7" />
+        <Path d="M45 130q4-44 30-44 26 0 30 44z" fill="#F7F2E9" />
         <Path d="M92 84q16-18 18-34" stroke="#B4744C" strokeWidth="9" strokeLinecap="round" fill="none" />
         <Circle cx="75" cy="66" r="19" fill="#2E1F14" />
         <Circle cx="75" cy="46" r="8" fill="#2E1F14" />
@@ -705,7 +714,7 @@ function PassportScene({ width = 158 }) {
         <Rect x="62" y="70" width="66" height="84" rx="10" fill="#5F55C9" stroke="#3A2A55" strokeWidth="3.5" />
         <Circle cx="95" cy="102" r="16" fill="none" stroke="#fff" strokeWidth="2.5" />
         <Path d="M79 102h32M95 86c5 5 5 27 0 32-5-5-5-27 0-32zM82 94q13 6 26 0M82 110q13-6 26 0" stroke="#fff" strokeWidth="2" fill="none" />
-        <Rect x="80" y="132" width="30" height="8" rx="3" fill="#F5F0E7" />
+        <Rect x="80" y="132" width="30" height="8" rx="3" fill="#F7F2E9" />
       </Svg>
     </Animated.View>
   );
@@ -738,7 +747,7 @@ function PromoCarousel() {
       }}>
         {PROMO_SLIDES.map((_, x) => (
           <Pressable key={x} onPress={() => setI(x)}
-            style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: x === i ? T.ink : '#D8DEE9' }} />
+            style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: x === i ? T.ink : '#E0D5C3' }} />
         ))}
       </View>
     </View>
@@ -1361,7 +1370,7 @@ function EsimDetailModal({ esim, countries, onClose, onInstall }) {
               <Text style={{ flex: 1, color: T.ink, fontWeight: '800', fontSize: 15.5 }}>Renewals</Text>
               <Pressable onPress={toggleRenew} style={{
                 width: 48, height: 28, borderRadius: 999, padding: 3,
-                backgroundColor: renewOn ? '#3E9B63' : '#CBD2E4',
+                backgroundColor: renewOn ? '#3E9B63' : '#DCD1BF',
                 alignItems: renewOn ? 'flex-end' : 'flex-start', justifyContent: 'center',
               }}>
                 <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' }} />
@@ -1584,7 +1593,7 @@ function DeleteAccountSheet({ session, onClose, onDone }) {
               </Text>
               {DEL_REASONS.map(r => (
                 <Pressable key={r} onPress={() => setReason(r)} style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 7 }}>
-                  <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: reason === r ? 7 : 2, borderColor: reason === r ? T.coral : '#C5CBDD', marginRight: 12 }} />
+                  <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: reason === r ? 7 : 2, borderColor: reason === r ? T.coral : '#D8CDBB', marginRight: 12 }} />
                   <Text style={{ color: T.ink, fontWeight: '600', fontSize: 14.5, flex: 1 }}>{r}</Text>
                 </Pressable>
               ))}
@@ -1633,7 +1642,7 @@ function InboxModal({ onClose }) {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
         {INBOX_TABS.map(x => (
           <Pressable key={x} onPress={() => setTab(x)} style={{
-            borderWidth: 1.5, borderColor: tab === x ? T.coral : '#C9D4E8', backgroundColor: tab === x ? '#fff' : 'transparent',
+            borderWidth: 1.5, borderColor: tab === x ? T.coral : '#DCD1BF', backgroundColor: tab === x ? '#fff' : 'transparent',
             borderRadius: 999, paddingVertical: 9, paddingHorizontal: 18, marginRight: 8,
           }}><Text style={{ color: T.ink, fontWeight: '700', fontSize: 13.5 }}>{x}</Text></Pressable>
         ))}
@@ -1703,7 +1712,7 @@ function NotifyModal({ session, onClose }) {
                   <View key={ch} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 14, padding: 15, marginBottom: 8 }}>
                     <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 15 }}>{label}</Text>
                     <Pressable onPress={() => save({ ...prefs, [sheet]: { ...prefs[sheet], [ch]: !on } })} style={{
-                      width: 48, height: 28, borderRadius: 999, padding: 3, backgroundColor: on ? T.coral : '#CBD2E4',
+                      width: 48, height: 28, borderRadius: 999, padding: 3, backgroundColor: on ? T.coral : '#DCD1BF',
                       alignItems: on ? 'flex-end' : 'flex-start', justifyContent: 'center',
                     }}><View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#fff' }} /></Pressable>
                   </View>
@@ -1782,7 +1791,7 @@ function OrdersModal({ orders, countries, onClose }) {
               <Text style={{ color: T.soft, fontWeight: '600', fontSize: 11.5, marginTop: 2 }}>{new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</Text>
               <Text style={{ color: T.ink, fontWeight: '800', fontSize: 14.5, marginTop: 4 }}>₹{o.price_inr}</Text>
             </View>
-            <Text style={{ color: '#B2BFD4', fontSize: 18 }}>›</Text>
+            <Text style={{ color: '#B8AE9C', fontSize: 18 }}>›</Text>
           </Pressable>
         );
       })}
@@ -1894,7 +1903,7 @@ function OrderDetailsModal({ order, countries, onClose }) {
           <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15.5 }}>Request refund</Text>
           <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12.5 }}>Get help for your order.</Text>
         </View>
-        <Text style={{ color: '#B2BFD4', fontSize: 18 }}>›</Text>
+        <Text style={{ color: '#B8AE9C', fontSize: 18 }}>›</Text>
       </Pressable>
 
       {refund && (
@@ -1984,7 +1993,7 @@ function Profile({ session, countries = [], onAuth, onLogout, onChat }) {
   const Row = ({ label, fn, last }) => (
     <Pressable onPress={fn || undefined} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: last ? 0 : 1, borderColor: T.line }}>
       <Text style={{ flex: 1, color: T.ink, fontWeight: '700', fontSize: 15.5 }}>{label}</Text>
-      {fn ? <Text style={{ color: '#B2BFD4', fontSize: 18 }}>›</Text> : null}
+      {fn ? <Text style={{ color: '#B8AE9C', fontSize: 18 }}>›</Text> : null}
     </Pressable>
   );
   return (
@@ -2141,7 +2150,7 @@ function AuthModal({ open, onClose, onDone }) {
                 {[0, 1, 2, 3, 4, 5].map(i => (
                   <View key={i} style={{
                     width: 44, height: 52, borderRadius: 10, borderWidth: 1.5, backgroundColor: '#fff',
-                    borderColor: code.length === i ? T.coral : '#D6DDEB', alignItems: 'center', justifyContent: 'center',
+                    borderColor: code.length === i ? T.coral : '#E0D5C3', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <Text style={{ fontSize: 20, fontWeight: '800', color: T.ink }}>{code[i] || ''}</Text>
                   </View>
@@ -2150,7 +2159,7 @@ function AuthModal({ open, onClose, onDone }) {
               <TextInput ref={codeRef} value={code} autoFocus keyboardType="number-pad"
                 onChangeText={t => setCode(t.replace(/\D/g, '').slice(0, 6))}
                 style={{ position: 'absolute', opacity: 0, height: 1, width: 1 }} />
-              <Pressable onPress={resendCode} style={{ borderWidth: 1.5, borderColor: '#D6DDEB', backgroundColor: '#fff', borderRadius: 999, paddingVertical: 10, paddingHorizontal: 26, marginTop: 18 }}>
+              <Pressable onPress={resendCode} style={{ borderWidth: 1.5, borderColor: '#E0D5C3', backgroundColor: '#fff', borderRadius: 999, paddingVertical: 10, paddingHorizontal: 26, marginTop: 18 }}>
                 <Text style={{ fontWeight: '800', fontSize: 13.5, color: T.ink }}>Resend code</Text>
               </Pressable>
               <Pressable style={[s.btnPrimary, { alignSelf: 'stretch', marginTop: 22, opacity: code.length === 6 ? 1 : .5 }]}
@@ -2198,7 +2207,7 @@ function AuthModal({ open, onClose, onDone }) {
                   finally { setBusy(false); }
                 }}
                 style={{
-                  flex: 1, borderWidth: 1.5, borderColor: '#D6DDEB', backgroundColor: '#fff',
+                  flex: 1, borderWidth: 1.5, borderColor: '#E0D5C3', backgroundColor: '#fff',
                   borderRadius: 999, paddingVertical: 13, alignItems: 'center',
                 }}>
                 {icon}
@@ -2236,7 +2245,7 @@ function AuthModal({ open, onClose, onDone }) {
               <TextInput style={s.field} placeholder="Referral or voucher code" placeholderTextColor={T.soft} autoCapitalize="none" value={refCode} onChangeText={setRefCode} />
               <Pressable onPress={() => setPromos(v => !v)} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
                 <View style={{
-                  width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: promos ? T.indigo : '#C5CBDD',
+                  width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: promos ? T.indigo : '#D8CDBB',
                   backgroundColor: promos ? T.indigo : '#fff', alignItems: 'center', justifyContent: 'center', marginRight: 10,
                 }}>{promos ? <Text style={{ color: '#fff', fontSize: 13, fontWeight: '800' }}>✓</Text> : null}</View>
                 <Text style={{ flex: 1, color: T.soft, fontWeight: '600', fontSize: 12.5 }}>Send me promotions, product updates and new destination alerts</Text>
@@ -2433,17 +2442,17 @@ function ChatModal({ open, session, onClose }) {
 /* ================= styles ================= */
 const s = StyleSheet.create({
   fill: { flex: 1, backgroundColor: T.bg },
-  card: { backgroundColor: T.card, borderRadius: 18, padding: 16, shadowColor: '#2A2C4A', shadowOpacity: 0.07, shadowRadius: 10, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
+  card: { backgroundColor: T.card, borderRadius: 20, padding: 16, shadowColor: '#5A4A32', shadowOpacity: 0.10, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 3 },
   search: { backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15, fontWeight: '600', color: T.ink, marginBottom: 14, elevation: 2, shadowColor: '#2A2C4A', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   promo: { backgroundColor: T.indigoDark, borderRadius: 20, padding: 18, marginBottom: 14 },
   svcgrid: { backgroundColor: '#fff', borderRadius: 20, flexDirection: 'row', paddingVertical: 14, marginBottom: 14, elevation: 2, shadowColor: '#2A2C4A', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
   svc: { flex: 1, alignItems: 'center', gap: 6 },
   svcIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: T.tint, alignItems: 'center', justifyContent: 'center' },
   svcLbl: { fontSize: 11.5, fontWeight: '700', color: T.ink },
-  crow: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 10, borderRadius: 16, padding: 15, elevation: 2, shadowColor: '#2A2C4A', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-  flag: { width: 48, height: 34, borderRadius: 7, backgroundColor: '#E8E7EF' },
+  crow: { flexDirection: 'row', alignItems: 'center', gap: 13, backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 10, borderRadius: 16, padding: 15, elevation: 2, shadowColor: '#2A2C4A', shadowOpacity: 0.07, shadowRadius: 8, shadowOffset: { width: 0, height: 2, shadowColor: '#5A4A32', shadowOpacity: 0.07, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 2 } },
+  flag: { width: 48, height: 34, borderRadius: 7, backgroundColor: '#EFE7D9' },
   fab: { position: 'absolute', right: 16, bottom: 100, width: 54, height: 54, borderRadius: 27, backgroundColor: T.coral, alignItems: 'center', justifyContent: 'center', elevation: 6, shadowColor: T.coral, shadowOpacity: 0.5, shadowRadius: 10, shadowOffset: { width: 0, height: 5 } },
-  tabbar: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.97)', borderTopWidth: 1, borderColor: T.line, paddingTop: 8, paddingBottom: 24 },
+  tabbar: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.98)', borderTopWidth: 1, borderColor: T.line, paddingTop: 8, paddingBottom: 24, shadowColor: '#5A4A32', shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -3 }, elevation: 8 },
   tabbtn: { flex: 1, alignItems: 'center', gap: 2 },
   tablbl: { fontSize: 11, fontWeight: '700', color: '#94A1B8' },
   tabdot: { width: 20, height: 3, borderRadius: 2, backgroundColor: T.coral, marginTop: 2 },
@@ -2454,7 +2463,7 @@ const s = StyleSheet.create({
   btnOutline: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#D8E1EF', borderRadius: 999, paddingVertical: 15, alignItems: 'center' },
   btnOutlineTxt: { color: T.ink, fontWeight: '700', fontSize: 16 },
   btnOutlineDark: { backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.26)', borderRadius: 999, paddingVertical: 15, alignItems: 'center' },
-  btnOutlineLight: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#D6DDEB', borderRadius: 999, paddingVertical: 15, alignItems: 'center' },
+  btnOutlineLight: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#E0D5C3', borderRadius: 999, paddingVertical: 15, alignItems: 'center' },
   field: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#D8E1EF', borderRadius: 14, paddingHorizontal: 16, paddingVertical: 13, fontSize: 15, color: T.ink, marginBottom: 12 },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: T.coralDeep, alignItems: 'center', justifyContent: 'center' },
   mitem: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 15, borderRadius: 14, marginBottom: 8 },
