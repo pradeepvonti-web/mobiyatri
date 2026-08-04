@@ -406,6 +406,59 @@ async function askAssistant(messages, context) {
 }
 
 /* ---------------- delivery email (Resend) ---------------- */
+/* ---------------- Razorpay payments ----------------
+   Set RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET in .env (test keys work immediately
+   after signup; live keys after KYC). Flow: create order -> hosted checkout ->
+   signature verified server-side -> only then is the eSIM provisioned. */
+const crypto = require('crypto');
+const rzpConfigured = () => !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
+const rzpAuth = () => 'Basic ' + Buffer.from(`${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`).toString('base64');
+
+async function rzpCreateOrder(amountInr, receipt, notes) {
+  const r = await fetch('https://api.razorpay.com/v1/orders', {
+    method: 'POST',
+    headers: { Authorization: rzpAuth(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount: Math.round(amountInr * 100), currency: 'INR', receipt, notes: notes || {} }),
+  });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error?.description || 'razorpay order failed');
+  return d;
+}
+function rzpVerifySignature(orderId, paymentId, signature) {
+  const expected = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+    .update(`${orderId}|${paymentId}`).digest('hex');
+  // timing-safe compare
+  const a = Buffer.from(expected), b = Buffer.from(String(signature || ''));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+function rzpVerifyWebhook(rawBody, signature) {
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!secret) return false;
+  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+  const a = Buffer.from(expected), b = Buffer.from(String(signature || ''));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+/* hosted checkout page — opened in an in-app browser by the apps */
+function rzpCheckoutPage(q) {
+  const esc = s => String(s || '').replace(/[<>"']/g, '');
+  return `<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MobiYatri payment</title>
+<style>body{font-family:system-ui,-apple-system,sans-serif;background:#F7F2E9;color:#16182A;display:flex;
+align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}
+.b{max-width:320px;padding:24px}h1{font-size:19px;margin:0 0 6px}p{color:#6A6478;font-size:14px}</style></head>
+<body><div class="b"><h1>Opening secure payment…</h1><p>${esc(q.country)} · ₹${esc(q.amount)}</p></div>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+var opts={key:"${esc(q.key)}",order_id:"${esc(q.orderId)}",amount:${Number(q.amount) * 100},currency:"INR",
+name:"MobiYatri",description:${JSON.stringify(esc(q.country) + ' eSIM · ' + esc(q.pkg))},
+theme:{color:"#FF6B57"},
+handler:function(res){location.href="/api/payments/return?"+new URLSearchParams(res).toString();},
+modal:{ondismiss:function(){location.href="/api/payments/return?cancelled=1";}}};
+new Razorpay(opts).open();
+</script></body></html>`;
+}
+
 /* ---------------- WhatsApp delivery (Meta Cloud API) ----------------
    Set WHATSAPP_TOKEN + WHATSAPP_PHONE_ID in .env to activate. Business-initiated
    messages must use a template approved in Meta Business Manager; we use the
@@ -658,12 +711,59 @@ const server = http.createServer(async (req, res) => {
       }
       return send(200, await askAssistant((body.messages || []).slice(-12), context));
     }
+    if (req.method === 'GET' && req.url.startsWith('/api/payments/config')) {
+      return send(200, { configured: rzpConfigured(), mode: (process.env.RAZORPAY_KEY_ID || '').startsWith('rzp_live') ? 'live' : 'test' });
+    }
+    if (req.method === 'POST' && req.url === '/api/payments/create-order') {
+      if (!rzpConfigured()) return send(200, { configured: false });
+      let b = ''; for await (const ch of req) b += ch;
+      const body = JSON.parse(b || '{}');
+      const amount = Number(body.price || 0);
+      if (!(amount > 0)) return send(400, { error: 'invalid amount' });
+      const order = await rzpCreateOrder(amount, 'MY' + Date.now(), { country: body.country || '', pkg: body.package || '' });
+      return send(200, {
+        configured: true, orderId: order.id, amount, keyId: process.env.RAZORPAY_KEY_ID,
+        checkoutUrl: `/api/payments/checkout?orderId=${order.id}&amount=${amount}` +
+          `&country=${encodeURIComponent(body.country || '')}&pkg=${encodeURIComponent(body.package || '')}`,
+      });
+    }
+    if (req.method === 'GET' && req.url.startsWith('/api/payments/checkout')) {
+      const u = new URL(req.url, 'http://x');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      return res.end(rzpCheckoutPage({
+        key: process.env.RAZORPAY_KEY_ID, orderId: u.searchParams.get('orderId'),
+        amount: u.searchParams.get('amount'), country: u.searchParams.get('country'), pkg: u.searchParams.get('pkg'),
+      }));
+    }
+    if (req.method === 'GET' && req.url.startsWith('/api/payments/return')) {
+      // Razorpay redirects here after checkout; the apps read the query string.
+      const u = new URL(req.url, 'http://x');
+      const ok = u.searchParams.get('razorpay_payment_id') && !u.searchParams.get('cancelled');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      return res.end(`<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;background:#F7F2E9;color:#16182A;text-align:center;padding-top:60px">
+        <h2>${ok ? 'Payment received ✓' : 'Payment cancelled'}</h2><p>You can return to MobiYatri.</p>
+        <script>window.mobiyatriResult=${JSON.stringify(Object.fromEntries(u.searchParams))}</script></body>`);
+    }
+    if (req.method === 'POST' && req.url === '/api/payments/webhook') {
+      let raw = ''; for await (const ch of req) raw += ch;
+      if (!rzpVerifyWebhook(raw, req.headers['x-razorpay-signature'])) return send(400, { error: 'bad signature' });
+      try { const ev = JSON.parse(raw); console.log('razorpay webhook:', ev.event); } catch {}
+      return send(200, { received: true });
+    }
     if (req.method === 'POST' && req.url === '/api/orders') {
       let b = ''; for await (const ch of req) b += ch;
       const body = JSON.parse(b || '{}');
+      // Payment gate: once Razorpay is configured, an order must carry a verified
+      // payment signature before any wholesale eSIM is bought.
+      if (rzpConfigured()) {
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
+        if (!razorpay_payment_id || !rzpVerifySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature)) {
+          return send(402, { error: 'payment required' });
+        }
+      }
       const result = await placeOrder(body.bundle);
+      if (body.razorpay_payment_id) result.paymentId = body.razorpay_payment_id;
       // Persist to Supabase when configured AND the request carries a valid user session.
-      // (Payment gate comes later — for now every order is treated as paid+provisioned.)
       const token = (req.headers.authorization || '').replace(/^Bearer /, '');
       if (SB_URL && SB_SERVICE && token) {
         const user = await getUserFromToken(token);
