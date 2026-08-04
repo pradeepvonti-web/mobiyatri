@@ -5,7 +5,7 @@ import 'react-native-url-polyfill/auto';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator, Alert, Animated, FlatList, Image, KeyboardAvoidingView, Linking, Modal,
-  Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, View,
+  Platform, Pressable, ScrollView, Share, StatusBar, StyleSheet, Text as RNText, TextInput as RNTextInput, View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
@@ -13,6 +13,10 @@ import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import * as WebBrowser from 'expo-web-browser';
 import * as ExpoLinking from 'expo-linking';
+import {
+  useFonts, Alexandria_400Regular, Alexandria_500Medium,
+  Alexandria_600SemiBold, Alexandria_700Bold, Alexandria_800ExtraBold,
+} from '@expo-google-fonts/alexandria';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -38,10 +42,10 @@ const ConfettiBG = () => {
         {/* concentric outline rings, top-right */}
         <Circle cx="342" cy="76" r="96" stroke="#DCD1BF" strokeWidth="1.5" fill="none" />
         <Circle cx="342" cy="76" r="64" stroke="#DCD1BF" strokeWidth="1.5" fill="none" opacity=".7" />
-        <Circle cx="342" cy="76" r="34" stroke="#F3B9AE" strokeWidth="1.5" fill="none" opacity=".8" />
+        <Circle cx="342" cy="76" r="34" stroke="#F0B5A6" strokeWidth="1.5" fill="none" opacity=".8" />
         {/* ring cluster, bottom-left */}
         <Circle cx="18" cy="726" r="104" stroke="#DCD1BF" strokeWidth="1.5" fill="none" />
-        <Circle cx="18" cy="726" r="70" stroke="#F3B9AE" strokeWidth="1.5" fill="none" opacity=".7" />
+        <Circle cx="18" cy="726" r="70" stroke="#F0B5A6" strokeWidth="1.5" fill="none" opacity=".7" />
         {/* thin arcs */}
         <Path d="M-20 330q90-30 96-140" stroke="#E4DACA" strokeWidth="1.6" fill="none" />
         <Path d="M395 470q-100 24-110 150" stroke="#E8D9C4" strokeWidth="1.6" fill="none" />
@@ -284,6 +288,19 @@ const T = {
 };
 const TOPPAD = Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 8 : 54;
 
+/* Alexandria everywhere — weight-mapped so existing fontWeight props keep working */
+const FONT_BY_WEIGHT = {
+  '400': 'Alexandria_400Regular', '500': 'Alexandria_500Medium', '600': 'Alexandria_600SemiBold',
+  '700': 'Alexandria_700Bold', '800': 'Alexandria_800ExtraBold', '900': 'Alexandria_800ExtraBold',
+  normal: 'Alexandria_400Regular', bold: 'Alexandria_700Bold',
+};
+const brandFont = style => {
+  const w = String(StyleSheet.flatten(style)?.fontWeight ?? '400');
+  return { fontFamily: FONT_BY_WEIGHT[w] || 'Alexandria_400Regular' };
+};
+const Text = ({ style, ...p }) => <RNText {...p} style={[brandFont(style), style]} />;
+const TextInput = ({ style, ...p }) => <RNTextInput {...p} style={[brandFont(style), style]} />;
+
 /* ---------------- fallback data (until catalogue loads) ---------------- */
 const FALLBACK = [
   { iso: 'th', n: 'Thailand', op: 'AIS', from: 329, pop: 1 },
@@ -313,6 +330,10 @@ async function shareOrCopy(message, okMsg) {
 
 /* ================= root ================= */
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Alexandria_400Regular, Alexandria_500Medium, Alexandria_600SemiBold,
+    Alexandria_700Bold, Alexandria_800ExtraBold,
+  });
   const [screen, setScreen] = useState('welcome');
   const [showSplash, setShowSplash] = useState(true);
   const splashFade = useRef(new Animated.Value(1)).current;
