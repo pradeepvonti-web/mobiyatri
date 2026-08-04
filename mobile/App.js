@@ -14,6 +14,37 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import * as WebBrowser from 'expo-web-browser';
 import * as ExpoLinking from 'expo-linking';
 import { useFonts, Alexandria_700Bold, Alexandria_800ExtraBold } from '@expo-google-fonts/alexandria';
+import * as Notifications from 'expo-notifications';
+
+/* Trip reminders — scheduled locally on the device, no push service needed.
+   Fires: install nudge the evening before, roaming nudge on travel morning. */
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({ shouldShowAlert: true, shouldPlaySound: false, shouldSetBadge: false }),
+});
+async function scheduleTripReminders(country, daysFromNow) {
+  if (Platform.OS === 'web') return { ok: false, reason: 'web' };
+  const perm = await Notifications.getPermissionsAsync();
+  let granted = perm.granted;
+  if (!granted) granted = (await Notifications.requestPermissionsAsync()).granted;
+  if (!granted) return { ok: false, reason: 'denied' };
+  const now = Date.now();
+  const departure = new Date(now + daysFromNow * 86400000);
+  const at = (d, h, m) => { const x = new Date(d); x.setHours(h, m, 0, 0); return x; };
+  const jobs = [
+    { when: at(new Date(departure.getTime() - 86400000), 19, 0), title: 'Install your eSIM tonight ✈️',
+      body: `You fly to ${country} tomorrow. Install now on WiFi — it only activates when you land.` },
+    { when: at(departure, 7, 30), title: `Landing in ${country} today 🌏`,
+      body: 'On arrival: switch data roaming ON for your MobiYatri eSIM, and OFF for your Indian SIM.' },
+  ].filter(j => j.when.getTime() > now + 60000);
+  await Notifications.cancelAllScheduledNotificationsAsync();
+  for (const j of jobs) {
+    await Notifications.scheduleNotificationAsync({
+      content: { title: j.title, body: j.body },
+      trigger: { type: 'date', date: j.when },
+    });
+  }
+  return { ok: true, count: jobs.length, first: jobs[0]?.when };
+}
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -864,6 +895,42 @@ const VISA_DB = {
 };
 const PLUG_DB = { th: 'A/B/C · 230V', ae: 'G · 230V', sg: 'G · 230V', id: 'C/F · 230V', my: 'G · 240V', vn: 'A/C · 220V', us: 'A/B · 120V', gb: 'G · 230V', jp: 'A/B · 100V', fr: 'C/E · 230V', de: 'C/F · 230V', au: 'I · 230V', lk: 'D/G · 230V', np: 'C/D · 230V', mv: 'D/G · 230V', kr: 'C/F · 220V' };
 
+/* trip reminder card — schedules real device notifications for the trip */
+function TripReminderCard({ country }) {
+  const [set, setSet] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const CHOICES = [['Today', 0], ['Tomorrow', 1], ['In 3 days', 3], ['In a week', 7]];
+  const pick = async (label, days) => {
+    setBusy(true);
+    const r = await scheduleTripReminders(country || 'your destination', days);
+    setBusy(false);
+    if (r.ok && r.count) setSet(`Reminders set — we'll nudge you to install before you fly and to switch on roaming when you land.`);
+    else if (r.reason === 'web') setSet('Reminders work on the phone app — open MobiYatri on your phone to set them.');
+    else if (r.reason === 'denied') setSet('Notifications are off for MobiYatri. Enable them in your phone settings to get trip reminders.');
+    else setSet('That date has passed — pick a later one.');
+  };
+  return (
+    <View style={[s.card, { marginTop: 16 }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <ToolIcon kind="holidays" size={34} />
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: T.ink, fontWeight: '800', fontSize: 15 }}>Remind me before I fly</Text>
+          <Text style={{ color: T.soft, fontWeight: '600', fontSize: 12 }}>When are you travelling?</Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+        {CHOICES.map(([label, days]) => (
+          <Pressable key={label} disabled={busy} onPress={() => pick(label, days)}
+            style={{ borderWidth: 1.5, borderColor: T.line, backgroundColor: T.bg, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 15 }}>
+            <Text style={{ color: T.ink, fontWeight: '700', fontSize: 13 }}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
+      {set ? <Text style={{ color: T.mintInk, fontWeight: '700', fontSize: 12.5, marginTop: 10 }}>{set}</Text> : null}
+    </View>
+  );
+}
+
 /* toolkit icons — tinted rounded tile + line mark, one visual family */
 const TOOL_TINT = {
   money: ['#EAF3EC', '#2E7D5B'], visa: ['#EAF0FA', '#3E6FB0'], weather: ['#E9F2FA', '#4A8FC0'],
@@ -1300,6 +1367,7 @@ function OrderComplete({ order, policy, country, iso, session, onDone, onInstall
           Order {order.orderReference}{order.persisted ? ' · saved to your account' : ''}{order.emailSent ? ' · QR emailed' : ''}
         </Text>
       ) : null}
+      <TripReminderCard country={country} />
       <TravelToolkit name={country} iso={iso} session={session} />
       {policy ? (
         <View style={[s.card, { marginTop: 18, flexDirection: 'row', gap: 12, alignItems: 'center' }]}>
