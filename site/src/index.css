@@ -35,6 +35,10 @@ h1,h2,h3{font-family:var(--head);letter-spacing:-0.01em}
 .pill-outline{background:transparent;color:var(--ink);border:2px solid var(--ink)}
 .pill-dark{background:var(--ink);color:#fff}
 
+/* partner portal: seat row collapses to a stack on phones, like the app */
+.seatgrid{display:grid;grid-template-columns:1.2fr 1fr 1.3fr auto;gap:8px;align-items:center}
+@media(max-width:700px){.seatgrid{grid-template-columns:1fr}}
+
 /* rounded page band */
 .band{border-radius:var(--band-radius);margin:28px auto;max-width:1280px;padding:72px 24px;position:relative;overflow:hidden}
 @media(max-width:720px){.band{border-radius:28px;padding:48px 18px;margin:18px 10px}}

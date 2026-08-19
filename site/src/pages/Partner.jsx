@@ -3,7 +3,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useCatalogue, flag } from '../hooks.js';
 import { useAuth } from '../lib/auth.jsx';
 import { authHeaders } from '../lib/supabase.js';
-import { Badge, Field, inputStyle, Skeleton, Spinner, Modal, useToast } from '../components/ui.jsx';
+import { Badge, Skeleton, Spinner, Modal, useToast } from '../components/ui.jsx';
+
+/* Design tokens mirror mobile/App.js `T` + its StyleSheet, so the portal reads as
+   the same product as the app rather than as a page on the website. */
+const M = {
+  bg: '#F7F2E9', bgTop: '#EFE7D9', card: '#FFFFFF',
+  ink: '#16182A', soft: '#6A6478', line: '#E9E0D0',
+  coral: '#FF6B57', coralDeep: '#E85340',
+  indigo: '#33386E', indigoDark: '#20234A',
+  mint: '#DCEDDC', mintInk: '#1F5B33', tint: '#EDE4F2',
+  fieldLine: '#D8E1EF', statBg: '#EAF0F9',
+};
+const shadow = '0 5px 14px rgba(90,74,50,.10)';
+const shadowSm = '0 2px 8px rgba(42,44,74,.07)';
+const display = 'Alexandria, sans-serif';
 
 const inr = n => '₹' + Number(n || 0).toLocaleString('en-IN');
 const rupees = paise => Math.floor(Number(paise || 0) / 100);
@@ -15,26 +29,90 @@ async function api(path, opts = {}) {
   return body;
 }
 
-const Card = ({ children, style }) => (
-  <div style={{ background: '#fff', borderRadius: 20, boxShadow: '0 2px 14px rgba(22,24,42,.06)', padding: 24, ...style }}>{children}</div>
+/* ---------------- app-styled primitives ---------------- */
+const Card = ({ children, style, ...p }) => (
+  <div {...p} style={{ background: M.card, borderRadius: 20, padding: 18, boxShadow: shadow, ...style }}>{children}</div>
 );
-const H = ({ children, sub }) => (
-  <div style={{ marginBottom: 18 }}>
-    <h2 style={{ fontSize: 19, fontWeight: 800, color: 'var(--ink)', margin: 0 }}>{children}</h2>
-    {sub && <p style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--muted)', margin: '5px 0 0' }}>{sub}</p>}
+
+const Title = ({ children, size = 20, style }) => (
+  <h2 style={{ fontFamily: display, fontSize: size, fontWeight: 800, color: M.ink, letterSpacing: '-.01em', margin: 0, ...style }}>{children}</h2>
+);
+
+const H = ({ children, sub, size }) => (
+  <div style={{ marginBottom: 16 }}>
+    <Title size={size}>{children}</Title>
+    {sub && <p style={{ fontSize: 13.5, fontWeight: 500, color: M.soft, margin: '6px 0 0', lineHeight: 1.6 }}>{sub}</p>}
+  </div>
+);
+
+const btnPrimary = {
+  background: M.coral, color: '#fff', borderRadius: 999, padding: '15px 26px',
+  fontWeight: 700, fontSize: 16, boxShadow: '0 4px 10px rgba(255,107,87,.35)',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'transform .12s ease',
+};
+const btnLight = {
+  background: '#fff', color: M.ink, borderRadius: 999, padding: '13px 22px',
+  fontWeight: 700, fontSize: 15, border: '1.5px solid #E0D5C3',
+  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+};
+const field = {
+  width: '100%', background: '#fff', border: `1.5px solid ${M.fieldLine}`, borderRadius: 14,
+  padding: '13px 16px', fontSize: 15, fontWeight: 500, fontFamily: 'inherit', color: M.ink, outline: 'none',
+};
+
+const Field = ({ label, children, hint }) => (
+  <label style={{ display: 'block' }}>
+    <span style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: M.soft, marginBottom: 6 }}>{label}</span>
+    {children}
+    {hint && <span style={{ display: 'block', fontSize: 12, fontWeight: 500, color: M.soft, marginTop: 5 }}>{hint}</span>}
+  </label>
+);
+
+// the app's chip row (white pill, selected fills with ink)
+const Chips = ({ value, onChange, options, style }) => (
+  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', ...style }}>
+    {options.map(([k, l]) => {
+      const on = value === k;
+      return (
+        <button key={k} onClick={() => onChange(k)} style={{
+          padding: '9px 16px', borderRadius: 999, fontWeight: 700, fontSize: 13.5,
+          background: on ? M.ink : '#fff', color: on ? '#fff' : M.ink,
+          border: `1.5px solid ${on ? M.ink : M.fieldLine}`, transition: 'background .14s',
+        }}>{l}</button>
+      );
+    })}
+  </div>
+);
+
+// the app's stat tile
+const Stat = ({ k, v }) => (
+  <div style={{ flex: 1, background: M.statBg, borderRadius: 12, padding: '10px 12px', minWidth: 0 }}>
+    <div style={{ fontSize: 11.5, fontWeight: 700, color: M.soft }}>{k}</div>
+    <div style={{ fontFamily: display, fontSize: 16, fontWeight: 800, color: M.ink, marginTop: 2 }}>{v}</div>
+  </div>
+);
+
+const Page = ({ children, max = 860 }) => (
+  <div style={{ background: M.bg, minHeight: '70vh' }}>
+    <div style={{ maxWidth: max, margin: '0 auto', padding: '22px 18px 90px' }}>{children}</div>
   </div>
 );
 
 /* ---------------- gate: sign in ---------------- */
 function SignedOut({ openAuth }) {
   return (
-    <Card style={{ maxWidth: 520, margin: '60px auto', textAlign: 'center', padding: 40 }}>
-      <div style={{ fontSize: 42, marginBottom: 14 }}>🏢</div>
-      <H sub="Bulk eSIMs for group departures, at agent pricing. Sign in with your agency email to continue.">
-        MobiYatri for travel agents
-      </H>
-      <button className="pill pill-coral" onClick={() => openAuth('login')} style={{ marginTop: 6 }}>Sign in</button>
-    </Card>
+    <Page max={520}>
+      <Card style={{ marginTop: 40, padding: 30, textAlign: 'center' }}>
+        <div style={{
+          width: 66, height: 66, borderRadius: 20, background: M.tint, margin: '0 auto 16px',
+          display: 'grid', placeItems: 'center', fontSize: 30,
+        }}>🏢</div>
+        <H size={22} sub="Bulk eSIMs for group departures, at agent pricing. Sign in with your agency email to continue.">
+          MobiYatri for travel agents
+        </H>
+        <button onClick={() => openAuth('login')} style={{ ...btnPrimary, width: '100%', marginTop: 6 }}>Sign in</button>
+      </Card>
+    </Page>
   );
 }
 
@@ -53,27 +131,29 @@ function Register({ email, onDone }) {
   };
 
   return (
-    <form onSubmit={submit}>
-      <Card style={{ maxWidth: 560, margin: '40px auto', padding: 32 }}>
-        <H sub={`Signed in as ${email}. Tell us about your agency and your partner account opens straight away.`}>
-          Open a partner account
-        </H>
-        <div style={{ display: 'grid', gap: 14 }}>
-          <Field label="Agency name *"><input required style={inputStyle} value={f.agency_name} onChange={set('agency_name')} placeholder="e.g. Sunrise Holidays" /></Field>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <Field label="Your name"><input style={inputStyle} value={f.contact_name} onChange={set('contact_name')} /></Field>
-            <Field label="Phone"><input style={inputStyle} value={f.contact_phone} onChange={set('contact_phone')} placeholder="+91…" /></Field>
+    <Page max={520}>
+      <form onSubmit={submit}>
+        <Card style={{ marginTop: 26, padding: 24 }}>
+          <H size={21} sub={`Signed in as ${email}. Tell us about your agency and your partner account opens straight away.`}>
+            Open a partner account
+          </H>
+          <div style={{ display: 'grid', gap: 12 }}>
+            <Field label="Agency name *"><input required style={field} value={f.agency_name} onChange={set('agency_name')} placeholder="e.g. Sunrise Holidays" /></Field>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Field label="Your name"><input style={field} value={f.contact_name} onChange={set('contact_name')} /></Field>
+              <Field label="Phone"><input style={field} value={f.contact_phone} onChange={set('contact_phone')} placeholder="+91…" /></Field>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Field label="City"><input style={field} value={f.city} onChange={set('city')} /></Field>
+              <Field label="GSTIN" hint="Needed on your tax invoices"><input style={field} value={f.gstin} onChange={set('gstin')} /></Field>
+            </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <Field label="City"><input style={inputStyle} value={f.city} onChange={set('city')} /></Field>
-            <Field label="GSTIN" hint="Needed on your tax invoices"><input style={inputStyle} value={f.gstin} onChange={set('gstin')} /></Field>
-          </div>
-        </div>
-        <button className="pill pill-coral" disabled={busy} style={{ width: '100%', marginTop: 22, justifyContent: 'center' }}>
-          {busy ? <Spinner /> : 'Create partner account'}
-        </button>
-      </Card>
-    </form>
+          <button disabled={busy} style={{ ...btnPrimary, width: '100%', marginTop: 20 }}>
+            {busy ? <Spinner /> : 'Create partner account'}
+          </button>
+        </Card>
+      </form>
+    </Page>
   );
 }
 
@@ -121,35 +201,39 @@ function Wallet({ partner, ledger, onChange }) {
   const bal = rupees(partner.wallet_paise);
   return (
     <>
-      <Card style={{ background: 'linear-gradient(135deg,#33386E,#20234A)', color: '#fff' }}>
+      {/* the app's dark promo card */}
+      <div style={{ background: M.indigoDark, borderRadius: 20, padding: 20, color: '#fff' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
           <div>
-            <div style={{ fontSize: 12.5, fontWeight: 700, opacity: .7, textTransform: 'uppercase', letterSpacing: '.05em' }}>Wallet balance</div>
-            <div style={{ fontSize: 38, fontWeight: 800, lineHeight: 1.2 }}>{inr(bal)}</div>
-            <div style={{ fontSize: 13, fontWeight: 500, opacity: .75, marginTop: 2 }}>
-              Your commission: {Number(partner.commission_pct)}% off retail on every eSIM
+            <div style={{ fontSize: 11.5, fontWeight: 700, opacity: .62, textTransform: 'uppercase', letterSpacing: '.06em' }}>Wallet balance</div>
+            <div style={{ fontFamily: display, fontSize: 36, fontWeight: 800, lineHeight: 1.25, letterSpacing: '-.02em' }}>{inr(bal)}</div>
+            <div style={{ fontSize: 13, fontWeight: 500, opacity: .72, marginTop: 2 }}>
+              {Number(partner.commission_pct)}% off retail on every eSIM
             </div>
           </div>
-          <button className="pill pill-coral" onClick={() => setOpen(true)}>Add funds</button>
+          <button onClick={() => setOpen(true)} style={{ ...btnPrimary, padding: '13px 22px', fontSize: 15 }}>Add funds</button>
         </div>
         {bal < 5000 && (
-          <div style={{ marginTop: 16, background: 'rgba(255,107,87,.18)', borderRadius: 12, padding: '11px 15px', fontSize: 13.5, fontWeight: 600 }}>
+          <div style={{ marginTop: 16, background: 'rgba(255,107,87,.18)', borderRadius: 14, padding: '11px 15px', fontSize: 13.5, fontWeight: 600 }}>
             Low balance — top up before your next departure so provisioning doesn't stall.
           </div>
         )}
-      </Card>
+      </div>
 
       {ledger?.length > 0 && (
-        <Card style={{ marginTop: 16 }}>
-          <H sub="Every top-up and purchase against your account.">Statement</H>
-          <div style={{ display: 'grid', gap: 2 }}>
-            {ledger.map(l => (
-              <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '11px 0', borderBottom: '1px solid #F2EDE3', fontSize: 14 }}>
+        <Card style={{ marginTop: 14 }}>
+          <H size={17} sub="Every top-up and purchase against your account.">Statement</H>
+          <div>
+            {ledger.map((l, i) => (
+              <div key={l.id} style={{
+                display: 'flex', justifyContent: 'space-between', gap: 12, padding: '12px 0',
+                borderTop: i ? `1px solid ${M.line}` : 'none', fontSize: 14,
+              }}>
                 <div>
-                  <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{l.note || l.kind}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--muted)', fontWeight: 500 }}>{new Date(l.created_at).toLocaleString('en-IN')}</div>
+                  <div style={{ fontWeight: 700, color: M.ink }}>{l.note || l.kind}</div>
+                  <div style={{ fontSize: 12.5, color: M.soft, fontWeight: 500, marginTop: 1 }}>{new Date(l.created_at).toLocaleString('en-IN')}</div>
                 </div>
-                <div style={{ fontWeight: 800, color: l.delta_paise > 0 ? '#1F5B33' : 'var(--ink)', whiteSpace: 'nowrap' }}>
+                <div style={{ fontFamily: display, fontWeight: 800, color: l.delta_paise > 0 ? M.mintInk : M.ink, whiteSpace: 'nowrap' }}>
                   {l.delta_paise > 0 ? '+' : '−'}{inr(Math.abs(rupees(l.delta_paise)))}
                 </div>
               </div>
@@ -159,19 +243,19 @@ function Wallet({ partner, ledger, onChange }) {
       )}
 
       <Modal open={open} onClose={() => !busy && setOpen(false)}>
-        <div style={{ padding: 30 }}>
-          <H sub="Funds sit in your account and are drawn down as you provision eSIMs.">Add funds</H>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div style={{ padding: 26 }}>
+          <H size={20} sub="Funds sit in your account and are drawn down as you provision eSIMs.">Add funds</H>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
             {[10000, 25000, 50000, 100000].map(v => (
               <button key={v} onClick={() => setAmt(v)} style={{
-                flex: '1 0 auto', padding: '10px 14px', borderRadius: 12, fontWeight: 700, fontSize: 14,
-                background: Number(amt) === v ? 'var(--ink)' : '#fff', color: Number(amt) === v ? '#fff' : 'var(--ink)',
-                border: '1.5px solid ' + (Number(amt) === v ? 'var(--ink)' : '#DDD5C6'),
+                flex: '1 0 auto', padding: '11px 14px', borderRadius: 999, fontWeight: 700, fontSize: 14,
+                background: Number(amt) === v ? M.ink : '#fff', color: Number(amt) === v ? '#fff' : M.ink,
+                border: `1.5px solid ${Number(amt) === v ? M.ink : M.fieldLine}`,
               }}>{inr(v)}</button>
             ))}
           </div>
-          <Field label="Amount (₹)"><input type="number" min="1000" style={inputStyle} value={amt} onChange={e => setAmt(e.target.value)} /></Field>
-          <button className="pill pill-coral" disabled={busy} onClick={topup} style={{ width: '100%', marginTop: 20, justifyContent: 'center' }}>
+          <Field label="Amount (₹)"><input type="number" min="1000" style={field} value={amt} onChange={e => setAmt(e.target.value)} /></Field>
+          <button disabled={busy} onClick={topup} style={{ ...btnPrimary, width: '100%', marginTop: 18 }}>
             {busy ? <Spinner /> : `Add ${inr(amt)}`}
           </button>
         </div>
@@ -237,21 +321,24 @@ function NewBatch({ partner, onCreated }) {
       <div style={{ display: 'grid', gap: 14 }}>
         <Field label="Destination">
           {dest ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F7F2E9', borderRadius: 13, padding: '12px 16px' }}>
-              {dest.iso && <img alt="" src={flag(dest.iso)} width={30} style={{ borderRadius: 4 }} />}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: M.bgTop, borderRadius: 14, padding: '12px 16px' }}>
+              {dest.iso && <img alt="" src={flag(dest.iso)} width={44} height={32} style={{ borderRadius: 7, objectFit: 'cover' }} />}
               <span style={{ fontWeight: 700, flex: 1 }}>{dest.n}</span>
-              <button onClick={() => { setDest(null); setPick(null); }} style={{ fontWeight: 700, color: 'var(--muted)', fontSize: 13 }}>Change</button>
+              <button onClick={() => { setDest(null); setPick(null); }} style={{ fontWeight: 700, color: M.soft, fontSize: 13 }}>Change</button>
             </div>
           ) : (
             <div style={{ position: 'relative' }}>
-              <input style={inputStyle} value={q} onChange={e => setQ(e.target.value)} placeholder="Search country or region…" />
+              <input style={{ ...field, boxShadow: shadowSm, border: 'none' }} value={q} onChange={e => setQ(e.target.value)} placeholder="Search country or region…" />
               {matches.length > 0 && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: '#fff', borderRadius: 14, boxShadow: '0 16px 40px rgba(22,24,42,.16)', overflow: 'hidden', zIndex: 5 }}>
-                  {matches.map(c => (
-                    <button key={c.n} onClick={() => { setDest(c); setPick(null); setQ(''); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '12px 16px', textAlign: 'left', fontWeight: 600, borderBottom: '1px solid #F2EDE3' }}>
-                      {c.iso && <img alt="" src={flag(c.iso)} width={24} style={{ borderRadius: 3 }} />}
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: '#fff', borderRadius: 16, boxShadow: '0 16px 40px rgba(22,24,42,.16)', overflow: 'hidden', zIndex: 5 }}>
+                  {matches.map((c, i) => (
+                    <button key={c.n} onClick={() => { setDest(c); setPick(null); setQ(''); }} style={{
+                      display: 'flex', alignItems: 'center', gap: 13, width: '100%', padding: '13px 15px',
+                      textAlign: 'left', fontWeight: 700, borderTop: i ? `1px solid ${M.line}` : 'none',
+                    }}>
+                      {c.iso && <img alt="" src={flag(c.iso)} width={44} height={32} style={{ borderRadius: 7, objectFit: 'cover' }} />}
                       <span style={{ flex: 1 }}>{c.n}</span>
-                      <span style={{ color: 'var(--muted)', fontSize: 13 }}>from {inr(c.from)}</span>
+                      <span style={{ color: M.soft, fontSize: 13, fontWeight: 600 }}>from {inr(c.from)}</span>
                     </button>
                   ))}
                 </div>
@@ -262,19 +349,19 @@ function NewBatch({ partner, onCreated }) {
 
         {dest && (
           <Field label="Package">
-            <div style={{ display: 'grid', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
-              {options.length === 0 && <Skeleton h={54} r={13} />}
+            <div style={{ display: 'grid', gap: 10, maxHeight: 280, overflowY: 'auto', padding: 2 }}>
+              {options.length === 0 && <Skeleton h={56} r={16} />}
               {options.map(p => {
                 const on = pick?.bundle === p.bundle;
                 const agent = Math.max(1, Math.round(p.price * (1 - Number(partner.commission_pct) / 100)));
                 return (
                   <button key={p.bundle} onClick={() => setPick(p)} style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', borderRadius: 13, textAlign: 'left',
-                    background: on ? '#F7F2E9' : '#fff', border: '1.5px solid ' + (on ? 'var(--ink)' : '#E9E0D0'),
+                    display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 16, textAlign: 'left',
+                    background: '#fff', border: `2px solid ${on ? M.coral : 'transparent'}`, boxShadow: shadowSm,
                   }}>
-                    <span style={{ fontWeight: 700, flex: 1 }}>{p.label2}</span>
-                    <span style={{ color: 'var(--muted)', fontSize: 13, textDecoration: 'line-through' }}>{inr(p.price)}</span>
-                    <span style={{ fontWeight: 800 }}>{inr(agent)}</span>
+                    <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>{p.label2}</span>
+                    <span style={{ color: M.soft, fontSize: 13, fontWeight: 600, textDecoration: 'line-through' }}>{inr(p.price)}</span>
+                    <span style={{ fontFamily: display, fontWeight: 800, fontSize: 17 }}>{inr(agent)}</span>
                   </button>
                 );
               })}
@@ -284,27 +371,26 @@ function NewBatch({ partner, onCreated }) {
 
         {pick && (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-              <Field label="Passengers"><input type="number" min="1" max="100" style={inputStyle} value={qty} onChange={e => setQty(e.target.value)} /></Field>
-              <Field label="Tour name" hint="Shows on your invoice"><input style={inputStyle} value={tour} onChange={e => setTour(e.target.value)} placeholder="Dubai Nov 14 departure" /></Field>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <Field label="Passengers"><input type="number" min="1" max="100" style={field} value={qty} onChange={e => setQty(e.target.value)} /></Field>
+              <Field label="Tour name" hint="Shows on your invoice"><input style={field} value={tour} onChange={e => setTour(e.target.value)} placeholder="Dubai Nov 14 departure" /></Field>
             </div>
 
-            <div style={{ background: '#F7F2E9', borderRadius: 16, padding: 18 }}>
-              {[
-                ['Retail value', inr(retail)],
-                [`Your price (${Number(partner.commission_pct)}% off)`, inr(total)],
-              ].map(([l, v], i) => (
-                <div key={l} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5, fontWeight: i ? 800 : 500, color: i ? 'var(--ink)' : 'var(--muted)', marginBottom: i ? 0 : 8 }}>
-                  <span>{l}</span><span>{v}</span>
-                </div>
-              ))}
-              <div style={{ borderTop: '1px solid #E4DBC9', marginTop: 12, paddingTop: 12, fontSize: 13.5, fontWeight: 600, color: '#1F5B33' }}>
+            <div style={{ background: M.bgTop, borderRadius: 16, padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14.5, fontWeight: 500, color: M.soft, marginBottom: 8 }}>
+                <span>Retail value</span><span>{inr(retail)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 15, fontWeight: 800, color: M.ink }}>
+                <span>Your price ({Number(partner.commission_pct)}% off)</span>
+                <span style={{ fontFamily: display, fontSize: 18 }}>{inr(total)}</span>
+              </div>
+              <div style={{ background: M.mint, color: M.mintInk, borderRadius: 12, padding: '10px 13px', marginTop: 12, fontSize: 13, fontWeight: 700 }}>
                 You keep {inr(retail - total)} if you resell at MobiYatri's retail price.
               </div>
             </div>
 
-            <button className="pill pill-coral" disabled={busy || short || !(qty > 0)} onClick={create}
-              style={{ width: '100%', justifyContent: 'center', opacity: short ? .55 : 1 }}>
+            <button disabled={busy || short || !(qty > 0)} onClick={create}
+              style={{ ...btnPrimary, width: '100%', opacity: short ? .55 : 1 }}>
               {busy ? <Spinner /> : short ? `Add ${inr(total - rupees(partner.wallet_paise))} to your wallet` : `Provision ${qty} eSIMs · ${inr(total)}`}
             </button>
           </>
@@ -337,38 +423,41 @@ function Seat({ seat, onSaved }) {
     setBusy(false);
   };
 
+  const small = { ...field, padding: '11px 14px', fontSize: 14.5 };
   return (
-    <div style={{ background: '#fff', borderRadius: 16, padding: 16, border: '1px solid #EFE7D9' }}>
+    <Card style={{ padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--muted)', flex: 1 }}>{seat.iccid}</span>
+        <span style={{ fontFamily: 'monospace', fontSize: 12, color: M.soft, flex: 1 }}>{seat.iccid}</span>
         {seat.delivered_at ? <Badge tone="green">Delivered</Badge>
           : seat.passenger_name ? <Badge tone="gold">Assigned</Badge>
           : <Badge tone="indigo">Open seat</Badge>}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1.3fr auto', gap: 8, alignItems: 'end' }}>
-        <input style={{ ...inputStyle, padding: '10px 13px', fontSize: 14 }} value={f.passenger_name} onChange={set('passenger_name')} placeholder="Passenger name" />
-        <input style={{ ...inputStyle, padding: '10px 13px', fontSize: 14 }} value={f.passenger_phone} onChange={set('passenger_phone')} placeholder="+91 phone" />
-        <input style={{ ...inputStyle, padding: '10px 13px', fontSize: 14 }} value={f.passenger_email} onChange={set('passenger_email')} placeholder="email" />
-        <button className="pill pill-dark" disabled={busy} onClick={save} style={{ padding: '11px 18px', fontSize: 14 }}>
+      <div className="seatgrid">
+        <input style={small} value={f.passenger_name} onChange={set('passenger_name')} placeholder="Passenger name" />
+        <input style={small} value={f.passenger_phone} onChange={set('passenger_phone')} placeholder="+91 phone" />
+        <input style={small} value={f.passenger_email} onChange={set('passenger_email')} placeholder="email" />
+        <button disabled={busy} onClick={save} style={{ ...btnPrimary, padding: '12px 20px', fontSize: 14.5 }}>
           {busy ? <Spinner size={15} /> : seat.delivered_at ? 'Resend' : 'Send eSIM'}
         </button>
       </div>
-      <button onClick={() => setShowQr(true)} style={{ fontSize: 13, fontWeight: 700, color: 'var(--muted)', marginTop: 10 }}>Show QR / activation code</button>
+      <button onClick={() => setShowQr(true)} style={{ fontSize: 13, fontWeight: 700, color: M.soft, marginTop: 11 }}>
+        Show QR / activation code
+      </button>
 
       <Modal open={showQr} onClose={() => setShowQr(false)} maxWidth={380}>
-        <div style={{ padding: 30, textAlign: 'center' }}>
-          <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 4 }}>{seat.passenger_name || 'Unassigned eSIM'}</h3>
-          <p style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 500, marginBottom: 18 }}>Scan with the passenger's phone camera</p>
-          <img alt="eSIM QR" width={230} height={230} style={{ background: '#fff', borderRadius: 12, padding: 10 }}
+        <div style={{ padding: 26, textAlign: 'center' }}>
+          <Title size={18}>{seat.passenger_name || 'Unassigned eSIM'}</Title>
+          <p style={{ fontSize: 13, color: M.soft, fontWeight: 500, margin: '6px 0 18px' }}>Scan with the passenger's phone camera</p>
+          <img alt="eSIM QR" width={230} height={230} style={{ background: '#fff', borderRadius: 16, padding: 12, boxShadow: shadowSm }}
             src={'https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=' + encodeURIComponent(seat.lpa_string || '')} />
-          <p style={{ fontFamily: 'monospace', fontSize: 11, wordBreak: 'break-all', color: 'var(--muted)', marginTop: 16 }}>{seat.lpa_string}</p>
+          <p style={{ fontFamily: 'monospace', fontSize: 11, wordBreak: 'break-all', color: M.soft, marginTop: 16 }}>{seat.lpa_string}</p>
         </div>
       </Modal>
-    </div>
+    </Card>
   );
 }
 
-function BatchDetail({ batch, onBack, partner }) {
+function BatchDetail({ batch, onBack }) {
   const [seats, setSeats] = useState(null);
   const [filter, setFilter] = useState('all');
   const toast = useToast();
@@ -395,42 +484,48 @@ function BatchDetail({ batch, onBack, partner }) {
   };
 
   return (
-    <div>
-      <button onClick={onBack} style={{ fontWeight: 700, color: 'var(--muted)', marginBottom: 16 }}>← All departures</button>
-      <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-          <div>
-            <h2 style={{ fontSize: 21, fontWeight: 800, margin: 0 }}>{batch.tour_name || batch.country_name}</h2>
-            <p style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500, margin: '5px 0 0' }}>
-              {batch.country_name} · {batch.package_label} · {batch.qty} eSIMs · {inr(batch.total_inr)}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="pill pill-white" onClick={csv} style={{ fontSize: 14 }}>Export CSV</button>
-            <button className="pill pill-white" onClick={invoice} style={{ fontSize: 14 }}>Invoice</button>
-          </div>
+    <Page>
+      {/* app-style screen header with a round back button */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <button onClick={onBack} aria-label="Back" style={{
+          width: 38, height: 38, borderRadius: 19, background: '#fff', boxShadow: shadowSm,
+          display: 'grid', placeItems: 'center', flex: 'none',
+        }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={M.ink} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <div style={{ minWidth: 0 }}>
+          <Title size={21}>{batch.tour_name || batch.country_name}</Title>
+          <p style={{ fontSize: 13.5, color: M.soft, fontWeight: 500, margin: '3px 0 0' }}>
+            {batch.country_name} · {batch.package_label} · {batch.qty} eSIMs
+          </p>
+        </div>
+      </div>
+
+      <Card style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          <Stat k="eSIMs" v={batch.qty} />
+          <Stat k="Delivered" v={(seats || []).filter(s => s.delivered_at).length} />
+          <Stat k="Paid" v={inr(batch.total_inr)} />
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={csv} style={{ ...btnLight, flex: 1 }}>Export CSV</button>
+          <button onClick={invoice} style={{ ...btnLight, flex: 1 }}>Tax invoice</button>
         </div>
       </Card>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-        {[['all', 'All'], ['open', 'Unassigned'], ['sent', 'Delivered']].map(([k, l]) => (
-          <button key={k} onClick={() => setFilter(k)} style={{
-            padding: '8px 16px', borderRadius: 999, fontWeight: 700, fontSize: 13.5,
-            background: filter === k ? 'var(--ink)' : '#fff', color: filter === k ? '#fff' : 'var(--ink)',
-          }}>{l}</button>
-        ))}
-      </div>
+      <Chips value={filter} onChange={setFilter} style={{ marginBottom: 12 }}
+        options={[['all', 'All'], ['open', 'Unassigned'], ['sent', 'Delivered']]} />
 
       <div style={{ display: 'grid', gap: 10 }}>
-        {!seats && [...Array(4)].map((_, i) => <Skeleton key={i} h={110} r={16} />)}
+        {!seats && [...Array(4)].map((_, i) => <Skeleton key={i} h={120} r={20} />)}
         {shown.map(s => (
           <Seat key={s.id} seat={s} onSaved={row => setSeats(list => list.map(x => x.id === row.id ? row : x))} />
         ))}
         {seats && shown.length === 0 && (
-          <p style={{ textAlign: 'center', color: 'var(--muted)', fontWeight: 600, padding: 30 }}>Nothing here.</p>
+          <p style={{ textAlign: 'center', color: M.soft, fontWeight: 600, padding: 30 }}>Nothing here.</p>
         )}
       </div>
-    </div>
+    </Page>
   );
 }
 
@@ -448,70 +543,72 @@ function Dashboard({ partner: p0, ledger: l0, email }) {
   };
   useEffect(() => { refresh(); }, []);
 
-  if (open) return <div className="container" style={{ padding: '26px 24px 100px', maxWidth: 900 }}>
-    <BatchDetail batch={open} partner={partner} onBack={() => { setOpen(null); refresh(); }} />
-  </div>;
+  if (open) return <BatchDetail batch={open} onBack={() => { setOpen(null); refresh(); }} />;
 
   const totals = (batches || []).reduce((a, b) => ({
     esims: a.esims + b.qty, spend: a.spend + b.total_inr, delivered: a.delivered + (b.delivered || 0),
   }), { esims: 0, spend: 0, delivered: 0 });
 
+  const initials = (partner.agency_name || '?').split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
   return (
-    <div className="container" style={{ padding: '26px 24px 100px', maxWidth: 900 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 27, fontWeight: 800, margin: 0 }}>{partner.agency_name}</h1>
-          <p style={{ fontSize: 14, color: 'var(--muted)', fontWeight: 500, margin: '4px 0 0' }}>Partner account · {email}</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {[['departures', 'Departures'], ['new', 'New departure'], ['wallet', 'Wallet']].map(([k, l]) => (
-            <button key={k} onClick={() => setTab(k)} style={{
-              padding: '9px 18px', borderRadius: 999, fontWeight: 700, fontSize: 14,
-              background: tab === k ? 'var(--ink)' : '#fff', color: tab === k ? '#fff' : 'var(--ink)',
-            }}>{l}</button>
-          ))}
+    <Page>
+      {/* app-style greeting header with avatar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 16 }}>
+        <div style={{
+          width: 50, height: 50, borderRadius: 25, background: M.coralDeep, color: '#fff', flex: 'none',
+          display: 'grid', placeItems: 'center', fontFamily: display, fontWeight: 800, fontSize: 17,
+        }}>{initials}</div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <Title size={22}>{partner.agency_name}</Title>
+          <p style={{ fontSize: 13, color: M.soft, fontWeight: 500, margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            Partner account · {email}
+          </p>
         </div>
       </div>
 
+      <Chips value={tab} onChange={setTab} style={{ marginBottom: 14 }}
+        options={[['departures', 'Departures'], ['new', 'New departure'], ['wallet', 'Wallet']]} />
+
       {tab === 'departures' && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12, marginBottom: 18 }}>
-            {[
-              ['Wallet', inr(rupees(partner.wallet_paise))],
-              ['eSIMs bought', totals.esims],
-              ['Delivered', totals.delivered],
-              ['Spend', inr(totals.spend)],
-            ].map(([l, v]) => (
-              <Card key={l} style={{ padding: 18 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>{l}</div>
-                <div style={{ fontSize: 24, fontWeight: 800, marginTop: 4 }}>{v}</div>
-              </Card>
-            ))}
-          </div>
+          <Card style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Stat k="Wallet" v={inr(rupees(partner.wallet_paise))} />
+              <Stat k="eSIMs" v={totals.esims} />
+              <Stat k="Delivered" v={totals.delivered} />
+              <Stat k="Spend" v={inr(totals.spend)} />
+            </div>
+          </Card>
 
-          {!batches && <Skeleton h={90} r={18} />}
+          {!batches && <Skeleton h={92} r={20} />}
           {batches?.length === 0 && (
-            <Card style={{ textAlign: 'center', padding: 44 }}>
-              <div style={{ fontSize: 38, marginBottom: 10 }}>✈️</div>
-              <H sub="Buy eSIMs for your next group in one go, then assign each one to a passenger.">No departures yet</H>
-              <button className="pill pill-coral" onClick={() => setTab('new')}>Create your first departure</button>
+            <Card style={{ textAlign: 'center', padding: 34 }}>
+              <div style={{ width: 66, height: 66, borderRadius: 20, background: M.tint, margin: '0 auto 14px', display: 'grid', placeItems: 'center', fontSize: 30 }}>✈️</div>
+              <H size={19} sub="Buy eSIMs for your next group in one go, then assign each one to a passenger.">No departures yet</H>
+              <button onClick={() => setTab('new')} style={{ ...btnPrimary, width: '100%' }}>Create your first departure</button>
             </Card>
           )}
+
           <div style={{ display: 'grid', gap: 10 }}>
             <AnimatePresence>
               {(batches || []).map(b => (
                 <motion.button key={b.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   onClick={() => setOpen(b)} style={{ textAlign: 'left' }}>
-                  <Card style={{ padding: 18, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: 200 }}>
-                      <div style={{ fontWeight: 800, fontSize: 16 }}>{b.tour_name || b.country_name}</div>
-                      <div style={{ fontSize: 13.5, color: 'var(--muted)', fontWeight: 500, marginTop: 3 }}>
-                        {b.country_name} · {b.package_label} · {new Date(b.created_at).toLocaleDateString('en-IN')}
+                  <Card style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 13 }}>
+                    <div style={{
+                      width: 48, height: 48, borderRadius: 14, background: M.tint, flex: 'none',
+                      display: 'grid', placeItems: 'center', fontSize: 21,
+                    }}>🧳</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15.5, color: M.ink }}>{b.tour_name || b.country_name}</div>
+                      <div style={{ fontSize: 13, color: M.soft, fontWeight: 500, marginTop: 2 }}>
+                        {b.country_name} · {new Date(b.created_at).toLocaleDateString('en-IN')}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 800 }}>{b.delivered}/{b.qty} delivered</div>
-                      <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>{inr(b.total_inr)}</div>
+                    <div style={{ textAlign: 'right', flex: 'none' }}>
+                      <div style={{ fontFamily: display, fontWeight: 800, fontSize: 15 }}>{b.delivered}/{b.qty}</div>
+                      <div style={{ fontSize: 12, color: M.soft, fontWeight: 600 }}>delivered</div>
                     </div>
                     {b.assigned < b.qty && <Badge tone="coral">{b.qty - b.assigned} open</Badge>}
                   </Card>
@@ -524,7 +621,7 @@ function Dashboard({ partner: p0, ledger: l0, email }) {
 
       {tab === 'new' && <NewBatch partner={partner} onCreated={() => { setTab('departures'); refresh(); }} />}
       {tab === 'wallet' && <Wallet partner={partner} ledger={ledger} onChange={() => refresh()} />}
-    </div>
+    </Page>
   );
 }
 
@@ -538,23 +635,22 @@ export default function Partner() {
     api('me').then(setState).catch(err => setState(err.body?.setupRequired ? { setup: err.body } : { partner: null }));
   }, [user]);
 
-  if (!ready) return <div className="container" style={{ padding: 60, maxWidth: 900 }}><Skeleton h={120} r={20} /></div>;
-  if (!user) return <div className="container" style={{ padding: '20px 24px 90px' }}><SignedOut openAuth={openAuth} /></div>;
-  if (state?.setup) return (
-    <div className="container" style={{ padding: '20px 24px 90px' }}>
-      <Card style={{ maxWidth: 560, margin: '50px auto', padding: 34 }}>
-        <H sub="One setup step left: run the partner tables migration in your Supabase project's SQL editor, then reload this page.">
+  const loading = <Page><Skeleton h={120} r={20} /></Page>;
+  if (!ready) return loading;
+  if (!user) return <SignedOut openAuth={openAuth} />;
+  if (!state) return loading;
+  if (state.setup) return (
+    <Page max={520}>
+      <Card style={{ marginTop: 34, padding: 26 }}>
+        <H size={21} sub="One setup step left: run the partner tables migration in your Supabase project's SQL editor, then reload this page.">
           Almost there
         </H>
-        <code style={{ display: 'block', background: '#F7F2E9', borderRadius: 12, padding: '13px 16px', fontSize: 13.5, fontWeight: 600 }}>
+        <code style={{ display: 'block', background: M.bgTop, borderRadius: 14, padding: '13px 16px', fontSize: 13.5, fontWeight: 600 }}>
           {state.setup.sql}
         </code>
       </Card>
-    </div>
+    </Page>
   );
-  if (!state) return <div className="container" style={{ padding: 60, maxWidth: 900 }}><Skeleton h={120} r={20} /></div>;
-  if (!state.partner) return <div className="container" style={{ padding: '20px 24px 90px' }}>
-    <Register email={state.email} onDone={p => setState(s => ({ ...s, partner: p }))} />
-  </div>;
+  if (!state.partner) return <Register email={state.email} onDone={p => setState(s => ({ ...s, partner: p }))} />;
   return <Dashboard partner={state.partner} ledger={state.ledger} email={state.email} />;
 }
