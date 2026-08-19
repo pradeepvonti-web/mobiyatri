@@ -1,12 +1,8 @@
 # Render blueprint — deploy with "New + > Blueprint" and this repo
-services:
-  - type: web
-    name: mobiyatri
-    runtime: node
-    plan: free
-    buildCommand: npm install && npm run build
-    startCommand: node server.js
-    healthCheckPath: /api/health
+# Shared secrets live in one env group so the web service and the nightly
+# catalogue sync read the same values.
+envVarGroups:
+  - name: mobiyatri-core
     envVars:
       - key: ESIMACCESS_ACCESS_CODE
         sync: false
@@ -18,13 +14,56 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: USD_INR
+        value: "88"
+      - key: MARGIN
+        value: "1.35"
+
+services:
+  - type: web
+    name: mobiyatri
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - fromGroup: mobiyatri-core
       - key: RESEND_API_KEY
         sync: false
       - key: FROM_EMAIL
         sync: false
       - key: ANTHROPIC_API_KEY
         sync: false
-      - key: USD_INR
-        value: "88"
-      - key: MARGIN
-        value: "1.35"
+      - key: ASSISTANT_MODEL
+        value: claude-opus-5
+      # Payments — test keys work immediately; live keys after Razorpay KYC.
+      # Webhook secret comes from the Razorpay dashboard once the public URL
+      # exists; while it is blank the server rejects webhooks (payments still
+      # confirm through the checkout return flow).
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      # WhatsApp delivery (Meta Cloud API) — inert until both token and phone id are set.
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_ID
+        sync: false
+      - key: WHATSAPP_TEMPLATE
+        value: esim_delivery
+
+  # Nightly catalogue sync into Supabase (02:30 UTC = 08:00 IST).
+  # Render cron jobs are paid (starter plan, billed per run-second) — delete this
+  # block and run "node server.js sync" manually if you want to stay on free tier.
+  - type: cron
+    name: mobiyatri-sync
+    runtime: node
+    plan: starter
+    schedule: "30 2 * * *"
+    buildCommand: npm install
+    startCommand: node server.js sync
+    envVars:
+      - fromGroup: mobiyatri-core
